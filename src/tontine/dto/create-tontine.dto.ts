@@ -1,5 +1,6 @@
 import { IsIn, IsNumber, IsString } from 'class-validator';
 import { CreateMemberDto } from 'src/member/dto/create-member.dto';
+import { ConfigTontine } from '../entities/config-tontine.entity';
 
 export class CreateTontineDto {
   @IsString({ message: 'Le titre de la tontine est requis' })
@@ -10,6 +11,12 @@ export class CreateTontineDto {
   members: CreateMemberDto[];
 
   config: CreateConfigTontineDto;
+
+  @IsString()
+  @IsIn(['FCFA', 'USD', 'EUR'], {
+    message: "La devise doit être l'une des suivantes : FCFA, USD, ou EUR",
+  })
+  currency: 'FCFA' | 'USD' | 'EUR';
 }
 
 export class CreateConfigTontineDto {
@@ -26,7 +33,6 @@ export class CreateConfigTontineDto {
   })
   loopPeriod: 'DAILY' | 'WEEKLY' | 'MONTHLY';
 
-  @IsString()
   minLoanAmount: number;
 
   @IsString()
@@ -34,4 +40,25 @@ export class CreateConfigTontineDto {
 
   @IsString()
   movementType: 'ROTATIVE' | 'CUMULATIVE';
+}
+
+export function createToConfigTontineDtoToConfigTontine(
+  createConfigTontineDto: CreateConfigTontineDto,
+) {
+  const {
+    defaultLoanRate,
+    defaultLoanDuration,
+    loopPeriod,
+    minLoanAmount,
+    countPersonPerMovement,
+    movementType,
+  } = createConfigTontineDto;
+  const configTontine = new ConfigTontine();
+  configTontine.defaultLoanRate = defaultLoanRate;
+  configTontine.defaultLoanDuration = defaultLoanDuration;
+  configTontine.loopPeriod = loopPeriod;
+  configTontine.minLoanAmount = minLoanAmount;
+  configTontine.countPersonPerMovement = countPersonPerMovement;
+  configTontine.movementType = movementType;
+  return configTontine;
 }

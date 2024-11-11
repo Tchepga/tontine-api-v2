@@ -1,15 +1,15 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
 } from '@nestjs/common';
-import { TontineService } from './tontine.service';
 import { CreateTontineDto } from './dto/create-tontine.dto';
 import { UpdateTontineDto } from './dto/update-tontine.dto';
+import { TontineService } from './tontine.service';
 
 @Controller('tontine')
 export class TontineController {

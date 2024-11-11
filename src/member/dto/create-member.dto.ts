@@ -1,4 +1,6 @@
 import { IsString, Length } from 'class-validator';
+import { Member } from '../entities/member.entity';
+import { User } from 'src/authentification/entities/user.entity';
 
 export class CreateMemberDto {
   @IsString({ message: "Le nom d'utilisateur est requis" })
@@ -28,4 +30,23 @@ export class CreateMemberDto {
   @IsString({ message: 'Le pays est requis' })
   @Length(2, 2, { message: 'Le pays doit avoir exactement 2 caractères' })
   country: string;
+}
+
+export function createToMemberDtoToMember(
+  createMemberDto: CreateMemberDto,
+): Member {
+  const { username, password, firstname, lastname, email, phone, country } =
+    createMemberDto;
+  const member = new Member();
+  const user = new User();
+  user.username = username;
+  user.password = password;
+
+  member.user = user;
+  member.firstname = firstname;
+  member.lastname = lastname;
+  member.email = email;
+  member.phone = phone;
+  member.country = country;
+  return member;
 }
