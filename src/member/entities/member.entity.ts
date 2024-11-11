@@ -1,15 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { User } from 'src/authentification/entities/user.entity';
+import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class Member {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ length: 50 })
-  username: string;
-
-  @Column({ length: 100 })
-  password: string;
+  @OneToOne(() => User, { cascade: true })
+  user: User;
 
   @Column()
   firstname: string;
@@ -17,7 +15,7 @@ export class Member {
   @Column()
   lastname: string;
 
-  @Column()
+  @Column({ nullable: true })
   email: string;
 
   @Column()

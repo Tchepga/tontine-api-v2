@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ErrorCode } from './utilities/error-code';
+import { availableMemory } from 'process';
 
 @Module({
   imports: [],
@@ -9,11 +10,19 @@ import { ErrorCode } from './utilities/error-code';
       provide: 'ErrorCode',
       useValue: ErrorCode,
     },
+    {
+      provide: 'availableLanguages',
+      useValue: availableMemory,
+    },
   ],
   exports: [
     {
       provide: 'ErrorCode',
       useValue: ErrorCode,
+    },
+    {
+      provide: 'availableLanguages',
+      useValue: availableMemory,
     },
   ],
 })

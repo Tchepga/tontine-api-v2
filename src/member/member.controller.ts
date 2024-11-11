@@ -10,6 +10,7 @@ import {
 import { CreateMemberDto } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { MemberService } from './member.service';
+import { validateEmail } from 'src/shared/utilities/custom-validator';
 
 @Controller('member')
 export class MemberController {
@@ -17,6 +18,10 @@ export class MemberController {
 
   @Post()
   create(@Body() createMemberDto: CreateMemberDto) {
+    if (createMemberDto.email) {
+      validateEmail(createMemberDto.email);
+    }
+
     return this.memberService.create(createMemberDto);
   }
 

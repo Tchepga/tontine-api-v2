@@ -4,35 +4,13 @@ import { Repository } from 'typeorm';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { Member } from './entities/member.entity';
-
-const mockMembers: Member[] = [
-  {
-    id: 1,
-    username: 'john_doe',
-    email: 'test@email.fr',
-    firstname: 'John',
-    lastname: 'Doe',
-    phone: '0606060606',
-    country: 'France',
-    password: 'password',
-  },
-  {
-    id: 2,
-    username: 'paul_smith',
-    email: 'paul.smith@email.fr',
-    firstname: 'Paul',
-    lastname: 'Smith',
-    phone: '0606060606',
-    country: 'France',
-    password: 'password',
-  },
-];
+import { User } from 'src/authentification/entities/user.entity';
 
 @Injectable()
 export class MemberService {
   constructor(
-    @InjectRepository(Member)
-    private memberRepository: Repository<Member>,
+    @InjectRepository(Member) private memberRepository: Repository<Member>,
+    @InjectRepository(User) private userRepository: Repository<User>,
   ) {}
 
   create(createMemberDto: CreateMemberDto) {
@@ -48,7 +26,7 @@ export class MemberService {
   }
 
   findByUsername(username: string) {
-    return mockMembers.find((member) => member.username === username);
+    return this.userRepository.findOne({ where: { username } });
   }
 
   update(id: number, updateMemberDto: UpdateMemberDto) {
