@@ -1,14 +1,15 @@
 import { Module } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { SharedModule } from 'src/shared/shared.module';
 import { AuthentificationController } from './authentification.controller';
-import { User } from './entities/user.entity';
 import { AuthentificationService } from './authentification.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from './entities/user.entity';
+import { RolesGuard } from './roles.guard';
 
 @Module({
   controllers: [AuthentificationController],
   imports: [SharedModule, TypeOrmModule.forFeature([User])],
-  providers: [AuthentificationService],
+  providers: [AuthentificationService, RolesGuard],
+  exports: [AuthentificationService, RolesGuard],
 })
 export class AuthentificationModule {}

@@ -1,23 +1,12 @@
-import { IsIn, IsNumber, IsString } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsNotEmptyObject,
+  IsNumber,
+  IsString,
+} from 'class-validator';
 import { CreateMemberDto } from 'src/member/dto/create-member.dto';
 import { ConfigTontine } from '../entities/config-tontine.entity';
-
-export class CreateTontineDto {
-  @IsString({ message: 'Le titre de la tontine est requis' })
-  title: string;
-
-  legacy: string;
-
-  members: CreateMemberDto[];
-
-  config: CreateConfigTontineDto;
-
-  @IsString()
-  @IsIn(['FCFA', 'USD', 'EUR'], {
-    message: "La devise doit être l'une des suivantes : FCFA, USD, ou EUR",
-  })
-  currency: 'FCFA' | 'USD' | 'EUR';
-}
 
 export class CreateConfigTontineDto {
   @IsNumber()
@@ -40,6 +29,25 @@ export class CreateConfigTontineDto {
 
   @IsString()
   movementType: 'ROTATIVE' | 'CUMULATIVE';
+}
+
+export class CreateTontineDto {
+  @IsString({ message: 'Le titre de la tontine est requis' })
+  title: string;
+
+  legacy: string;
+
+  @IsNotEmpty({ message: 'Un membre au minimum lors de la creation' })
+  members: CreateMemberDto[];
+
+  @IsNotEmptyObject({ nullable: false })
+  config: CreateConfigTontineDto;
+
+  @IsString()
+  @IsIn(['FCFA', 'USD', 'EUR'], {
+    message: "La devise doit être l'une des suivantes : FCFA, USD, ou EUR",
+  })
+  currency: 'FCFA' | 'USD' | 'EUR';
 }
 
 export function createToConfigTontineDtoToConfigTontine(

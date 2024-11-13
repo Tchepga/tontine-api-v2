@@ -2,6 +2,8 @@ import { Member } from 'src/member/entities/member.entity';
 import {
   Column,
   Entity,
+  JoinColumn,
+  JoinTable,
   ManyToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -20,12 +22,15 @@ export class Tontine {
   @Column({ nullable: true })
   legacy: string;
 
-  @ManyToMany(() => Member)
+  @ManyToMany(() => Member, (member) => member.tontines, { cascade: true })
+  @JoinTable()
   members: Member[];
 
   @OneToOne(() => ConfigTontine)
+  @JoinColumn()
   config: ConfigTontine;
 
   @OneToOne(() => CashFlow)
+  @JoinColumn()
   cashFlow: CashFlow;
 }

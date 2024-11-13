@@ -1,20 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { AuthentificationService } from 'src/authentification/authentification.service';
 import { Repository } from 'typeorm';
-import { CreateMemberDto } from './dto/create-member.dto';
+import {
+  CreateMemberDto,
+  createToMemberDtoToMember,
+} from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { Member } from './entities/member.entity';
-import { User } from 'src/authentification/entities/user.entity';
 
 @Injectable()
 export class MemberService {
   constructor(
     @InjectRepository(Member) private memberRepository: Repository<Member>,
-    @InjectRepository(User) private userRepository: Repository<User>,
+    private readonly authentificationService: AuthentificationService,
   ) {}
 
-  create(createMemberDto: CreateMemberDto) {
-    return this.memberRepository.save(createMemberDto);
+  async create(createMemberDto: CreateMemberDto) {
+    const member = createToMemberDtoToMember(createMemberDto);
+    await this.authentificationService.register(member.user);
+    return await this.memberRepository.save(member);
   }
 
   findAll() {
@@ -25,8 +30,14 @@ export class MemberService {
     return this.memberRepository.findOne({ where: { id } });
   }
 
-  findByUsername(username: string) {
-    return this.userRepository.findOne({ where: { username } });
+  async findByUsername(username: string): Promise<Member | null> {
+    const user = await this.authentificationService.findByUsername(username);
+    return this.memberRepository
+      .createQueryBuilder('member')
+      .innerJoinAndSelect('member.user', 'user', 'user.username = :username', {
+        username: user.username,
+      })
+      .getOne();
   }
 
   update(id: number, updateMemberDto: UpdateMemberDto) {

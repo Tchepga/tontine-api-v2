@@ -1,5 +1,13 @@
 import { User } from 'src/authentification/entities/user.entity';
-import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Tontine } from 'src/tontine/entities/tontine.entity';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity()
 export class Member {
@@ -7,6 +15,7 @@ export class Member {
   id: number;
 
   @OneToOne(() => User, { cascade: true })
+  @JoinColumn()
   user: User;
 
   @Column()
@@ -23,4 +32,7 @@ export class Member {
 
   @Column()
   country: string;
+
+  @ManyToMany(() => Tontine, (tontine) => tontine.members)
+  tontines: Tontine[];
 }

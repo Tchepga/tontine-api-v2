@@ -48,7 +48,7 @@ export class AuthentificationService {
     return { token };
   }
 
-  public async register(user: User): Promise<void> {
+  public async register(user: User): Promise<User> {
     const { username, password } = user;
     if (!username || !password) {
       throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIAL);
@@ -64,9 +64,13 @@ export class AuthentificationService {
 
     const hashedPassword = await bcrypt.hash(password, this.saltRounds);
 
-    this.userRepository.save({
+    return this.userRepository.save({
       username,
       password: hashedPassword,
     });
+  }
+
+  public async findByUsername(username: string): Promise<User> {
+    return this.userRepository.findOne({ where: { username } });
   }
 }

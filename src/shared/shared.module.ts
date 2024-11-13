@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ErrorCode } from './utilities/error-code';
 import { availableMemory } from 'process';
+import { ActivableEntity } from './utilities/activable.entity';
 
 @Module({
   imports: [],
@@ -14,6 +15,7 @@ import { availableMemory } from 'process';
       provide: 'availableLanguages',
       useValue: availableMemory,
     },
+    ActivableEntity,
   ],
   exports: [
     {
@@ -24,6 +26,7 @@ import { availableMemory } from 'process';
       provide: 'availableLanguages',
       useValue: availableMemory,
     },
+    ActivableEntity,
   ],
 })
 export class SharedModule {}
