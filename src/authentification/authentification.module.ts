@@ -4,7 +4,7 @@ import { AuthentificationController } from './authentification.controller';
 import { AuthentificationService } from './authentification.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { RolesGuard } from './roles.guard';
+import { RolesGuard } from './entities/roles/roles.guard';
 
 @Module({
   controllers: [AuthentificationController],

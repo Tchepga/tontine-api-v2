@@ -6,42 +6,55 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { MemberService } from './member.service';
 import { validateEmail } from 'src/shared/utilities/custom-validator';
+import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
+import { Roles } from 'src/authentification/entities/roles/roles.decorator';
+import { Role } from 'src/authentification/entities/roles/roles.enum';
 
 @Controller('member')
+@UseGuards(RolesGuard)
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}
 
   @Post()
+  @Roles(Role.PRESIDENT)
   create(@Body() createMemberDto: CreateMemberDto) {
-    if (createMemberDto.email) {
-      validateEmail(createMemberDto.email);
-    }
-
-    return this.memberService.create(createMemberDto);
+    return this.validateAndCreate(createMemberDto);
   }
 
-  @Get()
-  findAll() {
-    return this.memberService.findAll();
+  @Post('/president')
+  createPresident(@Body() createMemberDto: CreateMemberDto) {
+    createMemberDto.roles = [Role.PRESIDENT];
+    return this.validateAndCreate(createMemberDto);
   }
 
   @Get(':id')
+  @Roles(Role.TONTINARD)
   findOne(@Param('id') id: string) {
     return this.memberService.findOne(+id);
   }
 
   @Patch(':id')
+  @Roles(Role.TONTINARD)
   update(@Param('id') id: string, @Body() updateMemberDto: UpdateMemberDto) {
     return this.memberService.update(+id, updateMemberDto);
   }
 
   @Delete(':id')
+  @Roles(Role.PRESIDENT)
   remove(@Param('id') id: string) {
     return this.memberService.remove(+id);
+  }
+
+  private validateAndCreate(createMemberDto: CreateMemberDto) {
+    if (createMemberDto.email) {
+      validateEmail(createMemberDto.email);
+    }
+    return this.memberService.create(createMemberDto);
   }
 }

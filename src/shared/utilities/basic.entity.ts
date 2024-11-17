@@ -1,7 +1,7 @@
 import { Entity, Column } from 'typeorm';
 
 @Entity()
-export class ActivableEntity {
+export class BasicEntity {
   @Column({ default: true })
   isActive: boolean;
 }

@@ -30,6 +30,9 @@ export class CreateMemberDto {
   @IsString({ message: 'Le pays est requis' })
   @Length(2, 2, { message: 'Le pays doit avoir exactement 2 caractères' })
   country: string;
+
+  // The roles field is optional
+  roles?: string[];
 }
 
 export function createToMemberDtoToMember(

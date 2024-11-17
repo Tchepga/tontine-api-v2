@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AuthentificationService } from 'src/authentification/authentification.service';
 import { Repository } from 'typeorm';
@@ -26,8 +26,13 @@ export class MemberService {
     return this.memberRepository.find();
   }
 
-  findOne(id: number) {
-    return this.memberRepository.findOne({ where: { id } });
+  async findOne(id: number) {
+    const member = await this.memberRepository.findOne({ where: { id } });
+    if (member) {
+      return member;
+    } else {
+      throw new NotFoundException(`Member with id ${id} not found`);
+    }
   }
 
   async findByUsername(username: string): Promise<Member | null> {
@@ -40,11 +45,27 @@ export class MemberService {
       .getOne();
   }
 
-  update(id: number, updateMemberDto: UpdateMemberDto) {
-    return `This action updates a #${id} member`;
+  async update(id: number, updateMemberDto: UpdateMemberDto) {
+    const member = await this.memberRepository.findOne({ where: { id } });
+    const { firstname, lastname, email, phone } = updateMemberDto;
+    if (member) {
+      member.firstname = firstname ?? member.firstname;
+      member.lastname = lastname ?? member.lastname;
+      member.email = email ?? member.email;
+      member.phone = phone ?? member.phone;
+      return this.memberRepository.save(member);
+    } else {
+      throw new NotFoundException(`Member with id ${id} not found`);
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} member`;
+  async remove(id: number): Promise<void> {
+    const member = await this.memberRepository.findOne({ where: { id } });
+    if (member) {
+      member.isActive = false;
+      this.memberRepository.save(member);
+    } else {
+      throw new NotFoundException(`Member with id ${id} not found`);
+    }
   }
 }

@@ -1,0 +1,7 @@
+// src/auth/roles.enum.ts
+export enum Role {
+  PRESIDENT = 'PRESIDENT',
+  ACCOUNT_MANAGER = 'ACCOUNT_MANAGER',
+  OFFICE_MANAGER = 'OFFICE_MANAGER',
+  TONTINARD = 'TONTINARD',
+}

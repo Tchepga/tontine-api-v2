@@ -64,7 +64,7 @@ export class TontineService {
     } catch (err) {
       // since we have errors lets rollback the changes we made
       await queryRunner.rollbackTransaction();
-      console.log(err);
+      console.error(err);
       throw new HttpException(err, 500);
     } finally {
       // you need to release a queryRunner which was manually instantiated
@@ -73,16 +73,15 @@ export class TontineService {
   }
 
   findTontineByMember(member: Member): Promise<Tontine[]> {
-    return this.dataSource
-      .getRepository(Tontine)
-      .createQueryBuilder('tontine')
-      .leftJoinAndSelect('tontine.members', 'members')
+    return this.getTontineQueryBuilder()
       .where('members.id = :id', { id: member.id })
       .getMany();
   }
 
   findOne(id: number): Promise<Tontine> {
-    return this.dataSource.getRepository(Tontine).findOne({ where: { id } });
+    return this.getTontineQueryBuilder()
+      .where('tontine.id = :id', { id })
+      .getOne();
   }
 
   async addMember(id: number, username: string): Promise<Tontine> {
@@ -109,10 +108,19 @@ export class TontineService {
     return this.dataSource.getRepository(Tontine).save({
       ...tontine,
       ...updateTontineDto,
+      members: tontine.members,
     });
   }
 
   remove(id: number) {
     return `This action removes a #${id} tontine`;
+  }
+  private getTontineQueryBuilder() {
+    return this.dataSource
+      .getRepository(Tontine)
+      .createQueryBuilder('tontine')
+      .innerJoinAndSelect('tontine.members', 'members')
+      .innerJoinAndSelect('tontine.config', 'config')
+      .innerJoinAndSelect('tontine.cashFlow', 'cashFlow');
   }
 }

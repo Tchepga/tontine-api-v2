@@ -5,9 +5,13 @@ import { User } from 'src/authentification/entities/user.entity';
 import { Member } from './entities/member.entity';
 import { MemberController } from './member.controller';
 import { MemberService } from './member.service';
+import { Event } from 'src/event/entities/event.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Member, User]), AuthentificationModule],
+  imports: [
+    TypeOrmModule.forFeature([Member, User, Event]),
+    AuthentificationModule,
+  ],
   controllers: [MemberController],
   providers: [MemberService],
   exports: [MemberService],

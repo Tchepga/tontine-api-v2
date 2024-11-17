@@ -7,6 +7,8 @@ import { MemberModule } from './member/member.module';
 import { TontineModule } from './tontine/tontine.module';
 import { JwtModule } from '@nestjs/jwt';
 import { environment } from './shared/environement';
+import { LoanModule } from './loan/loan.module';
+import { EventModule } from './event/event.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { environment } from './shared/environement';
     MemberModule,
     AuthentificationModule,
     TontineModule,
+    LoanModule,
+    EventModule,
   ],
   controllers: [AppController],
   providers: [AppService],

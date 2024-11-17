@@ -4,4 +4,5 @@ import { CreateTontineDto } from './create-tontine.dto';
 export class UpdateTontineDto extends PartialType(CreateTontineDto) {
   title?: string;
   legacy?: string;
+  isActive?: boolean;
 }
