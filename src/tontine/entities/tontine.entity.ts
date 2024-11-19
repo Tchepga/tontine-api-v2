@@ -14,6 +14,8 @@ import {
 import { CashFlow } from './cashflow.entity';
 import { ConfigTontine } from './config-tontine.entity';
 import { Event } from 'src/event/entities/event.entity';
+import { RapportMeeting } from './rapport-meeting.entity';
+import { Sanction } from './sanction.entity';
 
 @Entity()
 export class Tontine extends BasicEntity {
@@ -43,4 +45,10 @@ export class Tontine extends BasicEntity {
 
   @OneToMany(() => Event, (event) => event.tontine)
   events: Event[];
+
+  @OneToMany(() => RapportMeeting, (rapport) => rapport.tontine)
+  rapports: RapportMeeting[];
+
+  @OneToMany(() => Sanction, (sanction) => sanction.tontine)
+  sanctions: Sanction[];
 }

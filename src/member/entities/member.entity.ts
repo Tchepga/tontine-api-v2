@@ -1,9 +1,11 @@
 import { Role } from 'src/authentification/entities/roles/roles.enum';
 import { User } from 'src/authentification/entities/user.entity';
+import { Event } from 'src/event/entities/event.entity';
 import { Loan } from 'src/loan/entities/loan.entity';
 import { BasicEntity } from 'src/shared/utilities/basic.entity';
+import { RapportMeeting } from 'src/tontine/entities/rapport-meeting.entity';
+import { Sanction } from 'src/tontine/entities/sanction.entity';
 import { Tontine } from 'src/tontine/entities/tontine.entity';
-import { Event } from 'src/event/entities/event.entity';
 import {
   Column,
   Entity,
@@ -50,4 +52,10 @@ export class Member extends BasicEntity {
 
   @OneToMany(() => Event, (event) => event.tontine)
   events: Event[];
+
+  @OneToMany(() => RapportMeeting, (rapport) => rapport.author)
+  rapport: RapportMeeting[];
+
+  @OneToMany(() => Sanction, (sanction) => sanction.gulty)
+  sanctions: Sanction[];
 }

@@ -9,10 +9,20 @@ import { TontineService } from './tontine.service';
 import { MemberModule } from 'src/member/member.module';
 import { AuthentificationService } from 'src/authentification/authentification.service';
 import { User } from 'src/authentification/entities/user.entity';
+import { RapportMeeting } from './entities/rapport-meeting.entity';
+import { Sanction } from './entities/sanction.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Tontine, Member, CashFlow, ConfigTontine, User]),
+    TypeOrmModule.forFeature([
+      Tontine,
+      Member,
+      CashFlow,
+      ConfigTontine,
+      User,
+      RapportMeeting,
+      Sanction,
+    ]),
     MemberModule,
   ],
   controllers: [TontineController],

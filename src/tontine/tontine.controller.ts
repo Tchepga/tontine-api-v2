@@ -54,4 +54,10 @@ export class TontineController {
   remove(@Param('id') id: string) {
     return this.tontineService.remove(+id);
   }
+
+  @Post(':id/rapport')
+  @Roles(Role.ACCOUNT_MANAGER)
+  createRapport(@Param('id') id: string, @Body() rapport: any) {
+    return this.tontineService.createRapport(+id, rapport);
+  }
 }
