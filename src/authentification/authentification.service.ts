@@ -8,6 +8,8 @@ import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { ErrorCode } from 'src/shared/utilities/error-code';
 import { JwtService } from '@nestjs/jwt';
+import { LoginDto } from './dto/login-dto';
+import { Role } from './entities/roles/roles.enum';
 
 @Injectable()
 export class AuthentificationService {
@@ -17,8 +19,7 @@ export class AuthentificationService {
     private jwtService: JwtService,
   ) {}
 
-  public async login(user: User): Promise<object> {
-    const { username, password } = user;
+  public async login(username: string, password: string): Promise<object> {
     if (!username || !password) {
       throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIAL);
     }
@@ -31,25 +32,25 @@ export class AuthentificationService {
       throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIAL);
     }
 
-    bcrypt.compare(password, userFound.password, (err, res) => {
-      if (err) {
-        throw new HttpException(err, 500);
-      }
-
-      if (!res) {
-        throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIAL);
-      }
-    });
+    const isMatch = await bcrypt.compare(password, userFound.password);
+    if (!isMatch) {
+      throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIAL);
+    }
 
     // generate jwt token
-    const payload = { username: userFound.username, sub: userFound.id };
+    const payload = {
+      username: userFound.username,
+      id: userFound.id,
+      role: userFound.roles,
+    };
     const token = this.jwtService.sign(payload);
 
     return { token };
   }
 
-  public async register(user: User): Promise<User> {
-    const { username, password } = user;
+  public async register(userData: LoginDto): Promise<User> {
+    const { username, password, role } = userData;
+
     if (!username || !password) {
       throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIAL);
     }
@@ -67,6 +68,7 @@ export class AuthentificationService {
     return this.userRepository.save({
       username,
       password: hashedPassword,
+      roles: [role ?? Role.TONTINARD],
     });
   }
 

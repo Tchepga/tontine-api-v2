@@ -8,6 +8,8 @@ import {
 } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { Member } from './entities/member.entity';
+import { Role } from 'src/authentification/entities/roles/roles.enum';
+import { LoginDto } from 'src/authentification/dto/login-dto';
 
 @Injectable()
 export class MemberService {
@@ -18,7 +20,14 @@ export class MemberService {
 
   async create(createMemberDto: CreateMemberDto) {
     const member = createToMemberDtoToMember(createMemberDto);
-    await this.authentificationService.register(member.user);
+    const loginDto = {
+      username: createMemberDto.username,
+      password: createMemberDto.password,
+      role: createMemberDto?.roles ?? Role.TONTINARD,
+    } as LoginDto;
+    const user = await this.authentificationService.register(loginDto);
+    member.user = user;
+
     return await this.memberRepository.save(member);
   }
 
@@ -37,6 +46,9 @@ export class MemberService {
 
   async findByUsername(username: string): Promise<Member | null> {
     const user = await this.authentificationService.findByUsername(username);
+    if (!user) {
+      return null;
+    }
     return this.memberRepository
       .createQueryBuilder('member')
       .innerJoinAndSelect('member.user', 'user', 'user.username = :username', {

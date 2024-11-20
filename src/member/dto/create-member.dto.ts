@@ -1,6 +1,7 @@
 import { IsString, Length } from 'class-validator';
 import { Member } from '../entities/member.entity';
 import { User } from 'src/authentification/entities/user.entity';
+import { Role } from 'src/authentification/entities/roles/roles.enum';
 
 export class CreateMemberDto {
   @IsString({ message: "Le nom d'utilisateur est requis" })
@@ -32,7 +33,7 @@ export class CreateMemberDto {
   country: string;
 
   // The roles field is optional
-  roles?: string[];
+  roles?: Role[];
 }
 
 export function createToMemberDtoToMember(

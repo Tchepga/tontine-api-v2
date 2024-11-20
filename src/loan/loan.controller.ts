@@ -50,7 +50,7 @@ export class LoanController {
 
   @Patch(':id/vote')
   @Roles(Role.TONTINARD)
-  vote(@Param('id') id: string, @Req() req) {
+  vote(@Param('id') id: string, @Req() req: any) {
     const user = req.user;
     return this.loanService.vote(+id, user);
   }

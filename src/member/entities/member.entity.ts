@@ -1,4 +1,3 @@
-import { Role } from 'src/authentification/entities/roles/roles.enum';
 import { User } from 'src/authentification/entities/user.entity';
 import { Event } from 'src/event/entities/event.entity';
 import { Loan } from 'src/loan/entities/loan.entity';
@@ -21,7 +20,7 @@ export class Member extends BasicEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @OneToOne(() => User, { cascade: true })
+  @OneToOne(() => User, { eager: true })
   @JoinColumn()
   user: User;
 
@@ -42,9 +41,6 @@ export class Member extends BasicEntity {
 
   @ManyToMany(() => Tontine, (tontine) => tontine.members)
   tontines: Tontine[];
-
-  @Column('simple-array')
-  roles: Role[] = [Role.TONTINARD];
 
   @Column({ nullable: true })
   @OneToMany(() => Loan, (loan) => loan.author)

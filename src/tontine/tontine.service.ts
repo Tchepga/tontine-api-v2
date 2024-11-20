@@ -46,8 +46,13 @@ export class TontineService {
 
       const members = await Promise.all(
         createTontineDto.members.map(async (memberDto) => {
-          return await (this.memberService.findByUsername(memberDto.username) ??
-            this.memberService.create(memberDto));
+          const memberFind = await this.memberService.findByUsername(
+            memberDto.username,
+          );
+          if (!memberFind) {
+            return await this.memberService.create(memberDto);
+          }
+          return memberFind;
         }),
       );
 
@@ -60,7 +65,13 @@ export class TontineService {
       await queryRunner.manager.save(tontine);
 
       await queryRunner.commitTransaction();
-      return tontine;
+      return {
+        ...tontine,
+        members: tontine.members.map((member) => ({
+          ...member,
+          user: { username: member.user.username, roles: member.user.roles },
+        })),
+      };
     } catch (err) {
       // since we have errors lets rollback the changes we made
       await queryRunner.rollbackTransaction();

@@ -9,6 +9,9 @@ import { JwtModule } from '@nestjs/jwt';
 import { environment } from './shared/environement';
 import { LoanModule } from './loan/loan.module';
 import { EventModule } from './event/event.module';
+import { RolesGuard } from './authentification/entities/roles/roles.guard';
+import { APP_GUARD } from '@nestjs/core';
+import { PassportModule } from '@nestjs/passport';
 
 @Module({
   imports: [
@@ -34,6 +37,12 @@ import { EventModule } from './event/event.module';
     EventModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+  ],
 })
 export class AppModule {}

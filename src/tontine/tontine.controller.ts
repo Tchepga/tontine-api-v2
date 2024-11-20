@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { CreateTontineDto } from './dto/create-tontine.dto';
@@ -15,9 +16,10 @@ import { TontineService } from './tontine.service';
 import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
 import { Roles } from 'src/authentification/entities/roles/roles.decorator';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
+import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
 
-@Controller('tontine')
 @UseGuards(RolesGuard)
+@Controller('tontine')
 export class TontineController {
   constructor(private readonly tontineService: TontineService) {}
 
@@ -57,7 +59,14 @@ export class TontineController {
 
   @Post(':id/rapport')
   @Roles(Role.ACCOUNT_MANAGER)
-  createRapport(@Param('id') id: string, @Body() rapport: any) {
-    return this.tontineService.createRapport(+id, rapport);
+  createRapport(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() rapport: CreateMeetingRapportDto,
+  ) {
+    const user = req.user;
+    // return this.tontineService.createRapport(+id, rapport);
+    console.log(user);
+    return 'rapport created';
   }
 }
