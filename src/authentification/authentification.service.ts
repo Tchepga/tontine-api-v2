@@ -10,13 +10,15 @@ import { ErrorCode } from 'src/shared/utilities/error-code';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login-dto';
 import { Role } from './entities/roles/roles.enum';
+import { EntityManager } from 'typeorm';
 
 @Injectable()
 export class AuthentificationService {
   private saltRounds = 10;
   constructor(
     @InjectRepository(User) private userRepository,
-    private jwtService: JwtService,
+    private readonly jwtService: JwtService,
+    private readonly entityManager: EntityManager,
   ) {}
 
   public async login(username: string, password: string): Promise<object> {
@@ -28,11 +30,13 @@ export class AuthentificationService {
       where: { username },
     });
 
+    const passwordHased = await this.getHashedPassword(username); // password is never export into user entity
+
     if (!userFound) {
       throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIAL);
     }
 
-    const isMatch = await bcrypt.compare(password, userFound.password);
+    const isMatch = await bcrypt.compare(password, passwordHased);
     if (!isMatch) {
       throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIAL);
     }
@@ -74,5 +78,16 @@ export class AuthentificationService {
 
   public async findByUsername(username: string): Promise<User> {
     return this.userRepository.findOne({ where: { username } });
+  }
+
+  private async getHashedPassword(username: string): Promise<string> {
+    const query = `
+      SELECT password FROM user
+      WHERE username = ?
+    `;
+    const params = [username];
+
+    const result = await this.entityManager.query(query, params);
+    return result && result.length ? result[0]?.password : '';
   }
 }

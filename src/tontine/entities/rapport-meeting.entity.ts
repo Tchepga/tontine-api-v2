@@ -13,9 +13,6 @@ export class RapportMeeting {
   @Column()
   content: string;
 
-  @Column()
-  date: Date;
-
   @ManyToOne(() => Member, (member) => member.rapport)
   author: Member;
 
@@ -25,6 +22,6 @@ export class RapportMeeting {
   @Column()
   createdAt: Date;
 
-  @Column()
+  @Column({ nullable: true })
   updatedAt: Date;
 }

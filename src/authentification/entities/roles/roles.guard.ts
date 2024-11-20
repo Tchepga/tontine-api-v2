@@ -28,9 +28,8 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const token = this.extractTokenFromHeader(
-      context.switchToHttp().getRequest(),
-    );
+    const request = context.switchToHttp().getRequest();
+    const token = this.extractTokenFromHeader(request);
     if (!token) {
       throw new UnauthorizedException();
     }
@@ -38,7 +37,10 @@ export class RolesGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: environment.jwtConfig.secret,
       });
-      return requiredRoles.some((rl) => payload?.role?.includes(rl));
+      // 💡 We're assigning the payload to the request object here
+      // so that we can access it in our route handlers
+      request['user'] = payload;
+      return this.isRoleMatchOrHigher(requiredRoles, payload.role);
     } catch {
       throw new UnauthorizedException();
     }
@@ -47,5 +49,49 @@ export class RolesGuard implements CanActivate {
   private extractTokenFromHeader(request: any): string | undefined {
     const [type, token] = request?.headers?.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
+  }
+
+  private isRoleMatchOrHigher(
+    requiredRoles: Role[],
+    userRoles: Role[],
+  ): boolean {
+    if (userRoles.includes(Role.PRESIDENT)) {
+      return true;
+    }
+    if (requiredRoles.includes(Role.PRESIDENT)) {
+      return userRoles.includes(Role.PRESIDENT);
+    }
+
+    if (requiredRoles.includes(Role.ACCOUNT_MANAGER)) {
+      return userRoles.some(
+        (role) => role === Role.ACCOUNT_MANAGER || role === Role.PRESIDENT,
+      );
+    }
+
+    if (requiredRoles.includes(Role.SECRETARY)) {
+      return userRoles.some(
+        (role) =>
+          role === Role.SECRETARY ||
+          role === Role.PRESIDENT ||
+          role === Role.ACCOUNT_MANAGER,
+      );
+    }
+
+    if (requiredRoles.includes(Role.OFFICE_MANAGER)) {
+      return userRoles.some(
+        (role) =>
+          role === Role.OFFICE_MANAGER ||
+          role === Role.PRESIDENT ||
+          role === Role.ACCOUNT_MANAGER ||
+          role === Role.SECRETARY,
+      );
+    }
+
+    if (requiredRoles.includes(Role.TONTINARD)) {
+      return userRoles.some((role) => Object.values(Role).includes(role));
+    }
+
+    console.log('requiredRoles', requiredRoles);
+    return false;
   }
 }

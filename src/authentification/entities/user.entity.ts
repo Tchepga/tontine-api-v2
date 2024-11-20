@@ -5,7 +5,7 @@ import { Role } from './roles/roles.enum';
 export class User {
   @PrimaryColumn()
   username: string;
-  @Column()
+  @Column({ select: false })
   password: string;
 
   @Column('simple-array')

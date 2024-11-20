@@ -28,7 +28,7 @@ export class Tontine extends BasicEntity {
   @Column({ nullable: true })
   legacy: string;
 
-  @ManyToMany(() => Member, (member) => member.tontines)
+  @ManyToMany(() => Member, (member) => member.tontines, { eager: true })
   @JoinTable()
   members: Member[];
 

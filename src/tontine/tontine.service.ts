@@ -10,6 +10,9 @@ import { UpdateTontineDto } from './dto/update-tontine.dto';
 import { CashFlow } from './entities/cashflow.entity';
 import { Tontine } from './entities/tontine.entity';
 import { ErrorCode } from 'src/shared/utilities/error-code';
+import { Role } from 'src/authentification/entities/roles/roles.enum';
+import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
+import { RapportMeeting } from './entities/rapport-meeting.entity';
 
 @Injectable()
 export class TontineService {
@@ -50,7 +53,10 @@ export class TontineService {
             memberDto.username,
           );
           if (!memberFind) {
-            return await this.memberService.create(memberDto);
+            return await this.memberService.create({
+              ...memberDto,
+              roles: [Role.PRESIDENT],
+            });
           }
           return memberFind;
         }),
@@ -85,25 +91,31 @@ export class TontineService {
 
   findTontineByMember(member: Member): Promise<Tontine[]> {
     return this.getTontineQueryBuilder()
+      .innerJoinAndSelect('members.user', 'user')
       .where('members.id = :id', { id: member.id })
       .getMany();
   }
 
   findOne(id: number): Promise<Tontine> {
     return this.getTontineQueryBuilder()
+      .innerJoinAndSelect('members.user', 'user')
       .where('tontine.id = :id', { id })
       .getOne();
   }
 
-  async addMember(id: number, username: string): Promise<Tontine> {
+  async addMember(id: number, memberId: number): Promise<Tontine> {
     const tontine = await this.findOne(id);
     if (!tontine) {
       throw new HttpException('Tontine not found', 404);
     }
 
-    const member = await this.memberService.findByUsername(username);
+    const member = await this.memberService.findOne(memberId);
     if (!member) {
       throw new HttpException(ErrorCode.NOT_FOUND, 404);
+    }
+
+    if (tontine.members.find((m) => m.id === member.id)) {
+      throw new HttpException(ErrorCode.ALREADY_EXISTS, 400);
     }
 
     tontine.members.push(member);
@@ -126,6 +138,58 @@ export class TontineService {
   remove(id: number) {
     return `This action removes a #${id} tontine`;
   }
+
+  async createRapport(
+    id: number,
+    username: string,
+    rapport: CreateMeetingRapportDto,
+  ): Promise<any> {
+    const tontine = await this.findOne(id);
+    if (!tontine) {
+      throw new HttpException('Tontine not found', 404);
+    }
+
+    const member = tontine.members.find((m) => m.user.username === username);
+    if (!member) {
+      throw new HttpException('Member not found', 404);
+    }
+
+    const rapportMeeting = new RapportMeeting();
+    rapportMeeting.content = rapport.content;
+    rapportMeeting.title = rapport.title;
+    rapportMeeting.author = member;
+    rapportMeeting.tontine = tontine;
+    rapportMeeting.createdAt = new Date();
+
+    return this.dataSource.getRepository(RapportMeeting).save(rapportMeeting);
+  }
+
+  async updateRapport(id: number, rapport: CreateMeetingRapportDto) {
+    const rapportMeeting = await this.dataSource
+      .getRepository(RapportMeeting)
+      .findOne({ where: { id } });
+    if (!rapportMeeting) {
+      throw new HttpException('Rapport not found', 404);
+    }
+
+    return this.dataSource.getRepository(RapportMeeting).save({
+      ...rapportMeeting,
+      ...rapport,
+      updatedAt: new Date(),
+    });
+  }
+
+  async removeRapport(id: number) {
+    const rapportMeeting = await this.dataSource
+      .getRepository(RapportMeeting)
+      .findOne({ where: { id } });
+    if (!rapportMeeting) {
+      throw new HttpException('Rapport not found', 404);
+    }
+
+    return this.dataSource.getRepository(RapportMeeting).remove(rapportMeeting);
+  }
+
   private getTontineQueryBuilder() {
     return this.dataSource
       .getRepository(Tontine)

@@ -20,7 +20,7 @@ export class Member extends BasicEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @OneToOne(() => User, { eager: true })
+  @OneToOne(() => User)
   @JoinColumn()
   user: User;
 
