@@ -52,6 +52,6 @@ export class Member extends BasicEntity {
   @OneToMany(() => RapportMeeting, (rapport) => rapport.author)
   rapport: RapportMeeting[];
 
-  @OneToMany(() => Sanction, (sanction) => sanction.gulty)
+  @ManyToMany(() => Sanction, (sanction) => sanction.gulty)
   sanctions: Sanction[];
 }

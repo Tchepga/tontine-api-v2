@@ -20,6 +20,7 @@ import { UpdateTontineDto } from './dto/update-tontine.dto';
 import { Tontine } from './entities/tontine.entity';
 import { TontineService } from './tontine.service';
 import { isMemberOfTontine } from './utilities/service.helper';
+import { CreateSanctionDto } from './dto/create-sanction.dto';
 
 @UseGuards(RolesGuard)
 @Controller('tontine')
@@ -104,5 +105,30 @@ export class TontineController {
   @Roles(Role.ACCOUNT_MANAGER)
   deleteRapport(@Param('id') id: string) {
     return this.tontineService.removeRapport(+id);
+  }
+
+  @Post(':id/sanction')
+  @Roles(Role.OFFICE_MANAGER)
+  createSanction(@Param('id') id: string, @Body() sanction: CreateSanctionDto) {
+    return this.tontineService.createSanction(+id, sanction);
+  }
+
+  @Patch(':id/sanction/:sanctionId')
+  @Roles(Role.OFFICE_MANAGER)
+  updateSanction(
+    @Param('id') id: string,
+    @Param('sanctionId') sanctionId: string,
+    @Body() sanction: any,
+  ) {
+    return this.tontineService.updateSanction(+id, +sanctionId, sanction);
+  }
+
+  @Delete(':id/sanction')
+  @Roles(Role.OFFICE_MANAGER)
+  deleteSanction(
+    @Param('id') id: string,
+    @Param('sanctionId') sanctionId: string,
+  ) {
+    return this.tontineService.removeSanction(+id, +sanctionId);
   }
 }

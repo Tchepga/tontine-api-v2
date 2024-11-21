@@ -1,4 +1,4 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { Member } from 'src/member/entities/member.entity';
 import { MemberService } from 'src/member/member.service';
 import { DataSource } from 'typeorm';
@@ -13,6 +13,8 @@ import { ErrorCode } from 'src/shared/utilities/error-code';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
 import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
 import { RapportMeeting } from './entities/rapport-meeting.entity';
+import { CreateSanctionDto } from './dto/create-sanction.dto';
+import { Sanction } from './entities/sanction.entity';
 
 @Injectable()
 export class TontineService {
@@ -188,6 +190,69 @@ export class TontineService {
     }
 
     return this.dataSource.getRepository(RapportMeeting).remove(rapportMeeting);
+  }
+
+  async createSanction(tontineId: number, sanctionDto: CreateSanctionDto) {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+
+    const member = await this.memberService.findOne(sanctionDto.memberId);
+    if (!member) {
+      throw new NotFoundException('Member associated not found');
+    }
+
+    const sanction = new Sanction();
+    sanction.type = sanctionDto.type;
+    sanction.description = sanctionDto.description;
+    sanction.startDate = sanctionDto?.startDate ?? new Date();
+    if (sanctionDto.endDate) {
+      sanction.endDate = sanctionDto.endDate;
+    }
+    sanction.gulty = member;
+    sanction.tontine = tontine;
+
+    return this.dataSource.getRepository(Sanction).save(sanction);
+  }
+
+  async updateSanction(
+    id: number,
+    sanctionId: number,
+    sanctionDto: CreateSanctionDto,
+  ) {
+    const tontine = await this.findOne(id);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+
+    const sanction = await this.dataSource
+      .getRepository(Sanction)
+      .findOne({ where: { id: sanctionId } });
+    if (!sanction) {
+      throw new NotFoundException('Sanction not found');
+    }
+
+    return this.dataSource.getRepository(Sanction).save({
+      ...sanction,
+      ...sanctionDto,
+    });
+  }
+
+  async removeSanction(id: number, sanctionId: number) {
+    const tontine = await this.findOne(id);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+
+    const sanction = await this.dataSource
+      .getRepository(Sanction)
+      .findOne({ where: { id: sanctionId } });
+    if (!sanction) {
+      throw new NotFoundException('Sanction not found');
+    }
+
+    return this.dataSource.getRepository(Sanction).remove(sanction);
   }
 
   private getTontineQueryBuilder() {
