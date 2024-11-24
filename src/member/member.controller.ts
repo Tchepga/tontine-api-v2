@@ -6,6 +6,8 @@ import {
   Param,
   Patch,
   Post,
+  Req,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { CreateMemberDto } from './dto/create-member.dto';
@@ -33,10 +35,14 @@ export class MemberController {
     return this.validateAndCreate(createMemberDto);
   }
 
-  @Get(':id')
+  @Get()
   @Roles(Role.TONTINARD)
-  findOne(@Param('id') id: string) {
-    return this.memberService.findOne(+id);
+  findOne(@Req() req: any) {
+    const { user } = req;
+    if (!user) {
+      throw new UnauthorizedException('Need to be logged in');
+    }
+    return this.memberService.findByUsername(user.username);
   }
 
   @Patch(':id')

@@ -22,4 +22,7 @@ export class ConfigTontine {
 
   @Column({ default: 'ROTATIVE' })
   movementType: 'ROTATIVE' | 'CUMULATIVE';
+
+  @Column({ default: 12 })
+  countMaxMember: number;
 }

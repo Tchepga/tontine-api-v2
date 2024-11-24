@@ -6,12 +6,18 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { EventService } from './event.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
+import { Roles } from 'src/authentification/entities/roles/roles.decorator';
+import { Role } from 'src/authentification/entities/roles/roles.enum';
 
 @Controller('event')
+@UseGuards(RolesGuard)
+@Roles(Role.TONTINARD)
 export class EventController {
   constructor(private readonly eventService: EventService) {}
 

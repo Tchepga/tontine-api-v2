@@ -1,4 +1,4 @@
-import { IsDate, IsString, MinLength } from 'class-validator';
+import { IsString, MinLength } from 'class-validator';
 
 export class CreateMeetingRapportDto {
   @IsString({ message: 'Le titre doit être une chaine de caractères' })

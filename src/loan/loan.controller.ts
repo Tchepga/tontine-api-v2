@@ -18,11 +18,11 @@ import { Roles } from 'src/authentification/entities/roles/roles.decorator';
 
 @Controller('loan')
 @UseGuards(RolesGuard)
+@Roles(Role.TONTINARD)
 export class LoanController {
   constructor(private readonly loanService: LoanService) {}
 
   @Post()
-  @Roles(Role.TONTINARD)
   create(@Body() createLoanDto: CreateLoanDto, @Req() req) {
     const user = req.user;
     return this.loanService.create(createLoanDto, user);
