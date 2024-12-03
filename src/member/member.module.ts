@@ -7,10 +7,11 @@ import { MemberController } from './member.controller';
 import { MemberService } from './member.service';
 import { Event } from 'src/event/entities/event.entity';
 import { RapportMeeting } from 'src/tontine/entities/rapport-meeting.entity';
+import { Deposit } from 'src/tontine/entities/deposit.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Member, User, Event, RapportMeeting]),
+    TypeOrmModule.forFeature([Member, User, Event, RapportMeeting, Deposit]),
     AuthentificationModule,
   ],
   controllers: [MemberController],

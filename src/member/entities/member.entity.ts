@@ -2,6 +2,7 @@ import { User } from 'src/authentification/entities/user.entity';
 import { Event } from 'src/event/entities/event.entity';
 import { Loan } from 'src/loan/entities/loan.entity';
 import { BasicEntity } from 'src/shared/utilities/basic.entity';
+import { Deposit } from 'src/tontine/entities/deposit.entity';
 import { RapportMeeting } from 'src/tontine/entities/rapport-meeting.entity';
 import { Sanction } from 'src/tontine/entities/sanction.entity';
 import { Tontine } from 'src/tontine/entities/tontine.entity';
@@ -54,4 +55,7 @@ export class Member extends BasicEntity {
 
   @ManyToMany(() => Sanction, (sanction) => sanction.gulty)
   sanctions: Sanction[];
+
+  @OneToMany(() => Deposit, (deposit) => deposit.author)
+  deposits: Deposit[];
 }

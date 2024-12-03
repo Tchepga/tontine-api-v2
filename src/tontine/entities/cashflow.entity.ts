@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class CashFlow {
@@ -13,4 +13,7 @@ export class CashFlow {
 
   @Column()
   dividendes: number;
+
+  @OneToMany(() => CashFlow, (cashFlow) => cashFlow.deposits)
+  deposits: CashFlow[];
 }

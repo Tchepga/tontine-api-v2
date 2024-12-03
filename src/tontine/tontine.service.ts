@@ -15,6 +15,9 @@ import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
 import { RapportMeeting } from './entities/rapport-meeting.entity';
 import { CreateSanctionDto } from './dto/create-sanction.dto';
 import { Sanction } from './entities/sanction.entity';
+import { CreateDepositDto } from './dto/create-deposit.dto';
+import { Deposit } from './entities/deposit.entity';
+import { StatusDeposit } from './enum/status-deposit';
 
 @Injectable()
 export class TontineService {
@@ -92,10 +95,14 @@ export class TontineService {
   }
 
   findTontineByMember(member: Member): Promise<Tontine[]> {
-    return this.getTontineQueryBuilder()
-      .innerJoinAndSelect('members.user', 'user')
-      .where('members.id = :id', { id: member.id })
-      .getMany();
+    return (
+      this.getTontineQueryBuilder()
+        .innerJoinAndSelect('members.user', 'user')
+        // .innerJoinAndSelect('tontine.cashFlow', 'cashFlow')
+        // .innerJoinAndSelect('tontine.casflow.deposit', 'deposit')
+        .where('members.id = :id', { id: member.id })
+        .getMany()
+    );
   }
 
   findOne(id: number): Promise<Tontine> {
@@ -262,5 +269,80 @@ export class TontineService {
       .innerJoinAndSelect('tontine.members', 'members')
       .innerJoinAndSelect('tontine.config', 'config')
       .innerJoinAndSelect('tontine.cashFlow', 'cashFlow');
+  }
+
+  // deposit part
+  async createDeposit(tontineId: number, createDepositDto: CreateDepositDto) {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+
+    const member = await this.memberService.findOne(createDepositDto.memberId);
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    const deposit = new Deposit();
+    deposit.amount = createDepositDto.amount;
+    const author = await this.dataSource
+      .getRepository(Member)
+      .findOne({ where: { id: createDepositDto.memberId } });
+    if (!author) {
+      throw new NotFoundException(
+        'Author not found with this member id: ' + createDepositDto.memberId,
+      );
+    }
+    deposit.author = author;
+    deposit.creationDate = new Date();
+    deposit.reasons = createDepositDto.reasons;
+    deposit.status = StatusDeposit.PENDING;
+    deposit.currency = createDepositDto.currency;
+
+    return this.dataSource.getRepository(Deposit).save(deposit);
+  }
+
+  async updateDeposit(
+    id: number,
+    depositId: number,
+    deposit: CreateDepositDto,
+  ) {
+    const tontine = await this.findOne(id);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+
+    const depositFind = await this.dataSource
+      .getRepository(Deposit)
+      .findOne({ where: { id: depositId } });
+    if (!depositFind) {
+      throw new NotFoundException('Deposit not found');
+    }
+
+    if (deposit.amount && depositFind.amount !== deposit.amount) {
+      depositFind.status = StatusDeposit.PENDING;
+      deposit.status = StatusDeposit.PENDING;
+    }
+
+    return this.dataSource.getRepository(Deposit).save({
+      ...depositFind,
+      ...deposit,
+    });
+  }
+
+  async removeDeposit(id: number, depositId: number) {
+    const tontine = await this.findOne(id);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+
+    const deposit = await this.dataSource
+      .getRepository(Deposit)
+      .findOne({ where: { id: depositId } });
+    if (!deposit) {
+      throw new NotFoundException('Deposit not found');
+    }
+
+    return this.dataSource.getRepository(Deposit).remove(deposit);
   }
 }
