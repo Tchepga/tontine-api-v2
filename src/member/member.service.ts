@@ -20,11 +20,24 @@ export class MemberService {
 
   async create(createMemberDto: CreateMemberDto) {
     const member = createToMemberDtoToMember(createMemberDto);
+
+    if (createMemberDto.username) {
+      const user = await this.authentificationService.findByUsername(
+        createMemberDto.username,
+      );
+      if (user) {
+        throw new HttpException('Username already used', 400);
+      }
+    } else {
+      createMemberDto.username =
+        createMemberDto.firstname + '.' + createMemberDto.lastname;
+    }
     const loginDto = {
       username: createMemberDto.username,
       password: createMemberDto.password,
       role: createMemberDto?.roles ?? Role.TONTINARD,
     } as LoginDto;
+
     const user = await this.authentificationService.register(loginDto);
     member.user = user;
 

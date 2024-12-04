@@ -4,11 +4,7 @@ import { User } from 'src/authentification/entities/user.entity';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
 
 export class CreateMemberDto {
-  @IsString({ message: "Le nom d'utilisateur est requis" })
-  @Length(4, 20, {
-    message: "Le nom d'utilisateur doit avoir entre 4 et 20 caractères",
-  })
-  username: string;
+  username?: string;
 
   @IsString({ message: 'Le mot de passe est requis' })
   @Length(8, 100, {
