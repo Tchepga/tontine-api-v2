@@ -21,6 +21,15 @@ export class AuthentificationService {
     private readonly entityManager: EntityManager,
   ) {}
 
+  public async verify(token: string): Promise<boolean> {
+    try {
+      await this.jwtService.verify(token);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   public async login(username: string, password: string): Promise<object> {
     if (!username || !password) {
       throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIAL);
