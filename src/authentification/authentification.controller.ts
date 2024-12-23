@@ -8,7 +8,7 @@ export class AuthentificationController {
   constructor(
     private authService: AuthentificationService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   @Post('login')
   login(@Body() loginDto: LoginDto): Promise<any> {
@@ -21,8 +21,8 @@ export class AuthentificationController {
   }
 
   @Post('verify')
-  async verify(@Body() body: {token: string}) {
-    return {valid: await this.authService.verify(body.token)};
+  async verify(@Body() body: { token: string }) {
+    return { valid: await this.authService.verify(body.token) };
   }
 
   // @Post('logout')
