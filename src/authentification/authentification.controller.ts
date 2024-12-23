@@ -20,6 +20,11 @@ export class AuthentificationController {
     return this.authService.register(loginDto);
   }
 
+  @Post('verify')
+  async verify(@Body() body: {token: string}) {
+    return {valid: await this.authService.verify(body.token)};
+  }
+
   // @Post('logout')
   // logout() {
   //   this.jwtService.
