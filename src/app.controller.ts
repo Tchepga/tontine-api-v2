@@ -22,4 +22,11 @@ export class AppController {
       typesDeposits,
     };
   }
+
+  @Get('/health')
+  health(): any {
+    return {
+      status: 'ok',
+    };
+  }
 }
