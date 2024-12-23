@@ -30,6 +30,9 @@ export class Loan {
   @Column({ nullable: true })
   redemptionDate: Date;
 
+  @Column({ nullable: true })
+  interestRate: number;
+
   @ManyToOne(() => Tontine, (tontine) => tontine.loans)
   @JoinColumn()
   tontine: Tontine;

@@ -6,18 +6,27 @@ import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto } from './dto/update-loan.dto';
 import { Loan } from './entities/loan.entity';
 import { StatusLoan } from './enum/status-loan';
+import { Role } from 'src/authentification/entities/roles/roles.enum';
+import { User } from 'src/authentification/entities/user.entity';
 
 @Injectable()
 export class LoanService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(private readonly dataSource: DataSource) { }
 
-  async create(createLoanDto: CreateLoanDto, author: Member) {
+  async create(createLoanDto: CreateLoanDto, user: User) {
     const { amount, currency, tontineId } = createLoanDto;
     const tontine = await this.dataSource
       .getRepository(Tontine)
       .findOne({ where: { id: tontineId } });
     if (!tontine) {
       throw new BadRequestException('Tontine not found');
+    }
+
+    const author = await this.dataSource
+      .getRepository(Member)
+      .findOne({ where: { user } });
+    if (!author) {
+      throw new BadRequestException('Member not found');
     }
 
     const loan = new Loan();
@@ -83,7 +92,20 @@ export class LoanService {
     this.dataSource.getRepository(Loan).save(loan);
   }
 
-  remove(id: number) {
+  async remove(id: number, user: User) {
+    const loan = await this.findOne(id);
+    if (!loan) {
+      throw new BadRequestException('Loan not found');
+    }
+
+    if (
+      !user.roles.includes(Role.PRESIDENT) &&
+      !user.roles.includes(Role.ACCOUNT_MANAGER) &&
+      loan.author.user.username !== user.username
+    ) {
+      throw new BadRequestException('You are not the author of this loan');
+    }
+
     return this.dataSource.getRepository(Loan).delete(id);
   }
 

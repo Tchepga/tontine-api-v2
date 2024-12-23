@@ -44,8 +44,9 @@ export class LoanController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.loanService.remove(+id);
+  remove(@Param('id') id: string, @Req() req: any) {
+    const user = req.user;
+    return this.loanService.remove(+id, user);
   }
 
   @Patch(':id/vote')
