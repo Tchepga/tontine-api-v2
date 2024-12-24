@@ -17,17 +17,19 @@ export class LoanService {
     const { amount, currency, tontineId } = createLoanDto;
     const tontine = await this.dataSource
       .getRepository(Tontine)
-      .findOne({ where: { id: tontineId } });
+      .findOne({ where: { id: tontineId }, relations: ['config'] });
     if (!tontine) {
       throw new BadRequestException('Tontine not found');
     }
 
-    const author = await this.dataSource
-      .getRepository(Member)
-      .findOne({ where: { user } });
+    const author = await this.dataSource.getRepository(Member).findOne({
+      where: { user: { username: user.username } },
+    });
     if (!author) {
       throw new BadRequestException('Member not found');
     }
+
+    const config = tontine.config;
 
     const loan = new Loan();
     loan.amount = amount;
@@ -35,6 +37,8 @@ export class LoanService {
     loan.author = author;
     loan.createdAt = new Date();
     loan.status = StatusLoan.PENDING;
+    loan.redemptionDate = createLoanDto.redemptionDate;
+    loan.interestRate = config.defaultLoanRate;
     loan.tontine = tontine;
     this.dataSource.getRepository(Loan).save(loan);
   }
@@ -46,7 +50,10 @@ export class LoanService {
     if (!tontine) {
       throw new BadRequestException('Tontine not found');
     }
-    return this.dataSource.getRepository(Loan).find({ where: { tontine } });
+    return this.dataSource.getRepository(Loan).find({
+      where: { tontine: { id: tontineId } },
+      relations: ['author', 'author.user'],
+    });
   }
 
   async findOne(id: number): Promise<Loan> {

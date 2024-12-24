@@ -1,4 +1,4 @@
-import { IsEnum, IsNumber, Min } from 'class-validator';
+import { IsDateString, IsEnum, IsNumber, Min } from 'class-validator';
 
 export class CreateLoanDto {
   @IsNumber({}, { message: 'Amount must be a number' })
@@ -12,4 +12,7 @@ export class CreateLoanDto {
 
   @IsNumber({}, { message: 'Tontine id must be a number' })
   tontineId: number;
+
+  @IsDateString()
+  redemptionDate: Date;
 }

@@ -3,6 +3,7 @@ import { Member } from 'src/member/entities/member.entity';
 import { MemberService } from 'src/member/member.service';
 import { DataSource } from 'typeorm';
 import {
+  CreateConfigTontineDto,
   createToConfigTontineDtoToConfigTontine,
   CreateTontineDto,
 } from './dto/create-tontine.dto';
@@ -18,13 +19,15 @@ import { Sanction } from './entities/sanction.entity';
 import { CreateDepositDto } from './dto/create-deposit.dto';
 import { Deposit } from './entities/deposit.entity';
 import { StatusDeposit } from './enum/status-deposit';
+import { ConfigTontine } from './entities/config-tontine.entity';
+import { RateMap } from './entities/rate-map.entity';
 
 @Injectable()
 export class TontineService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly memberService: MemberService,
-  ) {}
+  ) { }
 
   async findByMember(username: string): Promise<Tontine[]> {
     const member = await this.memberService.findByUsername(username);
@@ -95,13 +98,13 @@ export class TontineService {
   }
 
   findTontineByMember(member: Member): Promise<Tontine[]> {
-    return (
-      this.getTontineQueryBuilder()
-        .innerJoinAndSelect('members.user', 'user')
-        // .innerJoinAndSelect('tontine.cashFlow', 'cashFlow')
-        // .innerJoinAndSelect('tontine.casflow.deposit', 'deposit')
-        .where('members.id = :id', { id: member.id })
-        .getMany()
+    const tontines = this.dataSource.getRepository(Tontine).find({
+      relations: ['members', 'members.user', 'config', 'cashFlow'],
+    });
+    return tontines.then((tontines) =>
+      tontines.filter((tontine) =>
+        tontine.members.find((m) => m.id === member.id),
+      ),
     );
   }
 
@@ -272,7 +275,11 @@ export class TontineService {
   }
 
   // deposit part
-  async createDeposit(tontineId: number, createDepositDto: CreateDepositDto) {
+  async createDeposit(
+    tontineId: number,
+    createDepositDto: CreateDepositDto,
+    status: StatusDeposit,
+  ) {
     const tontine = await this.findOne(tontineId);
     if (!tontine) {
       throw new NotFoundException('Tontine not found');
@@ -296,10 +303,39 @@ export class TontineService {
     deposit.author = author;
     deposit.creationDate = new Date();
     deposit.reasons = createDepositDto.reasons;
-    deposit.status = StatusDeposit.PENDING;
+    deposit.status = status;
+    deposit.cashFlow = tontine.cashFlow;
     deposit.currency = createDepositDto.currency;
 
+    // update cashflow
+    const cashflow = await this.dataSource
+      .getRepository(CashFlow)
+      .findOne({ where: { id: tontine.cashFlow.id } });
+    if (!cashflow) {
+      throw new NotFoundException('Cashflow not found');
+    }
+
+    await this.updateCashflow(createDepositDto.cashFlowId, deposit.amount);
+
     return this.dataSource.getRepository(Deposit).save(deposit);
+  }
+
+  private async updateCashflow(cashFlowId: number, amount: number) {
+    const cashflow = await this.dataSource
+      .getRepository(CashFlow)
+      .findOne({ where: { id: cashFlowId } });
+    if (!cashflow) {
+      throw new NotFoundException('Cashflow not found');
+    }
+    // add all deposit attached to this tontine
+    const deposits = await this.dataSource
+      .getRepository(Deposit)
+      .find({ where: { cashFlow: { id: cashFlowId } } });
+    const totalDeposit = deposits
+      .filter((deposit) => deposit.status === StatusDeposit.APPROVED)
+      .reduce((acc, deposit) => acc + deposit.amount, 0);
+    cashflow.amount = totalDeposit + amount;
+    await this.dataSource.getRepository(CashFlow).save(cashflow);
   }
 
   async updateDeposit(
@@ -344,5 +380,71 @@ export class TontineService {
     }
 
     return this.dataSource.getRepository(Deposit).remove(deposit);
+  }
+
+  async setSelectedTontine(id: number, username: string) {
+    const member = await this.memberService.findByUsername(username);
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    const tontine = await this.findOne(id);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+
+    tontine.isSelected = true;
+    return this.dataSource.getRepository(Tontine).save(tontine);
+  }
+
+  async getDeposits(id: number) {
+    const tontine = await this.findOne(id);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+
+    const deposits = await this.dataSource.getRepository(Deposit).find({
+      where: { cashFlow: { id: tontine.cashFlow.id } },
+      relations: ['author', 'cashFlow', 'author.user'],
+    });
+    return deposits;
+  }
+
+  async updateConfig(id: number, updateConfigDto: CreateConfigTontineDto) {
+    const tontine = await this.findOne(id);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+    const config = await this.dataSource
+      .getRepository(ConfigTontine)
+      .findOne({ where: { id: tontine.config.id } });
+    if (!config) {
+      throw new NotFoundException('Config not found');
+    }
+
+    if (updateConfigDto.defaultLoanRate !== undefined)
+      config.defaultLoanRate = updateConfigDto.defaultLoanRate;
+    if (updateConfigDto.defaultLoanDuration !== undefined)
+      config.defaultLoanDuration = updateConfigDto.defaultLoanDuration;
+    if (updateConfigDto.loopPeriod !== undefined)
+      config.loopPeriod = updateConfigDto.loopPeriod;
+    if (updateConfigDto.minLoanAmount !== undefined)
+      config.minLoanAmount = updateConfigDto.minLoanAmount;
+    if (updateConfigDto.countPersonPerMovement !== undefined)
+      config.countPersonPerMovement = updateConfigDto.countPersonPerMovement;
+    if (updateConfigDto.movementType !== undefined)
+      config.movementType = updateConfigDto.movementType;
+    if (updateConfigDto.countMaxMember !== undefined)
+      config.countMaxMember = updateConfigDto.countMaxMember;
+    const rateMaps = updateConfigDto.rateMaps?.map((rateMap) => {
+      const rateMapEntity = new RateMap();
+      rateMapEntity.rate = rateMap.rate;
+      rateMapEntity.maxAmount = rateMap.maxAmount;
+      rateMapEntity.minAmount = rateMap.minAmount;
+      return rateMapEntity;
+    });
+    config.rateMaps = rateMaps;
+    // tontine.config = config;
+    return this.dataSource.getRepository(ConfigTontine).save(config);
   }
 }

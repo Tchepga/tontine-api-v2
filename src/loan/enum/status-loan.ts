@@ -1,5 +1,7 @@
 export enum StatusLoan {
   PENDING = 'PENDING',
-  ACCEPTED = 'ACCEPTED',
-  REFUSED = 'REFUSED',
+  PAID = 'PAID',
+  CANCELLED = 'CANCELLED',
+  REJECTED = 'REJECTED',
+  APPROVED = 'APPROVED',
 }

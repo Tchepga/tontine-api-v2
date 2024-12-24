@@ -15,13 +15,17 @@ import { Roles } from 'src/authentification/entities/roles/roles.decorator';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
 import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
 import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
-import { CreateTontineDto } from './dto/create-tontine.dto';
+import {
+  CreateConfigTontineDto,
+  CreateTontineDto,
+} from './dto/create-tontine.dto';
 import { UpdateTontineDto } from './dto/update-tontine.dto';
 import { Tontine } from './entities/tontine.entity';
 import { TontineService } from './tontine.service';
 import { isMemberOfTontine } from './utilities/service.helper';
 import { CreateSanctionDto } from './dto/create-sanction.dto';
 import { CreateDepositDto } from './dto/create-deposit.dto';
+import { StatusDeposit } from './enum/status-deposit';
 
 @UseGuards(RolesGuard)
 @Controller('tontine')
@@ -29,7 +33,7 @@ export class TontineController {
   constructor(
     private readonly tontineService: TontineService,
     private readonly userService: AuthentificationService,
-  ) {}
+  ) { }
 
   @Post()
   create(@Body() createTontineDto: CreateTontineDto) {
@@ -50,24 +54,38 @@ export class TontineController {
     return tontine;
   }
 
+  @Patch(':id/select-tontine')
+  @Roles(Role.TONTINARD)
+  setSelectedTontine(@Param('id') id: string, @Req() req: any) {
+    const user = req.user;
+    return this.tontineService.setSelectedTontine(+id, user.username);
+  }
+
   @Get('member/:username')
   @Roles(Role.TONTINARD)
   async findByMember(@Param('username') username: string): Promise<Tontine[]> {
     const tontines = await this.tontineService.findByMember(username);
-    const ownTontines = tontines.filter((tontine) =>
-      isMemberOfTontine(tontine, username),
-    );
-    if (ownTontines.length === 0) {
+
+    if (tontines.length === 0) {
       throw new NotFoundException(`Tontine not found`);
     }
 
-    return ownTontines;
+    return tontines;
   }
 
   @Patch(':id')
   @Roles(Role.TONTINARD)
   update(@Param('id') id: string, @Body() updateTontineDto: UpdateTontineDto) {
     return this.tontineService.update(+id, updateTontineDto);
+  }
+
+  @Patch(':id/config')
+  @Roles(Role.PRESIDENT)
+  updateConfig(
+    @Param('id') id: string,
+    @Body() updateConfigDto: CreateConfigTontineDto,
+  ) {
+    return this.tontineService.updateConfig(+id, updateConfigDto);
   }
 
   @Patch(':id/member')
@@ -134,10 +152,29 @@ export class TontineController {
   }
 
   // Deposist part
+  @Get(':id/deposit')
+  @Roles(Role.TONTINARD)
+  getDeposit(@Param('id') id: string) {
+    return this.tontineService.getDeposits(+id);
+  }
+
   @Post(':id/deposit')
   @Roles(Role.TONTINARD)
-  createDeposit(@Param('id') id: string, createDepositDto: CreateDepositDto) {
-    return this.tontineService.createDeposit(+id, createDepositDto);
+  createDeposit(
+    @Param('id') id: string,
+    @Body() createDepositDto: CreateDepositDto,
+    @Req() req: any,
+  ) {
+    const user = req.user;
+    let status: StatusDeposit = StatusDeposit.PENDING;
+    if (
+      user.role.find(
+        (role) => role === Role.PRESIDENT || role === Role.ACCOUNT_MANAGER,
+      )
+    ) {
+      status = StatusDeposit.APPROVED;
+    }
+    return this.tontineService.createDeposit(+id, createDepositDto, status);
   }
 
   @Patch(':id/deposit/:depositId')

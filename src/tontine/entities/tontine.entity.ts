@@ -51,4 +51,7 @@ export class Tontine extends BasicEntity {
 
   @OneToMany(() => Sanction, (sanction) => sanction.tontine)
   sanctions: Sanction[];
+
+  @Column({ default: false })
+  isSelected: boolean;
 }

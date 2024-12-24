@@ -8,7 +8,7 @@ export class CashFlow {
   @Column()
   amount: number;
 
-  @Column()
+  @Column({ default: 'EURO' })
   currency: string;
 
   @Column()

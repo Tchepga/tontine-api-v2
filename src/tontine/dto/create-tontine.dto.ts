@@ -10,10 +10,10 @@ import { ConfigTontine } from '../entities/config-tontine.entity';
 
 export class CreateConfigTontineDto {
   @IsNumber()
-  defaultLoanRate: number;
+  defaultLoanRate: number | undefined;
 
   @IsNumber()
-  defaultLoanDuration: number;
+  defaultLoanDuration: number | undefined;
 
   @IsString()
   @IsIn(['DAILY', 'WEEKLY', 'MONTHLY'], {
@@ -22,13 +22,29 @@ export class CreateConfigTontineDto {
   })
   loopPeriod: 'DAILY' | 'WEEKLY' | 'MONTHLY';
 
-  minLoanAmount: number;
+  minLoanAmount: number | undefined;
+
+  @IsNumber()
+  countPersonPerMovement: number | undefined;
 
   @IsString()
-  countPersonPerMovement: number;
+  movementType: 'ROTATIVE' | 'CUMULATIVE' | undefined;
 
-  @IsString()
-  movementType: 'ROTATIVE' | 'CUMULATIVE';
+  rateMaps: RateMapDto[] | undefined;
+
+  @IsNumber()
+  countMaxMember: number | undefined;
+}
+
+export class RateMapDto {
+  @IsNumber()
+  rate: number;
+
+  @IsNumber()
+  maxAmount: number;
+
+  @IsNumber()
+  minAmount: number;
 }
 
 export class CreateTontineDto {

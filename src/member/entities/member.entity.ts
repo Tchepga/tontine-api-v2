@@ -34,7 +34,10 @@ export class Member extends BasicEntity {
   @Column({ nullable: true })
   email: string;
 
-  @Column()
+  @Column({ nullable: true })
+  avatar: string;
+
+  @Column() 
   phone: string;
 
   @Column()

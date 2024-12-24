@@ -6,7 +6,7 @@ export class CreateDepositDto {
   @IsPositive({ message: 'Le montant doit être positif' })
   amount: number;
 
-  @IsIn([Currency.FRANC, Currency.EUR], {
+  @IsIn([Currency.FCFA, Currency.EUR], {
     message: 'La devise doit être FCFA ou EUR',
   })
   currency: Currency | undefined;
@@ -19,7 +19,7 @@ export class CreateDepositDto {
   })
   status: StatusDeposit | undefined;
 
-  @IsNumber()
+  @IsPositive({ message: 'Le cashflow doit être un entier' })
   cashFlowId: number;
 
   @IsString()
