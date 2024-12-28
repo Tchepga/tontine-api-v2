@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Member } from 'src/member/entities/member.entity';
 import { Tontine } from 'src/tontine/entities/tontine.entity';
-import { DataSource } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto } from './dto/update-loan.dto';
 import { Loan } from './entities/loan.entity';
@@ -116,17 +116,27 @@ export class LoanService {
     return this.dataSource.getRepository(Loan).delete(id);
   }
 
-  async vote(id: number, user: Member) {
+  async vote(id: number, user: User) {
     const loan = await this.findOne(id);
     if (!loan) {
       throw new BadRequestException('Loan not found');
     }
 
-    if (loan.voters.includes(user.id)) {
-      throw new BadRequestException('You already voted');
+    const member = await this.dataSource.getRepository(Member).findOne({
+      where: { user: { username: user.username } },
+    });
+
+    if (!member) {
+      throw new BadRequestException('Member not found');
     }
 
-    loan.voters.push(user.id);
+    if (loan.voters?.includes(member.id)) {
+      throw new BadRequestException('You already voted');
+    }
+    if (!loan.voters) {
+      loan.voters = [];
+    }
+    loan.voters.push(member.id);
     this.dataSource.getRepository(Loan).save(loan);
   }
 }

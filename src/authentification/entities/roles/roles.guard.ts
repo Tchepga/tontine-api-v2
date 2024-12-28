@@ -10,13 +10,16 @@ import { Role } from './roles.enum';
 import { ROLES_KEY } from './roles.decorator';
 import { JwtService } from '@nestjs/jwt';
 import { environment } from 'src/shared/environement';
+import { TontineService } from 'src/tontine/tontine.service';
+import { log } from 'console';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private readonly jwtService: JwtService,
-  ) {}
+    private readonly tontineService: TontineService,
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
@@ -33,14 +36,27 @@ export class RolesGuard implements CanActivate {
     if (!token) {
       throw new UnauthorizedException();
     }
+
     try {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: environment.jwtConfig.secret,
       });
-      // 💡 We're assigning the payload to the request object here
-      // so that we can access it in our route handlers
       request['user'] = payload;
-      return this.isRoleMatchOrHigher(requiredRoles, payload.role);
+      const tontineId = request.params.id ?? request.headers['tontine-id'];
+      if (!tontineId) {
+        return true;
+      }
+
+      const memberRole = await this.tontineService.getMemberRole(
+        payload.username,
+        +tontineId,
+      );
+
+      if (!memberRole) {
+        throw new UnauthorizedException('User is not a member of this tontine');
+      }
+
+      return this.isRoleMatchOrHigher(requiredRoles, [memberRole.role]);
     } catch {
       throw new UnauthorizedException();
     }
@@ -91,7 +107,6 @@ export class RolesGuard implements CanActivate {
       return userRoles.some((role) => Object.values(Role).includes(role));
     }
 
-    console.log('requiredRoles', requiredRoles);
     return false;
   }
 }

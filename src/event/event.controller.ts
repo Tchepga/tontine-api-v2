@@ -19,7 +19,7 @@ import { Role } from 'src/authentification/entities/roles/roles.enum';
 @UseGuards(RolesGuard)
 @Roles(Role.TONTINARD)
 export class EventController {
-  constructor(private readonly eventService: EventService) {}
+  constructor(private readonly eventService: EventService) { }
 
   @Post()
   create(@Body() createEventDto: CreateEventDto) {

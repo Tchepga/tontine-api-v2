@@ -4,10 +4,18 @@ import { EventController } from './event.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Member } from 'src/member/entities/member.entity';
 import { Tontine } from 'src/tontine/entities/tontine.entity';
+import { TontineService } from 'src/tontine/tontine.service';
+import { MemberService } from 'src/member/member.service';
+import { AuthentificationService } from 'src/authentification/authentification.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Event, Member, Tontine])],
   controllers: [EventController],
-  providers: [EventService],
+  providers: [
+    EventService,
+    TontineService,
+    MemberService,
+    AuthentificationService,
+  ],
 })
-export class EventModule {}
+export class EventModule { }

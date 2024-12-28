@@ -4,7 +4,7 @@ import { User } from 'src/authentification/entities/user.entity';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
 
 export class CreateMemberDto {
-  username?: string;
+  username: string;
 
   @IsString({ message: 'Le mot de passe est requis' })
   @Length(8, 100, {

@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { AuthentificationService } from './authentification.service';
 import { LoginDto } from './dto/login-dto';
 import { JwtService } from '@nestjs/jwt';
@@ -25,10 +25,10 @@ export class AuthentificationController {
     return { valid: await this.authService.verify(body.token) };
   }
 
-  // @Post('logout')
-  // logout() {
-  //   this.jwtService.
-  // }
+  @Get('username/:username')
+  async getUsername(@Param('username') username: string) {
+    return this.authService.getUserByUsername(username);
+  }
 
   // @Post('reset-password')
   // resetPassword() {

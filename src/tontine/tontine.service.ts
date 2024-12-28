@@ -1,7 +1,13 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import { Role } from 'src/authentification/entities/roles/roles.enum';
+import { User } from 'src/authentification/entities/user.entity';
 import { Member } from 'src/member/entities/member.entity';
 import { MemberService } from 'src/member/member.service';
+import { ErrorCode } from 'src/shared/utilities/error-code';
 import { DataSource } from 'typeorm';
+import { CreateDepositDto } from './dto/create-deposit.dto';
+import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
+import { CreateSanctionDto } from './dto/create-sanction.dto';
 import {
   CreateConfigTontineDto,
   createToConfigTontineDtoToConfigTontine,
@@ -9,18 +15,14 @@ import {
 } from './dto/create-tontine.dto';
 import { UpdateTontineDto } from './dto/update-tontine.dto';
 import { CashFlow } from './entities/cashflow.entity';
-import { Tontine } from './entities/tontine.entity';
-import { ErrorCode } from 'src/shared/utilities/error-code';
-import { Role } from 'src/authentification/entities/roles/roles.enum';
-import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
-import { RapportMeeting } from './entities/rapport-meeting.entity';
-import { CreateSanctionDto } from './dto/create-sanction.dto';
-import { Sanction } from './entities/sanction.entity';
-import { CreateDepositDto } from './dto/create-deposit.dto';
-import { Deposit } from './entities/deposit.entity';
-import { StatusDeposit } from './enum/status-deposit';
 import { ConfigTontine } from './entities/config-tontine.entity';
+import { Deposit } from './entities/deposit.entity';
+import { MemberRole } from './entities/member-role.entity';
+import { RapportMeeting } from './entities/rapport-meeting.entity';
 import { RateMap } from './entities/rate-map.entity';
+import { Sanction } from './entities/sanction.entity';
+import { Tontine } from './entities/tontine.entity';
+import { StatusDeposit } from './enum/status-deposit';
 
 @Injectable()
 export class TontineService {
@@ -63,7 +65,6 @@ export class TontineService {
           if (!memberFind) {
             return await this.memberService.create({
               ...memberDto,
-              roles: [Role.PRESIDENT],
             });
           }
           return memberFind;
@@ -77,6 +78,13 @@ export class TontineService {
       tontine.config = configTontine;
       tontine.members = members;
       await queryRunner.manager.save(tontine);
+
+      // just the first member is the president
+      const roleMember = new MemberRole();
+      roleMember.role = Role.PRESIDENT;
+      roleMember.user = members[0].user;
+      roleMember.tontine = tontine;
+      await queryRunner.manager.save(roleMember);
 
       await queryRunner.commitTransaction();
       return {
@@ -446,5 +454,41 @@ export class TontineService {
     config.rateMaps = rateMaps;
     // tontine.config = config;
     return this.dataSource.getRepository(ConfigTontine).save(config);
+  }
+
+  async getMemberRole(
+    username: string,
+    tontineId: number,
+  ): Promise<MemberRole> {
+    return this.dataSource.getRepository(MemberRole).findOne({
+      where: {
+        user: { username },
+        tontine: { id: tontineId },
+      },
+      relations: ['user', 'tontine'],
+    });
+  }
+
+  async addMemberWithRole(
+    tontineId: number,
+    username: string,
+    role: Role,
+  ): Promise<MemberRole> {
+    const memberRole = new MemberRole();
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+    memberRole.tontine = tontine;
+    const user = await this.dataSource.getRepository(User).findOne({
+      where: { username },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    memberRole.user = user;
+    memberRole.role = role;
+
+    return this.dataSource.getRepository(MemberRole).save(memberRole);
   }
 }

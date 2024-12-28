@@ -7,6 +7,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/authentification/entities/user.entity';
 import { Loan } from './entities/loan.entity';
 import { Tontine } from 'src/tontine/entities/tontine.entity';
+import { TontineService } from 'src/tontine/tontine.service';
+import { MemberService } from 'src/member/member.service';
+import { AuthentificationService } from 'src/authentification/authentification.service';
 
 @Module({
   imports: [
@@ -14,6 +17,11 @@ import { Tontine } from 'src/tontine/entities/tontine.entity';
     MemberModule,
   ],
   controllers: [LoanController],
-  providers: [LoanService],
+  providers: [
+    LoanService,
+    TontineService,
+    MemberService,
+    AuthentificationService,
+  ],
 })
-export class LoanModule {}
+export class LoanModule { }

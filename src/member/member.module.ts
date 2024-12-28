@@ -8,6 +8,8 @@ import { MemberService } from './member.service';
 import { Event } from 'src/event/entities/event.entity';
 import { RapportMeeting } from 'src/tontine/entities/rapport-meeting.entity';
 import { Deposit } from 'src/tontine/entities/deposit.entity';
+import { TontineService } from 'src/tontine/tontine.service';
+import { AuthentificationService } from 'src/authentification/authentification.service';
 
 @Module({
   imports: [
@@ -15,7 +17,7 @@ import { Deposit } from 'src/tontine/entities/deposit.entity';
     AuthentificationModule,
   ],
   controllers: [MemberController],
-  providers: [MemberService],
+  providers: [MemberService, TontineService, AuthentificationService],
   exports: [MemberService],
 })
-export class MemberModule {}
+export class MemberModule { }

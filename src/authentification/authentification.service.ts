@@ -10,16 +10,16 @@ import { ErrorCode } from 'src/shared/utilities/error-code';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login-dto';
 import { Role } from './entities/roles/roles.enum';
-import { EntityManager } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 
 @Injectable()
 export class AuthentificationService {
   private saltRounds = 10;
   constructor(
-    @InjectRepository(User) private userRepository,
+    private readonly dataSource: DataSource,
     private readonly jwtService: JwtService,
     private readonly entityManager: EntityManager,
-  ) {}
+  ) { }
 
   public async verify(token: string): Promise<boolean> {
     try {
@@ -35,7 +35,7 @@ export class AuthentificationService {
       throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIAL);
     }
 
-    const userFound = await this.userRepository.findOne({
+    const userFound = await this.dataSource.getRepository(User).findOne({
       where: { username },
     });
 
@@ -53,7 +53,6 @@ export class AuthentificationService {
     // generate jwt token
     const payload = {
       username: userFound.username,
-      id: userFound.id,
       role: userFound.roles,
     };
     const token = this.jwtService.sign(payload);
@@ -68,7 +67,7 @@ export class AuthentificationService {
       throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIAL);
     }
 
-    const userFound = await this.userRepository.findOne({
+    const userFound = await this.dataSource.getRepository(User).findOne({
       where: { username },
     });
 
@@ -78,7 +77,7 @@ export class AuthentificationService {
 
     const hashedPassword = await bcrypt.hash(password, this.saltRounds);
 
-    return this.userRepository.save({
+    return this.dataSource.getRepository(User).save({
       username,
       password: hashedPassword,
       roles: [role ?? Role.TONTINARD],
@@ -86,7 +85,7 @@ export class AuthentificationService {
   }
 
   public async findByUsername(username: string): Promise<User> {
-    return this.userRepository.findOne({ where: { username } });
+    return this.dataSource.getRepository(User).findOne({ where: { username } });
   }
 
   private async getHashedPassword(username: string): Promise<string> {
@@ -98,5 +97,9 @@ export class AuthentificationService {
 
     const result = await this.entityManager.query(query, params);
     return result && result.length ? result[0]?.password : '';
+  }
+
+  public async getUserByUsername(username: string): Promise<User> {
+    return this.dataSource.getRepository(User).findOne({ where: { username } });
   }
 }

@@ -1,22 +1,21 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { AuthentificationService } from 'src/authentification/authentification.service';
-import { Repository } from 'typeorm';
+import { LoginDto } from 'src/authentification/dto/login-dto';
+import { Role } from 'src/authentification/entities/roles/roles.enum';
+import { DataSource } from 'typeorm';
 import {
   CreateMemberDto,
   createToMemberDtoToMember,
 } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { Member } from './entities/member.entity';
-import { Role } from 'src/authentification/entities/roles/roles.enum';
-import { LoginDto } from 'src/authentification/dto/login-dto';
 
 @Injectable()
 export class MemberService {
   constructor(
-    @InjectRepository(Member) private memberRepository: Repository<Member>,
+    private readonly dataSource: DataSource,
     private readonly authentificationService: AuthentificationService,
-  ) {}
+  ) { }
 
   async create(createMemberDto: CreateMemberDto) {
     const member = createToMemberDtoToMember(createMemberDto);
@@ -41,15 +40,17 @@ export class MemberService {
     const user = await this.authentificationService.register(loginDto);
     member.user = user;
 
-    return await this.memberRepository.save(member);
+    return await this.dataSource.getRepository(Member).save(member);
   }
 
   findAll() {
-    return this.memberRepository.find();
+    return this.dataSource.getRepository(Member).find();
   }
 
   async findOne(id: number) {
-    const member = await this.memberRepository.findOne({ where: { id } });
+    const member = await this.dataSource
+      .getRepository(Member)
+      .findOne({ where: { id } });
     if (member) {
       return member;
     } else {
@@ -62,7 +63,8 @@ export class MemberService {
     if (!user) {
       return null;
     }
-    return this.memberRepository
+    return this.dataSource
+      .getRepository(Member)
       .createQueryBuilder('member')
       .innerJoinAndSelect('member.user', 'user', 'user.username = :username', {
         username: user.username,
@@ -71,24 +73,28 @@ export class MemberService {
   }
 
   async update(id: number, updateMemberDto: UpdateMemberDto) {
-    const member = await this.memberRepository.findOne({ where: { id } });
+    const member = await this.dataSource
+      .getRepository(Member)
+      .findOne({ where: { id } });
     const { firstname, lastname, email, phone } = updateMemberDto;
     if (member) {
       member.firstname = firstname ?? member.firstname;
       member.lastname = lastname ?? member.lastname;
       member.email = email ?? member.email;
       member.phone = phone ?? member.phone;
-      return this.memberRepository.save(member);
+      return this.dataSource.getRepository(Member).save(member);
     } else {
       throw new NotFoundException(`Member with id ${id} not found`);
     }
   }
 
   async remove(id: number): Promise<void> {
-    const member = await this.memberRepository.findOne({ where: { id } });
+    const member = await this.dataSource
+      .getRepository(Member)
+      .findOne({ where: { id } });
     if (member) {
       member.isActive = false;
-      this.memberRepository.save(member);
+      this.dataSource.getRepository(Member).save(member);
     } else {
       throw new NotFoundException(`Member with id ${id} not found`);
     }

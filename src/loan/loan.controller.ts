@@ -20,7 +20,7 @@ import { Roles } from 'src/authentification/entities/roles/roles.decorator';
 @UseGuards(RolesGuard)
 @Roles(Role.TONTINARD)
 export class LoanController {
-  constructor(private readonly loanService: LoanService) {}
+  constructor(private readonly loanService: LoanService) { }
 
   @Post()
   create(@Body() createLoanDto: CreateLoanDto, @Req() req) {

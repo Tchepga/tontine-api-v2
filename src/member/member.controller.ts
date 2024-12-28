@@ -17,11 +17,12 @@ import { validateEmail } from 'src/shared/utilities/custom-validator';
 import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
 import { Roles } from 'src/authentification/entities/roles/roles.decorator';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
+import { Public } from 'src/authentification/entities/public.decorator';
 
 @Controller('member')
 @UseGuards(RolesGuard)
 export class MemberController {
-  constructor(private readonly memberService: MemberService) {}
+  constructor(private readonly memberService: MemberService) { }
 
   @Post()
   @Roles(Role.PRESIDENT)
@@ -29,8 +30,9 @@ export class MemberController {
     return this.validateAndCreate(createMemberDto);
   }
 
-  @Post('/president')
-  createPresident(@Body() createMemberDto: CreateMemberDto) {
+  @Post('/register-president')
+  @Public()
+  registerPresident(@Body() createMemberDto: CreateMemberDto) {
     createMemberDto.roles = [Role.PRESIDENT];
     return this.validateAndCreate(createMemberDto);
   }

@@ -16,6 +16,7 @@ import { ConfigTontine } from './config-tontine.entity';
 import { Event } from 'src/event/entities/event.entity';
 import { RapportMeeting } from './rapport-meeting.entity';
 import { Sanction } from './sanction.entity';
+import { MemberRole } from './member-role.entity';
 
 @Entity()
 export class Tontine extends BasicEntity {
@@ -51,6 +52,9 @@ export class Tontine extends BasicEntity {
 
   @OneToMany(() => Sanction, (sanction) => sanction.tontine)
   sanctions: Sanction[];
+
+  @OneToMany(() => MemberRole, (memberRole) => memberRole.tontine)
+  memberRoles: MemberRole[];
 
   @Column({ default: false })
   isSelected: boolean;
