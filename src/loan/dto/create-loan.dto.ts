@@ -5,7 +5,7 @@ export class CreateLoanDto {
   @Min(1, { message: 'Amount must be at least 1' })
   amount: number;
 
-  @IsEnum(['EURO', 'FCFA', 'USD'], {
+  @IsEnum(['EUR', 'FCFA', 'USD'], {
     message: 'Currency must be one of the following: euro, fcfa, dollar',
   })
   currency: string;

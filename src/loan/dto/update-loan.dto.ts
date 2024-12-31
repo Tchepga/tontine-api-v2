@@ -12,7 +12,7 @@ export class UpdateLoanDto {
   })
   status?: StatusLoan;
 
-  @IsEnum(['EURO', 'FCFA', 'USD'], {
+  @IsEnum(['EUR', 'FCFA', 'USD'], {
     message: 'Currency must be one of the following: euro, fcfa, dollar',
   })
   currency?: string;

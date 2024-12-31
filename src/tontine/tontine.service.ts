@@ -156,7 +156,14 @@ export class TontineService {
   }
 
   remove(id: number) {
-    return `This action removes a #${id} tontine`;
+    return this.dataSource.getRepository(Tontine).delete(id);
+  }
+
+  getRapports(id: number) {
+    return this.dataSource.getRepository(RapportMeeting).find({
+      where: { tontine: { id } },
+      relations: ['author', 'author.user'],
+    });
   }
 
   async createRapport(
@@ -180,6 +187,7 @@ export class TontineService {
     rapportMeeting.author = member;
     rapportMeeting.tontine = tontine;
     rapportMeeting.createdAt = new Date();
+    rapportMeeting.attachmentFilename = rapport.attachmentFilename;
 
     return this.dataSource.getRepository(RapportMeeting).save(rapportMeeting);
   }
@@ -199,15 +207,27 @@ export class TontineService {
     });
   }
 
-  async removeRapport(id: number) {
+  async removeRapport(tontineId: number, rapportId: number) {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+
     const rapportMeeting = await this.dataSource
       .getRepository(RapportMeeting)
-      .findOne({ where: { id } });
+      .findOne({ where: { id: rapportId } });
     if (!rapportMeeting) {
       throw new HttpException('Rapport not found', 404);
     }
 
     return this.dataSource.getRepository(RapportMeeting).remove(rapportMeeting);
+  }
+
+  getRapport(rapportId: number) {
+    return this.dataSource.getRepository(RapportMeeting).findOne({
+      where: { id: rapportId },
+      relations: ['author', 'author.user'],
+    });
   }
 
   async createSanction(tontineId: number, sanctionDto: CreateSanctionDto) {

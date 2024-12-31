@@ -10,26 +10,28 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import * as fs from 'fs';
 import { AuthentificationService } from 'src/authentification/authentification.service';
 import { Roles } from 'src/authentification/entities/roles/roles.decorator';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
 import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
+import { CreateDepositDto } from './dto/create-deposit.dto';
 import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
+import { CreateSanctionDto } from './dto/create-sanction.dto';
 import {
   CreateConfigTontineDto,
   CreateTontineDto,
 } from './dto/create-tontine.dto';
 import { UpdateTontineDto } from './dto/update-tontine.dto';
 import { Tontine } from './entities/tontine.entity';
+import { StatusDeposit } from './enum/status-deposit';
 import { TontineService } from './tontine.service';
 import { isMemberOfTontine } from './utilities/service.helper';
-import { CreateSanctionDto } from './dto/create-sanction.dto';
-import { CreateDepositDto } from './dto/create-deposit.dto';
-import { StatusDeposit } from './enum/status-deposit';
 
 @UseGuards(RolesGuard)
 @Controller('tontine')
 export class TontineController {
+  private relativePathUploadFiles = 'upload/rapports/';
   constructor(
     private readonly tontineService: TontineService,
     private readonly userService: AuthentificationService,
@@ -100,15 +102,34 @@ export class TontineController {
     return this.tontineService.remove(+id);
   }
 
+  @Get(':id/rapport')
+  @Roles(Role.TONTINARD)
+  async getRapports(@Param('id') id: string) {
+    return this.tontineService.getRapports(+id);
+  }
+
   @Post(':id/rapport')
   @Roles(Role.ACCOUNT_MANAGER)
-  createRapport(
+  async createRapport(
     @Req() req: any,
     @Param('id') id: string,
     @Body() rapport: CreateMeetingRapportDto,
   ) {
-    const user = req.user;
-    return this.tontineService.createRapport(+id, user.username, rapport);
+    if (rapport.attachment) {
+      // Décode et sauvegarde le fichier
+      //
+      const fileName = `${Date.now()}-${rapport.attachmentFilename}`;
+      const filePath = `./${this.relativePathUploadFiles}${fileName}`;
+
+      await fs.promises.writeFile(
+        filePath,
+        Buffer.from(rapport.attachment, 'base64'),
+      );
+
+      rapport.attachmentFilename = fileName;
+    }
+
+    return this.tontineService.createRapport(+id, req.user.username, rapport);
   }
 
   @Patch(':id/rapport')
@@ -120,10 +141,33 @@ export class TontineController {
     return this.tontineService.updateRapport(+id, rapport);
   }
 
-  @Delete(':id/rapport')
+  @Delete(':id/rapport/:rapportId')
   @Roles(Role.ACCOUNT_MANAGER)
-  deleteRapport(@Param('id') id: string) {
-    return this.tontineService.removeRapport(+id);
+  deleteRapport(
+    @Param('id') id: string,
+    @Param('rapportId') rapportId: string,
+  ) {
+    return this.tontineService.removeRapport(+id, +rapportId);
+  }
+
+  @Get(':id/rapport/:rapportId/attachment')
+  @Roles(Role.TONTINARD)
+  async getAttachment(
+    @Param('id') id: string,
+    @Param('rapportId') rapportId: string,
+  ) {
+    const tontine = await this.tontineService.findOne(+id);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+    const rapport = await this.tontineService.getRapport(+rapportId);
+    if (!rapport) {
+      throw new NotFoundException('Rapport not found');
+    }
+    const file = fs.readFileSync(
+      `${this.relativePathUploadFiles}${rapport.attachmentFilename}`,
+    );
+    return file;
   }
 
   @Post(':id/sanction')

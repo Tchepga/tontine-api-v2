@@ -59,6 +59,12 @@ export class MemberController {
     return this.memberService.remove(+id);
   }
 
+  @Get('/username/:username')
+  @Roles(Role.PRESIDENT)
+  findByUsername(@Param('username') username: string) {
+    return this.memberService.findByUsername(username);
+  }
+
   private validateAndCreate(createMemberDto: CreateMemberDto) {
     if (createMemberDto.email) {
       validateEmail(createMemberDto.email);

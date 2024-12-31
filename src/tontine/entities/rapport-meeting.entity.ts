@@ -24,4 +24,7 @@ export class RapportMeeting {
 
   @Column({ nullable: true })
   updatedAt: Date;
+
+  @Column({ nullable: true })
+  attachmentFilename: string;
 }

@@ -14,9 +14,17 @@ describe('AppController', () => {
     appController = app.get<AppController>(AppController);
   });
 
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+  describe('getParam', () => {
+    it('should return an object', () => {
+      expect(appController.getParam()).toBeDefined();
+      expect(appController.getParam()).toBeInstanceOf(Object);
+    });
+  });
+
+  describe('health', () => {
+    it('should return an object', () => {
+      expect(appController.health()).toBeDefined();
+      expect(appController.health()).toBeInstanceOf(Object);
     });
   });
 });

@@ -11,7 +11,6 @@ import { ROLES_KEY } from './roles.decorator';
 import { JwtService } from '@nestjs/jwt';
 import { environment } from 'src/shared/environement';
 import { TontineService } from 'src/tontine/tontine.service';
-import { log } from 'console';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
