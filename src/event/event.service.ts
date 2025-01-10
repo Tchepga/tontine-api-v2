@@ -5,11 +5,13 @@ import { Event } from './entities/event.entity';
 import { DataSource } from 'typeorm';
 import { Member } from 'src/member/entities/member.entity';
 import { Tontine } from 'src/tontine/entities/tontine.entity';
+import { User } from 'src/authentification/entities/user.entity';
 
 @Injectable()
 export class EventService {
-  constructor(private readonly dataSource: DataSource) {}
-  async create(createEventDto: CreateEventDto) {
+  constructor(private readonly dataSource: DataSource) { }
+
+  async create(createEventDto: CreateEventDto, user: User) {
     const {
       tontineId,
       title,
@@ -19,6 +21,7 @@ export class EventService {
       endDate,
       participants,
     } = createEventDto;
+
     const tontine = await this.dataSource
       .getRepository(Tontine)
       .findOne({ where: { id: tontineId } });
@@ -26,7 +29,15 @@ export class EventService {
       throw new BadRequestException('Tontine not found');
     }
 
+    const author = await this.dataSource
+      .getRepository(Member)
+      .findOne({ where: { user: { username: user.username } } });
+    if (!author) {
+      throw new BadRequestException('Author not found');
+    }
+
     const event = new Event();
+    event.author = author;
     event.title = title;
     event.type = type;
     event.description = description;
@@ -57,17 +68,28 @@ export class EventService {
     if (!tontine) {
       throw new BadRequestException('Tontine not found');
     }
-    return this.dataSource.getRepository(Event).find({ where: { tontine } });
+    return this.dataSource.getRepository(Event).find({
+      where: { tontine: { id: tontineId } },
+      relations: ['author', 'author.user', 'participants'],
+    });
   }
 
   findOne(id: number) {
-    return this.dataSource.getRepository(Event).findOne({ where: { id } });
+    return this.dataSource.getRepository(Event).findOne({
+      where: { id },
+      relations: ['author', 'author.user', 'participants'],
+    });
   }
 
-  async update(id: number, updateEventDto: UpdateEventDto) {
+  async update(id: number, updateEventDto: UpdateEventDto, user: User) {
     const event = await this.findOne(id);
     if (!event) {
       throw new BadRequestException('Event not found');
+    }
+
+    const isOwnerOfEvent = event.author.user.username == user.username;
+    if (!isOwnerOfEvent) {
+      throw new BadRequestException('You are not the owner of this event');
     }
 
     const { title, type, description, startDate, endDate } = updateEventDto;
@@ -94,7 +116,15 @@ export class EventService {
     return this.dataSource.getRepository(Event).save(event);
   }
 
-  remove(id: number) {
+  async remove(id: number, user: User) {
+    const event = await this.findOne(id);
+    if (!event) {
+      throw new BadRequestException('Event not found');
+    }
+    const isOwnerOfEvent = event.author.user.username == user.username;
+    if (!isOwnerOfEvent) {
+      throw new BadRequestException('You are not the owner of this event');
+    }
     return this.dataSource.getRepository(Event).delete(id);
   }
 

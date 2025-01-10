@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { EventService } from './event.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -22,13 +23,13 @@ export class EventController {
   constructor(private readonly eventService: EventService) { }
 
   @Post()
-  create(@Body() createEventDto: CreateEventDto) {
-    return this.eventService.create(createEventDto);
+  create(@Body() createEventDto: CreateEventDto, @Req() req: any) {
+    return this.eventService.create(createEventDto, req.user);
   }
 
   @Get('/tontine/:tontineId')
-  findAll(@Param('tontineId') tontineId: number) {
-    return this.eventService.findAll(tontineId);
+  findAll(@Param('tontineId') tontineId: string) {
+    return this.eventService.findAll(+tontineId);
   }
 
   @Get(':id')
@@ -37,13 +38,17 @@ export class EventController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateEventDto: UpdateEventDto) {
-    return this.eventService.update(+id, updateEventDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateEventDto: UpdateEventDto,
+    @Req() req: any,
+  ) {
+    return this.eventService.update(+id, updateEventDto, req.user);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.eventService.remove(+id);
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.eventService.remove(+id, req.user);
   }
 
   @Patch(':id/add-participant/:participantId')

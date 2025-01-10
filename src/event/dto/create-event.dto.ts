@@ -1,4 +1,10 @@
-import { IsDate, IsEnum, IsNumber, IsString } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { EventType } from '../enum/event-type';
 
 export class CreateEventDto {
@@ -14,10 +20,11 @@ export class CreateEventDto {
   @IsString()
   description: string;
 
-  @IsDate()
+  @IsDateString()
   startDate?: Date;
 
-  @IsDate()
+  @IsDateString()
+  @IsOptional()
   endDate?: Date;
 
   participants?: number[];

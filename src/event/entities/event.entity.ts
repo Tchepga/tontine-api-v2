@@ -1,4 +1,11 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  ManyToMany,
+  JoinTable,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { EventType } from '../enum/event-type';
 import { Member } from 'src/member/entities/member.entity';
 import { Tontine } from 'src/tontine/entities/tontine.entity';
@@ -23,7 +30,8 @@ export class Event {
   @Column({ nullable: true })
   endDate: Date;
 
-  @Column('simple-array', { nullable: true })
+  @ManyToMany(() => Member)
+  @JoinTable()
   participants: Member[];
 
   @ManyToOne(() => Member, (member) => member.events)
