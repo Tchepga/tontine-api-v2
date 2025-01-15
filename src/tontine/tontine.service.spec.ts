@@ -161,7 +161,7 @@ describe('TontineService', () => {
       const result = await service.createDeposit(
         1,
         mockDeposit,
-        StatusDeposit.APPROVED,
+        StatusDeposit.APPROVED
       );
 
       expect(result).toBeDefined();
@@ -182,8 +182,8 @@ describe('TontineService', () => {
             cashFlowId: 1,
             status: StatusDeposit.PENDING,
           },
-          StatusDeposit.PENDING,
-        ),
+          StatusDeposit.PENDING
+        )
       ).rejects.toThrow(NotFoundException);
     });
   });

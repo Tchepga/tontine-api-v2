@@ -12,6 +12,7 @@ import { EventModule } from './event/event.module';
 import { RolesGuard } from './authentification/entities/roles/roles.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { PassportModule } from '@nestjs/passport';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { PassportModule } from '@nestjs/passport';
     TontineModule,
     LoanModule,
     EventModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [
@@ -45,4 +47,4 @@ import { PassportModule } from '@nestjs/passport';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

@@ -10,6 +10,7 @@ import { RapportMeeting } from 'src/tontine/entities/rapport-meeting.entity';
 import { Deposit } from 'src/tontine/entities/deposit.entity';
 import { TontineService } from 'src/tontine/tontine.service';
 import { AuthentificationService } from 'src/authentification/authentification.service';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Module({
   imports: [
@@ -17,7 +18,12 @@ import { AuthentificationService } from 'src/authentification/authentification.s
     AuthentificationModule,
   ],
   controllers: [MemberController],
-  providers: [MemberService, TontineService, AuthentificationService],
+  providers: [
+    MemberService,
+    TontineService,
+    AuthentificationService,
+    NotificationService,
+  ],
   exports: [MemberService],
 })
-export class MemberModule { }
+export class MemberModule {}

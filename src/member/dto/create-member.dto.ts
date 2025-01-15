@@ -33,7 +33,7 @@ export class CreateMemberDto {
 }
 
 export function createToMemberDtoToMember(
-  createMemberDto: CreateMemberDto,
+  createMemberDto: CreateMemberDto
 ): Member {
   const { username, password, firstname, lastname, email, phone, country } =
     createMemberDto;

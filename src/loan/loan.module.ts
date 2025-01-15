@@ -10,6 +10,7 @@ import { Tontine } from 'src/tontine/entities/tontine.entity';
 import { TontineService } from 'src/tontine/tontine.service';
 import { MemberService } from 'src/member/member.service';
 import { AuthentificationService } from 'src/authentification/authentification.service';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AuthentificationService } from 'src/authentification/authentification.s
     TontineService,
     MemberService,
     AuthentificationService,
+    NotificationService,
   ],
 })
-export class LoanModule { }
+export class LoanModule {}

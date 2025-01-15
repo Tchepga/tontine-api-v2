@@ -16,7 +16,7 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false,
+    "noFallthroughCasesInSwitch": false
     // "module": "ESNext",         // ou "CommonJS" si vous utilisez Node.js
     // "moduleResolution": "node", // nécessaire pour trouver les modules
     // "target": "ESNext",

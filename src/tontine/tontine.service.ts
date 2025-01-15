@@ -23,12 +23,15 @@ import { RateMap } from './entities/rate-map.entity';
 import { Sanction } from './entities/sanction.entity';
 import { Tontine } from './entities/tontine.entity';
 import { StatusDeposit } from './enum/status-deposit';
+import { Action } from 'src/notification/utility/message-notification';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class TontineService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly memberService: MemberService,
+    private readonly notificationService: NotificationService,
   ) { }
 
   async findByMember(username: string): Promise<Tontine[]> {
@@ -345,7 +348,20 @@ export class TontineService {
 
     await this.updateCashflow(createDepositDto.cashFlowId, deposit.amount);
 
-    return this.dataSource.getRepository(Deposit).save(deposit);
+    const depositSaved = await this.dataSource
+      .getRepository(Deposit)
+      .save(deposit);
+    this.notificationService.create({
+      action: Action.CREATE,
+      depositId: depositSaved.id,
+      memberId: depositSaved.author.id,
+      tontineId: tontine.id,
+      eventId: null,
+      sanctionId: null,
+      type: null,
+    });
+
+    return depositSaved;
   }
 
   private async updateCashflow(cashFlowId: number, amount: number) {
@@ -388,10 +404,22 @@ export class TontineService {
       deposit.status = StatusDeposit.PENDING;
     }
 
-    return this.dataSource.getRepository(Deposit).save({
+    const depositSaved = await this.dataSource.getRepository(Deposit).save({
       ...depositFind,
       ...deposit,
     });
+
+    this.notificationService.create({
+      action: Action.UPDATE,
+      depositId: depositSaved.id,
+      memberId: depositSaved.author.id,
+      tontineId: tontine.id,
+      eventId: null,
+      sanctionId: null,
+      type: null,
+    });
+
+    return depositSaved;
   }
 
   async removeDeposit(id: number, depositId: number) {
@@ -407,7 +435,21 @@ export class TontineService {
       throw new NotFoundException('Deposit not found');
     }
 
-    return this.dataSource.getRepository(Deposit).remove(deposit);
+    const depositRemoved = await this.dataSource
+      .getRepository(Deposit)
+      .remove(deposit);
+
+    this.notificationService.create({
+      action: Action.DELETE,
+      depositId: depositRemoved.id,
+      memberId: depositRemoved.author.id,
+      tontineId: tontine.id,
+      eventId: null,
+      sanctionId: null,
+      type: null,
+    });
+
+    return depositRemoved;
   }
 
   async setSelectedTontine(id: number, username: string) {

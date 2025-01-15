@@ -9,7 +9,9 @@ describe('AuthentificationController', () => {
       controllers: [AuthentificationController],
     }).compile();
 
-    controller = module.get<AuthentificationController>(AuthentificationController);
+    controller = module.get<AuthentificationController>(
+      AuthentificationController
+    );
   });
 
   it('should be defined', () => {

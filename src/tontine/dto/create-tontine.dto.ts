@@ -67,7 +67,7 @@ export class CreateTontineDto {
 }
 
 export function createToConfigTontineDtoToConfigTontine(
-  createConfigTontineDto: CreateConfigTontineDto,
+  createConfigTontineDto: CreateConfigTontineDto
 ) {
   const {
     defaultLoanRate,

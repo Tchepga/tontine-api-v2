@@ -6,10 +6,15 @@ import { DataSource } from 'typeorm';
 import { Member } from 'src/member/entities/member.entity';
 import { Tontine } from 'src/tontine/entities/tontine.entity';
 import { User } from 'src/authentification/entities/user.entity';
+import { NotificationService } from 'src/notification/notification.service';
+import { Action } from 'src/notification/utility/message-notification';
 
 @Injectable()
 export class EventService {
-  constructor(private readonly dataSource: DataSource) { }
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly notificationService: NotificationService
+  ) {}
 
   async create(createEventDto: CreateEventDto, user: User) {
     const {
@@ -58,7 +63,19 @@ export class EventService {
     }
     event.tontine = tontine;
 
-    return this.dataSource.getRepository(Event).save(event);
+    const eventSaved = await this.dataSource.getRepository(Event).save(event);
+
+    this.notificationService.create({
+      action: Action.CREATE,
+      depositId: null,
+      memberId: null,
+      tontineId: tontine.id,
+      eventId: eventSaved.id,
+      sanctionId: null,
+      type: null,
+    });
+
+    return eventSaved;
   }
 
   async findAll(tontineId: number) {

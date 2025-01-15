@@ -7,6 +7,7 @@ import { User } from './entities/user.entity';
 import { RolesGuard } from './entities/roles/roles.guard';
 import { TontineService } from 'src/tontine/tontine.service';
 import { MemberService } from 'src/member/member.service';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Module({
   controllers: [AuthentificationController],
@@ -16,7 +17,8 @@ import { MemberService } from 'src/member/member.service';
     RolesGuard,
     TontineService,
     MemberService,
+    NotificationService,
   ],
   exports: [AuthentificationService, RolesGuard],
 })
-export class AuthentificationModule { }
+export class AuthentificationModule {}

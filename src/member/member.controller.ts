@@ -22,7 +22,7 @@ import { Public } from 'src/authentification/entities/public.decorator';
 @Controller('member')
 @UseGuards(RolesGuard)
 export class MemberController {
-  constructor(private readonly memberService: MemberService) { }
+  constructor(private readonly memberService: MemberService) {}
 
   @Post()
   @Roles(Role.PRESIDENT)

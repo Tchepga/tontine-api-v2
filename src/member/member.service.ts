@@ -14,15 +14,15 @@ import { Member } from './entities/member.entity';
 export class MemberService {
   constructor(
     private readonly dataSource: DataSource,
-    private readonly authentificationService: AuthentificationService,
-  ) { }
+    private readonly authentificationService: AuthentificationService
+  ) {}
 
   async create(createMemberDto: CreateMemberDto) {
     const member = createToMemberDtoToMember(createMemberDto);
 
     if (createMemberDto.username) {
       const user = await this.authentificationService.findByUsername(
-        createMemberDto.username,
+        createMemberDto.username
       );
       if (user) {
         throw new HttpException('Username already used', 400);

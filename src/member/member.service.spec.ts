@@ -109,7 +109,7 @@ describe('MemberService', () => {
       };
 
       mockAuthService.create.mockRejectedValue(
-        new Error('User creation failed'),
+        new Error('User creation failed')
       );
 
       await expect(service.create(mockCreateMemberDto)).rejects.toThrow();
@@ -189,7 +189,7 @@ describe('MemberService', () => {
       mockDataSource.getRepository().findOne.mockResolvedValue(null);
 
       await expect(service.update(999, { firstname: 'Test' })).rejects.toThrow(
-        HttpException,
+        HttpException
       );
     });
   });

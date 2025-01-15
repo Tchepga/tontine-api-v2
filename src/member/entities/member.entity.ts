@@ -1,6 +1,7 @@
 import { User } from 'src/authentification/entities/user.entity';
 import { Event } from 'src/event/entities/event.entity';
 import { Loan } from 'src/loan/entities/loan.entity';
+import { Notification } from 'src/notification/entities/notification.entity';
 import { BasicEntity } from 'src/shared/utilities/basic.entity';
 import { Deposit } from 'src/tontine/entities/deposit.entity';
 import { RapportMeeting } from 'src/tontine/entities/rapport-meeting.entity';
@@ -37,7 +38,7 @@ export class Member extends BasicEntity {
   @Column({ nullable: true })
   avatar: string;
 
-  @Column() 
+  @Column()
   phone: string;
 
   @Column()
@@ -61,4 +62,7 @@ export class Member extends BasicEntity {
 
   @OneToMany(() => Deposit, (deposit) => deposit.author)
   deposits: Deposit[];
+
+  @OneToMany(() => Notification, (notification) => notification.target)
+  notifications: Notification[];
 }

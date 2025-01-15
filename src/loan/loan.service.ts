@@ -1,17 +1,23 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Member } from 'src/member/entities/member.entity';
 import { Tontine } from 'src/tontine/entities/tontine.entity';
-import { DataSource, In } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto } from './dto/update-loan.dto';
 import { Loan } from './entities/loan.entity';
 import { StatusLoan } from './enum/status-loan';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
 import { User } from 'src/authentification/entities/user.entity';
+import { Action } from 'src/notification/utility/message-notification';
+import { NotificationService } from 'src/notification/notification.service';
+import { TypeNotification } from 'src/notification/enum/type-notification';
 
 @Injectable()
 export class LoanService {
-  constructor(private readonly dataSource: DataSource) { }
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly notificationService: NotificationService,
+  ) { }
 
   async create(createLoanDto: CreateLoanDto, user: User) {
     const { amount, currency, tontineId } = createLoanDto;
@@ -40,7 +46,16 @@ export class LoanService {
     loan.redemptionDate = createLoanDto.redemptionDate;
     loan.interestRate = config.defaultLoanRate;
     loan.tontine = tontine;
-    this.dataSource.getRepository(Loan).save(loan);
+    const loanSaved = await this.dataSource.getRepository(Loan).save(loan);
+
+    this.notificationService.create({
+      action: Action.CREATE,
+      loanId: loanSaved.id,
+      type: TypeNotification.LOAN,
+      tontineId: tontine.id,
+    });
+
+    return loanSaved;
   }
 
   async findAll(tontineId: number): Promise<Loan[]> {

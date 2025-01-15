@@ -20,7 +20,7 @@ import { Role } from 'src/authentification/entities/roles/roles.enum';
 @UseGuards(RolesGuard)
 @Roles(Role.TONTINARD)
 export class EventController {
-  constructor(private readonly eventService: EventService) { }
+  constructor(private readonly eventService: EventService) {}
 
   @Post()
   create(@Body() createEventDto: CreateEventDto, @Req() req: any) {
@@ -41,7 +41,7 @@ export class EventController {
   update(
     @Param('id') id: string,
     @Body() updateEventDto: UpdateEventDto,
-    @Req() req: any,
+    @Req() req: any
   ) {
     return this.eventService.update(+id, updateEventDto, req.user);
   }
@@ -54,7 +54,7 @@ export class EventController {
   @Patch(':id/add-participant/:participantId')
   addParticipant(
     @Param('id') id: string,
-    @Param('participantId') participantId: string,
+    @Param('participantId') participantId: string
   ) {
     return this.eventService.addParticipant(+id, +participantId);
   }
@@ -62,7 +62,7 @@ export class EventController {
   @Patch(':id/remove-participant/:participantId')
   removeParticipant(
     @Param('id') id: string,
-    @Param('participantId') participantId: string,
+    @Param('participantId') participantId: string
   ) {
     return this.eventService.removeParticipant(+id, +participantId);
   }

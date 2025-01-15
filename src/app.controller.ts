@@ -10,11 +10,11 @@ export class AppController {
   @Get('/param')
   getParam(): any {
     const typesSanctions = Object.keys(TypeSanction).map(
-      (key) => TypeSanction[key],
+      (key) => TypeSanction[key]
     );
 
     const typesDeposits = Object.keys(StatusDeposit).map(
-      (key) => StatusDeposit[key],
+      (key) => StatusDeposit[key]
     );
 
     return {

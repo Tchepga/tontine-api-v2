@@ -1,4 +1,4 @@
-import { IsIn, IsNumber, IsPositive, IsString } from 'class-validator';
+import { IsIn, IsPositive, IsString } from 'class-validator';
 import { Currency } from '../enum/shared';
 import { StatusDeposit } from '../enum/status-deposit';
 

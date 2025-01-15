@@ -17,6 +17,7 @@ import { Event } from 'src/event/entities/event.entity';
 import { RapportMeeting } from './rapport-meeting.entity';
 import { Sanction } from './sanction.entity';
 import { MemberRole } from './member-role.entity';
+import { Notification } from 'src/notification/entities/notification.entity';
 
 @Entity()
 export class Tontine extends BasicEntity {
@@ -58,4 +59,7 @@ export class Tontine extends BasicEntity {
 
   @Column({ default: false })
   isSelected: boolean;
+
+  @OneToMany(() => Notification, (notification) => notification.tontine)
+  notifications: Notification[];
 }

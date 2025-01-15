@@ -18,8 +18,8 @@ export class AuthentificationService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly jwtService: JwtService,
-    private readonly entityManager: EntityManager,
-  ) { }
+    private readonly entityManager: EntityManager
+  ) {}
 
   public async verify(token: string): Promise<boolean> {
     try {

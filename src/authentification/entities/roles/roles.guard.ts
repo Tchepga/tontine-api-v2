@@ -17,8 +17,8 @@ export class RolesGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private readonly jwtService: JwtService,
-    private readonly tontineService: TontineService,
-  ) { }
+    private readonly tontineService: TontineService
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
@@ -48,7 +48,7 @@ export class RolesGuard implements CanActivate {
 
       const memberRole = await this.tontineService.getMemberRole(
         payload.username,
-        +tontineId,
+        +tontineId
       );
 
       if (!memberRole) {
@@ -68,7 +68,7 @@ export class RolesGuard implements CanActivate {
 
   private isRoleMatchOrHigher(
     requiredRoles: Role[],
-    userRoles: Role[],
+    userRoles: Role[]
   ): boolean {
     if (userRoles.includes(Role.PRESIDENT)) {
       return true;
@@ -79,7 +79,7 @@ export class RolesGuard implements CanActivate {
 
     if (requiredRoles.includes(Role.ACCOUNT_MANAGER)) {
       return userRoles.some(
-        (role) => role === Role.ACCOUNT_MANAGER || role === Role.PRESIDENT,
+        (role) => role === Role.ACCOUNT_MANAGER || role === Role.PRESIDENT
       );
     }
 
@@ -88,7 +88,7 @@ export class RolesGuard implements CanActivate {
         (role) =>
           role === Role.SECRETARY ||
           role === Role.PRESIDENT ||
-          role === Role.ACCOUNT_MANAGER,
+          role === Role.ACCOUNT_MANAGER
       );
     }
 
@@ -98,7 +98,7 @@ export class RolesGuard implements CanActivate {
           role === Role.OFFICE_MANAGER ||
           role === Role.PRESIDENT ||
           role === Role.ACCOUNT_MANAGER ||
-          role === Role.SECRETARY,
+          role === Role.SECRETARY
       );
     }
 

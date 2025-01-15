@@ -5,19 +5,19 @@ import { Role } from '../../authentification/entities/roles/roles.enum';
 
 @Entity()
 export class MemberRole {
-    @PrimaryGeneratedColumn()
-    id: number;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @ManyToOne(() => User)
-    user: User;
+  @ManyToOne(() => User)
+  user: User;
 
-    @ManyToOne(() => Tontine)
-    tontine: Tontine;
+  @ManyToOne(() => Tontine)
+  tontine: Tontine;
 
-    @Column({
-        type: 'enum',
-        enum: Role,
-        default: Role.TONTINARD,
-    })
-    role: Role;
+  @Column({
+    type: 'enum',
+    enum: Role,
+    default: Role.TONTINARD,
+  })
+  role: Role;
 }
