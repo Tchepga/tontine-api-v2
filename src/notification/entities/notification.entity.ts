@@ -1,5 +1,5 @@
 import { Member } from 'src/member/entities/member.entity';
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { TypeNotification } from '../enum/type-notification';
 import { Tontine } from 'src/tontine/entities/tontine.entity';
 
@@ -20,7 +20,7 @@ export class Notification {
   @Column()
   isRead: boolean;
 
-  @ManyToOne(() => Member, (member) => member.notifications)
+  @OneToMany(() => Member, (member) => member.notifications)
   target: Member;
 
   @ManyToOne(() => Tontine, (tontine) => tontine.notifications)

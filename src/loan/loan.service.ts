@@ -53,7 +53,9 @@ export class LoanService {
       loanId: loanSaved.id,
       type: TypeNotification.LOAN,
       tontineId: tontine.id,
-    });
+    },
+      user
+    );
 
     return loanSaved;
   }

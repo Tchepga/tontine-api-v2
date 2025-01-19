@@ -25,9 +25,11 @@ import { Tontine } from './entities/tontine.entity';
 import { StatusDeposit } from './enum/status-deposit';
 import { Action } from 'src/notification/utility/message-notification';
 import { NotificationService } from 'src/notification/notification.service';
+import { TypeNotification } from 'src/notification/enum/type-notification';
 
 @Injectable()
 export class TontineService {
+
   constructor(
     private readonly dataSource: DataSource,
     private readonly memberService: MemberService,
@@ -310,6 +312,7 @@ export class TontineService {
     tontineId: number,
     createDepositDto: CreateDepositDto,
     status: StatusDeposit,
+    user: User,
   ) {
     const tontine = await this.findOne(tontineId);
     if (!tontine) {
@@ -356,10 +359,10 @@ export class TontineService {
       depositId: depositSaved.id,
       memberId: depositSaved.author.id,
       tontineId: tontine.id,
-      eventId: null,
-      sanctionId: null,
-      type: null,
-    });
+      type: TypeNotification.DEPOSIT,
+    },
+      user
+    );
 
     return depositSaved;
   }
@@ -386,6 +389,7 @@ export class TontineService {
     id: number,
     depositId: number,
     deposit: CreateDepositDto,
+    user: User,
   ) {
     const tontine = await this.findOne(id);
     if (!tontine) {
@@ -414,15 +418,15 @@ export class TontineService {
       depositId: depositSaved.id,
       memberId: depositSaved.author.id,
       tontineId: tontine.id,
-      eventId: null,
-      sanctionId: null,
-      type: null,
-    });
+      type: TypeNotification.DEPOSIT,
+    },
+      user
+    );
 
     return depositSaved;
   }
 
-  async removeDeposit(id: number, depositId: number) {
+  async removeDeposit(id: number, depositId: number, user: User) {
     const tontine = await this.findOne(id);
     if (!tontine) {
       throw new NotFoundException('Tontine not found');
@@ -435,6 +439,11 @@ export class TontineService {
       throw new NotFoundException('Deposit not found');
     }
 
+    const member = await this.memberService.findByUsername(user.username);
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
     const depositRemoved = await this.dataSource
       .getRepository(Deposit)
       .remove(deposit);
@@ -444,10 +453,10 @@ export class TontineService {
       depositId: depositRemoved.id,
       memberId: depositRemoved.author.id,
       tontineId: tontine.id,
-      eventId: null,
-      sanctionId: null,
-      type: null,
-    });
+      type: TypeNotification.DEPOSIT,
+    },
+      user
+    );
 
     return depositRemoved;
   }

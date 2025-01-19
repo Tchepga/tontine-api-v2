@@ -6,14 +6,15 @@ import {
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
+import { Req } from '@nestjs/common';
 
 @WebSocketGateway()
 export class NotificationGateway {
   constructor(private readonly notificationService: NotificationService) { }
 
   @SubscribeMessage('createNotification')
-  create(@MessageBody() createNotificationDto: CreateNotificationDto) {
-    return this.notificationService.create(createNotificationDto);
+  create(@MessageBody() createNotificationDto: CreateNotificationDto, @Req() req: any) {
+    return this.notificationService.create(createNotificationDto, req.user);
   }
 
   @SubscribeMessage('findAllNotification')

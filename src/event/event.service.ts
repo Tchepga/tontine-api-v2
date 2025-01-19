@@ -8,13 +8,14 @@ import { Tontine } from 'src/tontine/entities/tontine.entity';
 import { User } from 'src/authentification/entities/user.entity';
 import { NotificationService } from 'src/notification/notification.service';
 import { Action } from 'src/notification/utility/message-notification';
+import { TypeNotification } from 'src/notification/enum/type-notification';
 
 @Injectable()
 export class EventService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly notificationService: NotificationService
-  ) {}
+  ) { }
 
   async create(createEventDto: CreateEventDto, user: User) {
     const {
@@ -67,13 +68,12 @@ export class EventService {
 
     this.notificationService.create({
       action: Action.CREATE,
-      depositId: null,
-      memberId: null,
-      tontineId: tontine.id,
+      tontineId,
       eventId: eventSaved.id,
-      sanctionId: null,
-      type: null,
-    });
+      type: TypeNotification.EVENT
+    },
+      user
+    );
 
     return eventSaved;
   }

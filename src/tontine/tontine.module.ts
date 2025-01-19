@@ -13,6 +13,7 @@ import { RapportMeeting } from './entities/rapport-meeting.entity';
 import { Sanction } from './entities/sanction.entity';
 import { RateMap } from './entities/rate-map.entity';
 import { MemberRole } from './entities/member-role.entity';
+import { Notification } from 'src/notification/entities/notification.entity';
 import { NotificationService } from 'src/notification/notification.service';
 
 @Module({
@@ -27,6 +28,7 @@ import { NotificationService } from 'src/notification/notification.service';
       Sanction,
       RateMap,
       MemberRole,
+      Notification,
     ]),
     MemberModule,
   ],
@@ -34,4 +36,4 @@ import { NotificationService } from 'src/notification/notification.service';
   providers: [TontineService, AuthentificationService, NotificationService],
   exports: [TontineService],
 })
-export class TontineModule {}
+export class TontineModule { }

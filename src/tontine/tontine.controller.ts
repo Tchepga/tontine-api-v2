@@ -35,7 +35,7 @@ export class TontineController {
   constructor(
     private readonly tontineService: TontineService,
     private readonly userService: AuthentificationService
-  ) {}
+  ) { }
 
   @Post()
   create(@Body() createTontineDto: CreateTontineDto) {
@@ -218,7 +218,7 @@ export class TontineController {
     ) {
       status = StatusDeposit.APPROVED;
     }
-    return this.tontineService.createDeposit(+id, createDepositDto, status);
+    return this.tontineService.createDeposit(+id, createDepositDto, status, user);
   }
 
   @Patch(':id/deposit/:depositId')
@@ -226,17 +226,19 @@ export class TontineController {
   updateDeposit(
     @Param('id') id: string,
     @Param('depositId') depositId: string,
-    @Body() createDepositDto: CreateDepositDto
+    @Body() createDepositDto: CreateDepositDto,
+    @Req() req: any
   ) {
-    return this.tontineService.updateDeposit(+id, +depositId, createDepositDto);
+    return this.tontineService.updateDeposit(+id, +depositId, createDepositDto, req.user);
   }
 
   @Delete(':id/deposit/:depositId')
   @Roles(Role.ACCOUNT_MANAGER)
   deleteDeposit(
     @Param('id') id: string,
-    @Param('depositId') depositId: string
+    @Param('depositId') depositId: string,
+    @Req() req: any
   ) {
-    return this.tontineService.removeDeposit(+id, +depositId);
+    return this.tontineService.removeDeposit(+id, +depositId, req.user);
   }
 }

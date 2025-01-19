@@ -30,9 +30,9 @@ export const messageNotificationDelete = {
 };
 
 export enum Action {
-    CREATE = 'créé',
-    UPDATE = 'modifié',
-    DELETE = 'supprimé',
+    CREATE = 'CREATED',
+    UPDATE = 'UPDATED',
+    DELETE = 'DELETED',
 }
 
 export function messageNotification(notificationDto: CreateNotificationDto) {

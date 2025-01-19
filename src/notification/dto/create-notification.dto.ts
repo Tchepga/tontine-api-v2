@@ -1,5 +1,6 @@
 import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Action } from '../utility/message-notification';
+import { TypeNotification } from '../enum/type-notification';
 
 export class CreateNotificationDto {
   @IsOptional()
@@ -29,6 +30,6 @@ export class CreateNotificationDto {
   @IsEnum(Action)
   action: Action;
 
-  @IsString()
-  type: string;
+  @IsEnum(TypeNotification)
+  type: TypeNotification;
 }
