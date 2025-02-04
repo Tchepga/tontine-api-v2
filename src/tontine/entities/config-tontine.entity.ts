@@ -1,5 +1,9 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { MovementType } from '../enum/movement-type';
+import { LoopPeriod } from '../enum/loop-period';
 import { RateMap } from './rate-map.entity';
+import { SystemType } from '../enum/system-type';
+import { PartOrder } from './part-order.entity';
 
 @Entity({ name: 'config_tontine' })
 export class ConfigTontine {
@@ -27,8 +31,14 @@ export class ConfigTontine {
   @Column({ default: 12 })
   countMaxMember: number;
 
+  @Column({ type: 'enum', enum: SystemType, default: SystemType.AUCTION })
+  systemType: SystemType;
+
   @OneToMany(() => RateMap, (rateMap) => rateMap.configTontine, {
     cascade: true,
   })
   rateMaps: RateMap[];
+
+  @OneToMany(() => PartOrder, partOrder => partOrder.config, { eager: true, cascade: true })
+  partOrders: PartOrder[];
 }

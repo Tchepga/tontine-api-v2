@@ -26,6 +26,8 @@ import { StatusDeposit } from './enum/status-deposit';
 import { Action } from 'src/notification/utility/message-notification';
 import { NotificationService } from 'src/notification/notification.service';
 import { TypeNotification } from 'src/notification/enum/type-notification';
+import { SystemType } from './enum/system-type';
+import { PartOrder } from './entities/part-order.entity';
 
 @Injectable()
 export class TontineService {
@@ -515,6 +517,10 @@ export class TontineService {
       config.movementType = updateConfigDto.movementType;
     if (updateConfigDto.countMaxMember !== undefined)
       config.countMaxMember = updateConfigDto.countMaxMember;
+    if (updateConfigDto.systemType) {
+      config.systemType = updateConfigDto.systemType;
+    }
+
     const rateMaps = updateConfigDto.rateMaps?.map((rateMap) => {
       const rateMapEntity = new RateMap();
       rateMapEntity.rate = rateMap.rate;
@@ -523,7 +529,24 @@ export class TontineService {
       return rateMapEntity;
     });
     config.rateMaps = rateMaps;
-    // tontine.config = config;
+
+    if (updateConfigDto.partOrders && updateConfigDto.systemType === SystemType.PART) {
+      const partOrders = await Promise.all(
+        updateConfigDto.partOrders.map(async (order) => {
+          const member = await this.memberService.findOne(order.memberId);
+          if (!member) {
+            throw new NotFoundException(`Member ${order.memberId} not found`);
+          }
+          const partOrder = new PartOrder();
+          partOrder.member = member;
+          partOrder.order = order.order;
+          partOrder.period = order.period;
+          return partOrder;
+        })
+      );
+      config.partOrders = partOrders;
+    }
+
     return this.dataSource.getRepository(ConfigTontine).save(config);
   }
 

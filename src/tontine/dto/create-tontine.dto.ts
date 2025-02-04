@@ -4,9 +4,14 @@ import {
   IsNotEmptyObject,
   IsNumber,
   IsString,
+  IsEnum,
+  IsOptional,
+  ValidateNested,
 } from 'class-validator';
 import { CreateMemberDto } from 'src/member/dto/create-member.dto';
 import { ConfigTontine } from '../entities/config-tontine.entity';
+import { Type } from 'class-transformer';
+import { SystemType } from '../enum/system-type';
 
 export class CreateConfigTontineDto {
   @IsNumber()
@@ -34,6 +39,14 @@ export class CreateConfigTontineDto {
 
   @IsNumber()
   countMaxMember: number | undefined;
+
+  @IsEnum(SystemType)
+  systemType: SystemType;
+
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => PartOrderDto)
+  partOrders?: PartOrderDto[];
 }
 
 export class RateMapDto {
@@ -85,4 +98,15 @@ export function createToConfigTontineDtoToConfigTontine(
   configTontine.countPersonPerMovement = countPersonPerMovement;
   configTontine.movementType = movementType;
   return configTontine;
+}
+
+export class PartOrderDto {
+  @IsNumber()
+  memberId: number;
+
+  @IsNumber()
+  order: number;
+
+  @Type(() => Date)
+  period: Date;
 }
