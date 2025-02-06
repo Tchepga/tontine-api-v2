@@ -1,6 +1,4 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { MovementType } from '../enum/movement-type';
-import { LoopPeriod } from '../enum/loop-period';
 import { RateMap } from './rate-map.entity';
 import { SystemType } from '../enum/system-type';
 import { PartOrder } from './part-order.entity';

@@ -7,6 +7,7 @@ import {
   IsEnum,
   IsOptional,
   ValidateNested,
+  IsDateString,
 } from 'class-validator';
 import { CreateMemberDto } from 'src/member/dto/create-member.dto';
 import { ConfigTontine } from '../entities/config-tontine.entity';
@@ -43,10 +44,6 @@ export class CreateConfigTontineDto {
   @IsEnum(SystemType)
   systemType: SystemType;
 
-  @IsOptional()
-  @ValidateNested({ each: true })
-  @Type(() => PartOrderDto)
-  partOrders?: PartOrderDto[];
 }
 
 export class RateMapDto {
@@ -107,6 +104,8 @@ export class PartOrderDto {
   @IsNumber()
   order: number;
 
+  @IsOptional()
   @Type(() => Date)
+  @IsDateString()
   period: Date;
 }

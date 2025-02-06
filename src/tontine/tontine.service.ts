@@ -12,6 +12,7 @@ import {
   CreateConfigTontineDto,
   createToConfigTontineDtoToConfigTontine,
   CreateTontineDto,
+  PartOrderDto,
 } from './dto/create-tontine.dto';
 import { UpdateTontineDto } from './dto/update-tontine.dto';
 import { CashFlow } from './entities/cashflow.entity';
@@ -530,23 +531,6 @@ export class TontineService {
     });
     config.rateMaps = rateMaps;
 
-    if (updateConfigDto.partOrders && updateConfigDto.systemType === SystemType.PART) {
-      const partOrders = await Promise.all(
-        updateConfigDto.partOrders.map(async (order) => {
-          const member = await this.memberService.findOne(order.memberId);
-          if (!member) {
-            throw new NotFoundException(`Member ${order.memberId} not found`);
-          }
-          const partOrder = new PartOrder();
-          partOrder.member = member;
-          partOrder.order = order.order;
-          partOrder.period = order.period;
-          return partOrder;
-        })
-      );
-      config.partOrders = partOrders;
-    }
-
     return this.dataSource.getRepository(ConfigTontine).save(config);
   }
 
@@ -585,4 +569,57 @@ export class TontineService {
 
     return this.dataSource.getRepository(MemberRole).save(memberRole);
   }
+
+  async createPartOrder(tontineId: number, data: PartOrderDto) {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+    const member = await this.memberService.findOne(data.memberId);
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+    const partOrder = new PartOrder();
+    partOrder.member = member;
+    partOrder.order = data.order;
+    partOrder.period = data.period;
+    return this.dataSource.getRepository(PartOrder).save(partOrder);
+  }
+
+  async updatePartOrder(tontineId: number, partOrderId: number, data: PartOrderDto) {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+    const partOrder = await this.dataSource.getRepository(PartOrder).findOne({
+      where: { id: partOrderId },
+    });
+    if (!partOrder) {
+      throw new NotFoundException('Part order not found');
+    }
+    const member = await this.memberService.findOne(data.memberId);
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+    partOrder.member = member;
+    partOrder.order = data.order;
+    partOrder.period = data.period;
+    return this.dataSource.getRepository(PartOrder).save(partOrder);
+  }
+
+  async deletePartOrder(tontineId: number, partOrderId: number) {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+    const partOrder = await this.dataSource.getRepository(PartOrder).findOne({
+      where: { id: partOrderId },
+    });
+    if (!partOrder) {
+      throw new NotFoundException('Part order not found');
+    }
+    return this.dataSource.getRepository(PartOrder).delete(partOrderId);
+  }
+
+
 }

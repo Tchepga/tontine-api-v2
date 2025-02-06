@@ -15,6 +15,7 @@ import { RateMap } from './entities/rate-map.entity';
 import { MemberRole } from './entities/member-role.entity';
 import { Notification } from 'src/notification/entities/notification.entity';
 import { NotificationService } from 'src/notification/notification.service';
+import { PartOrder } from './entities/part-order.entity';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { NotificationService } from 'src/notification/notification.service';
       RateMap,
       MemberRole,
       Notification,
+      PartOrder,
     ]),
     MemberModule,
   ],

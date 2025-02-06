@@ -21,6 +21,7 @@ import { CreateSanctionDto } from './dto/create-sanction.dto';
 import {
   CreateConfigTontineDto,
   CreateTontineDto,
+  PartOrderDto,
 } from './dto/create-tontine.dto';
 import { UpdateTontineDto } from './dto/update-tontine.dto';
 import { Tontine } from './entities/tontine.entity';
@@ -88,6 +89,24 @@ export class TontineController {
     @Body() updateConfigDto: CreateConfigTontineDto
   ) {
     return this.tontineService.updateConfig(+id, updateConfigDto);
+  }
+
+  @Post(':id/config/part-order')
+  @Roles(Role.PRESIDENT)
+  createPartOrder(@Param('id') tontineId: string, @Body() data: PartOrderDto) {
+    return this.tontineService.createPartOrder(+tontineId, data);
+  }
+
+  @Patch(':id/config/part-order/:partOrderId')
+  @Roles(Role.PRESIDENT)
+  updatePartOrder(@Param('id') tontineId: string, @Param('partOrderId') partOrderId: string, @Body() data: PartOrderDto) {
+    return this.tontineService.updatePartOrder(+tontineId, +partOrderId, data);
+  }
+
+  @Delete(':id/config/part-order/:partOrderId')
+  @Roles(Role.PRESIDENT)
+  deletePartOrder(@Param('id') tontineId: string, @Param('partOrderId') partOrderId: string) {
+    return this.tontineService.deletePartOrder(+tontineId, +partOrderId);
   }
 
   @Patch(':id/member')
