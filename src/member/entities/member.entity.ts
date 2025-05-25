@@ -47,9 +47,8 @@ export class Member extends BasicEntity {
   @ManyToMany(() => Tontine, (tontine) => tontine.members)
   tontines: Tontine[];
 
-  @Column({ nullable: true })
   @OneToMany(() => Loan, (loan) => loan.author)
-  loans: string;
+  loans: Loan[];
 
   @OneToMany(() => Event, (event) => event.tontine)
   events: Event[];

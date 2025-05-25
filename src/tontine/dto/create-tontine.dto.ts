@@ -105,7 +105,6 @@ export class PartOrderDto {
   order: number;
 
   @IsOptional()
-  @Type(() => Date)
   @IsDateString()
   period: Date;
 }

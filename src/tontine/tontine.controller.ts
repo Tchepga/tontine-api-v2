@@ -115,6 +115,12 @@ export class TontineController {
     return this.tontineService.addMember(+id, data.memberId);
   }
 
+  @Delete(':id/member/:memberId')
+  @Roles(Role.PRESIDENT)
+  removeMember(@Param('id') id: string, @Param('memberId') memberId: string) {
+    return this.tontineService.removeMember(+id, +memberId);
+  }
+
   @Delete(':id')
   @Roles(Role.PRESIDENT)
   remove(@Param('id') id: string) {

@@ -24,7 +24,10 @@ export class NotificationService {
       throw new BadRequestException('Tontine not found');
     }
 
-    const member = await this.dataSource.getRepository(Member).findOne({ where: { user: { username: user.username } } });
+    const member = await this.dataSource.getRepository(Member).findOne({
+      where: { user: { username: user.username } },
+      relations: ['user', 'notifications']
+    });
     if (!member) {
       throw new BadRequestException('Member not found');
     }
@@ -32,17 +35,21 @@ export class NotificationService {
       throw new BadRequestException('Member not found in tontine');
     }
 
+
     const notification = new Notification();
     notification.message = messageNotification(data);
     notification.createdAt = new Date();
     notification.isRead = false;
     notification.tontine = tontine;
-    if (data.memberId) {
-      notification.target = { id: data.memberId } as any;
-    }
     notification.type = data.type;
+    // notification.target = member;
 
-    return this.dataSource.getRepository(Notification).save(notification);
+    await this.dataSource.getRepository(Notification).save(notification);
+    if (!member.notifications) {
+      member.notifications = [];
+    }
+    member.notifications.push(notification);
+    await this.dataSource.getRepository(Member).save(member, { reload: true });
   }
 
   findAll(tontineId: number, memberId?: number) {

@@ -347,9 +347,16 @@ export class TontineService {
     // update cashflow
     const cashflow = await this.dataSource
       .getRepository(CashFlow)
-      .findOne({ where: { id: tontine.cashFlow.id } });
+      .findOne({
+        where: { id: tontine.cashFlow.id },
+        relations: ['deposits']
+      });
     if (!cashflow) {
       throw new NotFoundException('Cashflow not found');
+    }
+    // Initialize deposits array if it doesn't exist
+    if (!cashflow.deposits) {
+      cashflow.deposits = [];
     }
 
     await this.updateCashflow(createDepositDto.cashFlowId, deposit.amount);
@@ -357,6 +364,7 @@ export class TontineService {
     const depositSaved = await this.dataSource
       .getRepository(Deposit)
       .save(deposit);
+
     this.notificationService.create({
       action: Action.CREATE,
       depositId: depositSaved.id,
@@ -370,17 +378,30 @@ export class TontineService {
     return depositSaved;
   }
 
+
   private async updateCashflow(cashFlowId: number, amount: number) {
     const cashflow = await this.dataSource
       .getRepository(CashFlow)
-      .findOne({ where: { id: cashFlowId } });
+      .findOne({
+        where: { id: cashFlowId },
+        relations: ['deposits']
+      });
     if (!cashflow) {
       throw new NotFoundException('Cashflow not found');
     }
+
+    // Initialize deposits array if it doesn't exist
+    if (!cashflow.deposits) {
+      cashflow.deposits = [];
+    }
+
     // add all deposit attached to this tontine
     const deposits = await this.dataSource
       .getRepository(Deposit)
-      .find({ where: { cashFlow: { id: cashFlowId } } });
+      .find({
+        where: { cashFlow: { id: cashFlowId } },
+        relations: ['cashFlow']
+      });
     const totalDeposit = deposits
       .filter((deposit) => deposit.status === StatusDeposit.APPROVED)
       .reduce((acc, deposit) => acc + deposit.amount, 0);
@@ -568,6 +589,26 @@ export class TontineService {
     memberRole.role = role;
 
     return this.dataSource.getRepository(MemberRole).save(memberRole);
+  }
+
+  async removeMember(tontineId: number, memberId: number) {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+    const member = await this.dataSource.getRepository(Member).findOne({
+      where: { id: memberId },
+      relations: ['user'],
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+    const memberRole = await this.getMemberRole(member.user.username, tontineId);
+    if (memberRole) {
+      await this.dataSource.getRepository(MemberRole).delete(memberRole.id);
+    }
+    tontine.members = tontine.members.filter((m) => m.id !== memberId);
+    return this.dataSource.getRepository(Tontine).save(tontine);
   }
 
   async createPartOrder(tontineId: number, data: PartOrderDto) {
