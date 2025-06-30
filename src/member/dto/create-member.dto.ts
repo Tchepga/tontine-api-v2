@@ -6,10 +6,6 @@ import { Role } from 'src/authentification/entities/roles/roles.enum';
 export class CreateMemberDto {
   username: string;
 
-  @IsString({ message: 'Le mot de passe est requis' })
-  @Length(8, 100, {
-    message: 'Le mot de passe doit avoir entre 8 et 100 caractères',
-  })
   password?: string | undefined;
 
   @IsString({ message: 'Le prénom est requis' })

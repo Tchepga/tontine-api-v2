@@ -29,6 +29,7 @@ import { NotificationService } from 'src/notification/notification.service';
 import { TypeNotification } from 'src/notification/enum/type-notification';
 import { SystemType } from './enum/system-type';
 import { PartOrder } from './entities/part-order.entity';
+import { CreateMemberDto } from 'src/member/dto/create-member.dto';
 
 @Injectable()
 export class TontineService {
@@ -662,5 +663,26 @@ export class TontineService {
     return this.dataSource.getRepository(PartOrder).delete(partOrderId);
   }
 
+  async getPartOrder(tontineId: number) {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+    return this.dataSource.getRepository(PartOrder).findOne({
+      where: {
+        config: { id: tontine.config.id },
+      },
+      relations: ['member', 'member.user',]
+    });
+  }
 
+  async addMemberFromScratch(tontineId: number, data: CreateMemberDto) {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+    const member = await this.memberService.findByUsername(data.username) ?? await this.memberService.create(data);
+
+    return this.addMember(tontineId, member.id);
+  }
 }

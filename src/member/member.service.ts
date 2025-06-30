@@ -1,4 +1,4 @@
-import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuthentificationService } from 'src/authentification/authentification.service';
 import { LoginDto } from 'src/authentification/dto/login-dto';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
@@ -9,23 +9,26 @@ import {
 } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { Member } from './entities/member.entity';
+import { environment } from 'src/shared/environement';
 
 @Injectable()
 export class MemberService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly authentificationService: AuthentificationService
-  ) {}
+  ) { }
 
   async create(createMemberDto: CreateMemberDto) {
     const member = createToMemberDtoToMember(createMemberDto);
+
+    this.validatePassword(createMemberDto);
 
     if (createMemberDto.username) {
       const user = await this.authentificationService.findByUsername(
         createMemberDto.username
       );
       if (user) {
-        throw new HttpException('Username already used', 400);
+        throw new BadRequestException('Username already used');
       }
     } else {
       createMemberDto.username =
@@ -97,6 +100,19 @@ export class MemberService {
       this.dataSource.getRepository(Member).save(member);
     } else {
       throw new NotFoundException(`Member with id ${id} not found`);
+    }
+  }
+
+  private validatePassword(createMemberDto: CreateMemberDto) {
+    if (!createMemberDto.password) {
+      createMemberDto.password = environment.passwordConfig.defaultPassword;
+    }
+    const { minLength, maxLength } = environment.passwordConfig;
+    if (createMemberDto.password.length < minLength) {
+      throw new BadRequestException(`Password must be at least ${minLength} characters long`);
+    }
+    if (createMemberDto.password.length > maxLength) {
+      throw new BadRequestException(`Password must be less than ${maxLength} characters long`);
     }
   }
 }

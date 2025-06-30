@@ -15,5 +15,10 @@ export const environment = {
     synchronize: true,
     autoLoadEntities: true,
   },
+  passwordConfig: {
+    minLength: 8,
+    maxLength: 100,
+    defaultPassword: 'changeme1@',
+  },
 };
 
