@@ -27,7 +27,7 @@ jobs:
 
       - name: Create production environment file
         run: |
-          cat > src/shared/environment.prod.ts << 'EOF'
+          cat > src/shared/environement.prod.ts << 'EOF'
           export const environment = {
             production: true,
             jwtConfig: {
