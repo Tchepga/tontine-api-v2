@@ -38,7 +38,7 @@ jobs:
             databaseConfig: {
               type: '${{ secrets.DB_TYPE }}',
               host: '${{ secrets.DB_HOST }}',
-              port: ${{ secrets.DB_PORT }},
+              port: 3306,
               username: '${{ secrets.DB_USERNAME }}',
               password: '${{ secrets.DB_PASSWORD }}',
               database: '${{ secrets.DB_DATABASE }}',
