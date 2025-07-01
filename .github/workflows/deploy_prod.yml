@@ -59,39 +59,39 @@ jobs:
       - name: Display environment configuration
         run: |
           echo "=== Environment Configuration ==="
-          echo "JWT_SECRET: ${{ secrets.JWT_SECRET != '' && '***SET***' || '***NOT SET***' }}"
-          echo "JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}"
-          echo "DB_TYPE: ${{ secrets.DB_TYPE }}"
-          echo "DB_HOST: ${{ secrets.DB_HOST }}"
-          echo "DB_USERNAME: ${{ secrets.DB_USERNAME }}"
-          echo "DB_DATABASE: ${{ secrets.DB_DATABASE }}"
-          echo "DB_PASSWORD: ${{ secrets.DB_PASSWORD != '' && '***SET***' || '***NOT SET***' }}"
-          echo "SERVER_HOST: ${{ secrets.SERVER_HOST }}"
-          echo "SERVER_USER: ${{ secrets.SERVER_USER }}"
-          echo "SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY != '' && '***SET***' || '***NOT SET***' }}"
+          echo "JWT_SECRET: ${{ env.JWT_SECRET != '' && '***SET***' || '***NOT SET***' }}"
+          echo "JWT_EXPIRES_IN: ${{ env.JWT_EXPIRES_IN }}"
+          echo "DB_TYPE: ${{ env.DB_TYPE }}"
+          echo "DB_HOST: ${{ env.DB_HOST }}"
+          echo "DB_USERNAME: ${{ env.DB_USERNAME }}"
+          echo "DB_DATABASE: ${{ env.DB_DATABASE }}"
+          echo "DB_PASSWORD: ${{ env.DB_PASSWORD != '' && '***SET***' || '***NOT SET***' }}"
+          echo "SERVER_HOST: ${{ env.SERVER_HOST }}"
+          echo "SERVER_USER: ${{ env.SERVER_USER }}"
+          echo "SERVER_SSH_KEY: ${{ env.SERVER_SSH_KEY != '' && '***SET***' || '***NOT SET***' }}"
           echo "================================"
 
       - name: Create SSH key file
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ env.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
 
       - name: Clean and Copy files to server
         run: |
           # Clean existing dist files
-          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "rm -rf /apps/tontine/dist || true"
+          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} "rm -rf /apps/tontine/dist || true"
           # Copy new dist files
-          scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/apps/tontine/
+          scp -i ~/.ssh/deploy_key -r dist/* ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:/apps/tontine/
 
       - name: Stop existing process and start new application
         run: |
           # Stop any existing Node.js process
-          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "pkill -f 'node dist/main.js' || true"
+          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} "pkill -f 'node dist/main.js' || true"
           # Install dependencies and start the new application in background
-          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /apps/tontine && npm install --production && nohup node dist/main.js > app.log 2>&1 &"
+          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} "cd /apps/tontine && npm install --production && nohup node dist/main.js > app.log 2>&1 &"
 
       - name: Verify deployment
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "ls -la /apps/tontine && ps aux | grep node"
+          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} "ls -la /apps/tontine && ps aux | grep node"
