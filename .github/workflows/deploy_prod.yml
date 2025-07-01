@@ -59,16 +59,16 @@ jobs:
       - name: Display environment configuration
         run: |
           echo "=== Environment Configuration ==="
-          echo "JWT_SECRET: ${{ secrets.JWT_SECRET != '' && '***SET***' || '***NOT SET***' }}"
+          echo "JWT_SECRET: ${{ secrets.JWT_SECRET != '' ? '***SET***' : '***NOT SET***' }}"
           echo "JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}"
           echo "DB_TYPE: ${{ secrets.DB_TYPE }}"
           echo "DB_HOST: ${{ secrets.DB_HOST }}"
           echo "DB_USERNAME: ${{ secrets.DB_USERNAME }}"
           echo "DB_DATABASE: ${{ secrets.DB_DATABASE }}"
-          echo "DB_PASSWORD: ${{ secrets.DB_PASSWORD != '' && '***SET***' || '***NOT SET***' }}"
+          echo "DB_PASSWORD: ${{ secrets.DB_PASSWORD != '' ? '***SET***' : '***NOT SET***' }}"
           echo "SERVER_HOST: ${{ secrets.SERVER_HOST }}"
           echo "SERVER_USER: ${{ secrets.SERVER_USER }}"
-          echo "SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY != '' && '***SET***' || '***NOT SET***' }}"
+          echo "SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY != '' ? '***SET***' : '***NOT SET***' }}"
           echo "================================"
 
       - name: Create SSH key file
