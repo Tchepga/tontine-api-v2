@@ -141,17 +141,17 @@ jobs:
       - name: Clean and Copy files to server
         run: |
           # Clean existing dist files
-          ssh -i ~/.ssh/deploy_key root@46.202.134.104 "rm -rf /apps/tontine/dist || true"
+          ssh -i ~/.ssh/deploy_key root@46.202.134.104 "rm -rf /root/apps/tontine/dist || true"
           # Copy new dist files
-          scp -i ~/.ssh/deploy_key -r dist/* root@46.202.134.104:/apps/tontine/
+          scp -i ~/.ssh/deploy_key -r dist/* root@46.202.134.104:/root/apps/tontine/
 
       - name: Stop existing process and start new application
         run: |
           # Stop any existing Node.js process
           ssh -i ~/.ssh/deploy_key root@46.202.134.104 "pkill -f 'node dist/main.js' || true"
           # Install dependencies and start the new application in background
-          ssh -i ~/.ssh/deploy_key root@46.202.134.104 "cd /apps/tontine && npm install --production && nohup node dist/main.js > app.log 2>&1 &"
+          ssh -i ~/.ssh/deploy_key root@46.202.134.104 "cd /root/apps/tontine && npm install --production && nohup node dist/main.js > app.log 2>&1 &"
 
       - name: Verify deployment
         run: |
-          ssh -i ~/.ssh/deploy_key root@46.202.134.104 "ls -la /apps/tontine && ps aux | grep node"
+          ssh -i ~/.ssh/deploy_key root@46.202.134.104 "ls -la /root/apps/tontine && ps aux | grep node"
