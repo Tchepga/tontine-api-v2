@@ -77,6 +77,16 @@ jobs:
           echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan 46.202.134.104 >> ~/.ssh/known_hosts
+          # Debug SSH key
+          echo "SSH key file created:"
+          ls -la ~/.ssh/deploy_key
+          echo "SSH key content (first 50 chars):"
+          head -c 50 ~/.ssh/deploy_key
+
+      - name: Test SSH connection
+        run: |
+          echo "Testing SSH connection..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@46.202.134.104 "echo 'SSH connection successful'"
 
       - name: Clean and Copy files to server
         run: |
