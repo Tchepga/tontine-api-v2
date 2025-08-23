@@ -56,105 +56,58 @@ jobs:
       - name: Build project
         run: npm run build:prod
 
-      - name: Display environment configuration
-        run: |
-          echo "=== Environment Configuration ==="
-          echo "JWT_SECRET: ${{ secrets.JWT_SECRET != '' && '***SET***' || '***NOT SET***' }}"
-          echo "JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}"
-          echo "DB_TYPE: ${{ secrets.DB_TYPE }}"
-          echo "DB_HOST: ${{ secrets.DB_HOST }}"
-          echo "DB_USERNAME: ${{ secrets.DB_USERNAME }}"
-          echo "DB_DATABASE: ${{ secrets.DB_DATABASE }}"
-          echo "DB_PASSWORD: ${{ secrets.DB_PASSWORD != '' && '***SET***' || '***NOT SET***' }}"
-          echo "SERVER_HOST: ${{ secrets.SERVER_HOST }}"
-          echo "SERVER_USER: ${{ secrets.SERVER_USER }}"
-          echo "SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY != '' && '***SET***' || '***NOT SET***' }}"
-          echo "================================"
-
       - name: Create SSH key file
         run: |
+          # Vérifier que les secrets requis sont définis
+          if [ -z "${{ secrets.SSH_DEPLOY_KEY }}" ]; then
+            echo "❌ ERREUR: SSH_DEPLOY_KEY n'est pas définie dans les secrets GitHub"
+            exit 1
+          fi
+          
+          if [ -z "${{ secrets.HOST }}" ]; then
+            echo "❌ ERREUR: HOST n'est pas défini dans les secrets GitHub"
+            exit 1
+          fi
+          
+          if [ -z "${{ secrets.USER }}" ]; then
+            echo "❌ ERREUR: USER n'est pas défini dans les secrets GitHub"
+            exit 1
+          fi
+          
           mkdir -p ~/.ssh
-          cat > ~/.ssh/deploy_key << 'EOF'
-          -----BEGIN OPENSSH PRIVATE KEY-----
-          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
-          -----END OPENSSH PRIVATE KEY-----
-          EOF
+          echo "${{ secrets.SSH_DEPLOY_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H 46.202.134.104 >> ~/.ssh/known_hosts
-          # Debug SSH key
+          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+          
+          # Debug SSH key (sans afficher le contenu complet)
           echo "SSH key file created:"
           ls -la ~/.ssh/deploy_key
-          echo "SSH key content (first 50 chars):"
-          head -c 50 ~/.ssh/deploy_key
+          echo "SSH key exists: $([ -s ~/.ssh/deploy_key ] && echo 'YES' || echo 'NO')"
+          echo "SSH key size: $(wc -c < ~/.ssh/deploy_key) bytes"
+          echo "Connection details: ${{ secrets.USER }}@${{ secrets.HOST }}"
 
       - name: Test SSH connection
         run: |
           echo "Testing SSH connection..."
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@46.202.134.104 "echo 'SSH connection successful'"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.USER }}@${{ secrets.HOST }} "echo 'SSH connection successful'"
 
       - name: Clean and Copy files to server
         run: |
           # Clean existing dist files
-          ssh -i ~/.ssh/deploy_key root@46.202.134.104 "rm -rf /root/apps/tontine/dist || true"
+          ssh -i ~/.ssh/deploy_key ${{ secrets.USER }}@${{ secrets.HOST }} "rm -rf /root/apps/tontine/dist || true"
           # Copy new dist files
-          scp -i ~/.ssh/deploy_key -r dist/* root@46.202.134.104:/root/apps/tontine/
+          scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.USER }}@${{ secrets.HOST }}:/root/apps/tontine/
 
       - name: Stop existing process and start new application
         run: |
           # Check if Node.js process is running
-          if ssh -i ~/.ssh/deploy_key root@46.202.134.104 "pgrep -f 'node dist/main.js'"; then
+          if ssh -i ~/.ssh/deploy_key ${{ secrets.USER }}@${{ secrets.HOST }} "pgrep -f 'node dist/main.js'"; then
             # Stop any existing Node.js process
-            ssh -i ~/.ssh/deploy_key root@46.202.134.104 "pkill -f 'node dist/main.js'"
+            ssh -i ~/.ssh/deploy_key ${{ secrets.USER }}@${{ secrets.HOST }} "pkill -f 'node dist/main.js'"
           fi
           # Install dependencies and start the new application in background
-          ssh -i ~/.ssh/deploy_key root@46.202.134.104 "cd /root/apps/tontine && npm install --production && nohup node dist/main.js > app.log 2>&1 &"
+          ssh -i ~/.ssh/deploy_key ${{ secrets.USER }}@${{ secrets.HOST }} "cd /root/apps/tontine && npm install --production && nohup node dist/main.js > app.log 2>&1 &"
 
       - name: Verify deployment
         run: |
-          ssh -i ~/.ssh/deploy_key root@46.202.134.104 "ls -la /root/apps/tontine && ps aux | grep node"
+          ssh -i ~/.ssh/deploy_key ${{ secrets.USER }}@${{ secrets.HOST }} "ls -la /root/apps/tontine && ps aux | grep node"
