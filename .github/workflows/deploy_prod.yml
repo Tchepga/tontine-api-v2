@@ -86,28 +86,14 @@ jobs:
           echo "SSH key size: $(wc -c < ~/.ssh/deploy_key) bytes"
           echo "Connection details: ${{ secrets.USER }}@${{ secrets.HOST }}"
 
-      - name: Test SSH connection
-        run: |
-          echo "Testing SSH connection..."
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.USER }}@${{ secrets.HOST }} "echo 'SSH connection successful'"
-
-      - name: Clean and Copy files to server
-        run: |
-          # Clean existing dist files
-          ssh -i ~/.ssh/deploy_key ${{ secrets.USER }}@${{ secrets.HOST }} "rm -rf /root/apps/tontine/dist || true"
-          # Copy new dist files
-          scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.USER }}@${{ secrets.HOST }}:/root/apps/tontine/
-
-      - name: Stop existing process and start new application
-        run: |
-          # Check if Node.js process is running
-          if ssh -i ~/.ssh/deploy_key ${{ secrets.USER }}@${{ secrets.HOST }} "pgrep -f 'node dist/main.js'"; then
-            # Stop any existing Node.js process
-            ssh -i ~/.ssh/deploy_key ${{ secrets.USER }}@${{ secrets.HOST }} "pkill -f 'node dist/main.js'"
-          fi
-          # Install dependencies and start the new application in background
-          ssh -i ~/.ssh/deploy_key ${{ secrets.USER }}@${{ secrets.HOST }} "cd /root/apps/tontine && npm install --production && nohup node dist/main.js > app.log 2>&1 &"
-
-      - name: Verify deployment
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.USER }}@${{ secrets.HOST }} "ls -la /root/apps/tontine && ps aux | grep node"
+      - name: Run server command via SSH
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cp config/.env-tontine-api apps/tontine/.env
+            cd /apps/tontine
+            npm install --production || true
+            nohup node dist/main.js &
