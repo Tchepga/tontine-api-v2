@@ -59,8 +59,8 @@ jobs:
       - name: Create SSH key file
         run: |
           # Vérifier que les secrets requis sont définis
-          if [ -z "${{ secrets.SSH_DEPLOY_KEY }}" ]; then
-            echo "❌ ERREUR: SSH_DEPLOY_KEY n'est pas définie dans les secrets GitHub"
+          if [ -z "${{ secrets.SERVER_SSH_KEY }}" ]; then
+            echo "❌ ERREUR: SERVER_SSH_KEY n'est pas définie dans les secrets GitHub"
             exit 1
           fi
           
@@ -75,7 +75,7 @@ jobs:
           fi
           
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
           
