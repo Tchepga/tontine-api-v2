@@ -44,6 +44,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            cp config/.env-tontine-api apps/tontine/.env
             cd /apps/tontine
             npm install --production || true
             nohup node dist/main.js &
