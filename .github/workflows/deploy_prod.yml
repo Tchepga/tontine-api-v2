@@ -59,12 +59,8 @@ jobs:
           ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "pm2 stop tontine-api || true"
           ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "pm2 delete tontine-api || true"
           
-          # Installation des dépendances et démarrage avec PM2
+          # Démarrage de l'application
           echo "🚀 Démarrage de l'application avec PM2..."
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "cd /root/apps/tontine && pm2 start dist/main.js --name tontine-api --log /root/apps/tontine/app.log"
-          
-          # Vérification du déploiement avec PM2
-          echo "✅ Vérification du déploiement..."
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "ls -la /root/apps/tontine && pm2 status && pm2 logs tontine-api --lines 10"
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "./runner/start-tontine.sh"
           
           echo "🎉 Déploiement terminé avec succès !"
