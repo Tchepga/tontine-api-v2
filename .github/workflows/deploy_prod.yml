@@ -35,22 +35,22 @@ jobs:
           env | grep -i secret || echo "Aucun secret trouvé"
           echo ""
           echo "Vérification spécifique:"
-          echo "SERVER_SSH_KEY existe: ${{ secrets.SERVER_SSH_KEY != '' && 'OUI' || 'NON' }}"
+          echo "HOST_VPS_SSH_KEY existe: ${{ secrets.HOST_VPS_SSH_KEY != '' && 'OUI' || 'NON' }}"
           echo "HOST_VPS_HOSTINGER existe: ${{ secrets.HOST_VPS_HOSTINGER != '' && 'OUI' || 'NON' }}"
-          echo "SERVER_USER existe: ${{ secrets.SERVER_USER != '' && 'OUI' || 'NON' }}"
+          echo "HOST_VPS_USER existe: ${{ secrets.HOST_VPS_USER != '' && 'OUI' || 'NON' }}"
           echo "================================"
 
       - name: Create SSH key file
         run: |
           # Vérifier que les secrets requis sont définis
           echo "=== Vérification des secrets ==="
-          echo "SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY != '' && '***SET***' || '***NOT SET***' }}"
+          echo "HOST_VPS_SSH_KEY: ${{ secrets.HOST_VPS_SSH_KEY != '' && '***SET***' || '***NOT SET***' }}"
           echo "HOST_VPS_HOSTINGER: ${{ secrets.HOST_VPS_HOSTINGER != '' && secrets.HOST_VPS_HOSTINGER || '***NOT SET***' }}"
-          echo "SERVER_USER: ${{ secrets.SERVER_USER != '' && secrets.SERVER_USER || '***NOT SET***' }}"
+          echo "HOST_VPS_USER: ${{ secrets.HOST_VPS_USER != '' && secrets.HOST_VPS_USER || '***NOT SET***' }}"
           echo "================================"
           
-          if [ -z "${{ secrets.SERVER_SSH_KEY }}" ]; then
-            echo "❌ ERREUR: SERVER_SSH_KEY n'est pas définie dans les secrets GitHub"
+          if [ -z "${{ secrets.HOST_VPS_SSH_KEY }}" ]; then
+            echo "❌ ERREUR: HOST_VPS_SSH_KEY n'est pas définie dans les secrets GitHub"
             echo "Vérifiez que le secret existe dans Settings > Secrets and variables > Actions"
             exit 1
           fi
@@ -60,13 +60,13 @@ jobs:
             exit 1
           fi
           
-          if [ -z "${{ secrets.SERVER_USER }}" ]; then
-            echo "❌ ERREUR: SERVER_USER n'est pas défini dans les secrets GitHub"
+          if [ -z "${{ secrets.HOST_VPS_USER }}" ]; then
+            echo "❌ ERREUR: HOST_VPS_USER n'est pas défini dans les secrets GitHub"
             exit 1
           fi
           
           mkdir -p ~/.ssh
-          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.HOST_VPS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
           
@@ -75,14 +75,14 @@ jobs:
           ls -la ~/.ssh/deploy_key
           echo "SSH key exists: $([ -s ~/.ssh/deploy_key ] && echo 'YES' || echo 'NO')"
           echo "SSH key size: $(wc -c < ~/.ssh/deploy_key) bytes"
-          echo "Connection details: ${{ secrets.SERVER_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}"
+          echo "Connection details: ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}"
 
       - name: Run server command via SSH
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.HOST_VPS_HOSTINGER }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          username: ${{ secrets.HOST_VPS_USER }}
+          key: ${{ secrets.HOST_VPS_SSH_KEY }}
           script: |
             cp config/.env-tontine-api apps/tontine/.env
             cd /apps/tontine
