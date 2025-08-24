@@ -56,6 +56,18 @@ jobs:
       - name: Build project
         run: npm run build:prod
 
+      - name: Debug secrets
+        run: |
+          echo "=== Debug des secrets ==="
+          echo "Tous les secrets disponibles:"
+          env | grep -i secret || echo "Aucun secret trouvé"
+          echo ""
+          echo "Vérification spécifique:"
+          echo "SERVER_SSH_KEY existe: ${{ secrets.SERVER_SSH_KEY != '' && 'OUI' || 'NON' }}"
+          echo "SERVER_HOST existe: ${{ secrets.SERVER_HOST != '' && 'OUI' || 'NON' }}"
+          echo "SERVER_USER existe: ${{ secrets.SERVER_USER != '' && 'OUI' || 'NON' }}"
+          echo "================================"
+
       - name: Create SSH key file
         run: |
           # Vérifier que les secrets requis sont définis
@@ -67,6 +79,7 @@ jobs:
           
           if [ -z "${{ secrets.SERVER_SSH_KEY }}" ]; then
             echo "❌ ERREUR: SERVER_SSH_KEY n'est pas définie dans les secrets GitHub"
+            echo "Vérifiez que le secret existe dans Settings > Secrets and variables > Actions"
             exit 1
           fi
           
