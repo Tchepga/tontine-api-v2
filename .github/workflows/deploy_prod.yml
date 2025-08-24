@@ -25,34 +25,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Create production environment file
-        run: |
-          cat > src/shared/environement.prod.ts << 'EOF'
-          export const environment = {
-            production: true,
-            jwtConfig: {
-              secret: 'tontinard_2.0',
-              expiresIn: '24h',
-              global: true,
-            },
-            databaseConfig: {
-              type: 'mysql',
-              host: '127.0.0.1',
-              port: 3306,
-              username: 'user',
-              password: 'changeme',
-              database: 'tontine',
-              synchronize:true,
-              autoLoadEntities: true,
-            },
-            passwordConfig: {
-              minLength: 8,
-              maxLength: 100,
-              defaultPassword: 'changeme1@',
-            },
-          };
-          EOF
-
       - name: Build project
         run: npm run build:prod
 
@@ -64,7 +36,7 @@ jobs:
           echo ""
           echo "Vérification spécifique:"
           echo "SERVER_SSH_KEY existe: ${{ secrets.SERVER_SSH_KEY != '' && 'OUI' || 'NON' }}"
-          echo "SERVER_HOST existe: ${{ secrets.SERVER_HOST != '' && 'OUI' || 'NON' }}"
+          echo "HOST_VPS_HOSTINGER existe: ${{ secrets.HOST_VPS_HOSTINGER != '' && 'OUI' || 'NON' }}"
           echo "SERVER_USER existe: ${{ secrets.SERVER_USER != '' && 'OUI' || 'NON' }}"
           echo "================================"
 
@@ -73,7 +45,7 @@ jobs:
           # Vérifier que les secrets requis sont définis
           echo "=== Vérification des secrets ==="
           echo "SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY != '' && '***SET***' || '***NOT SET***' }}"
-          echo "SERVER_HOST: ${{ secrets.SERVER_HOST != '' && secrets.SERVER_HOST || '***NOT SET***' }}"
+          echo "HOST_VPS_HOSTINGER: ${{ secrets.HOST_VPS_HOSTINGER != '' && secrets.HOST_VPS_HOSTINGER || '***NOT SET***' }}"
           echo "SERVER_USER: ${{ secrets.SERVER_USER != '' && secrets.SERVER_USER || '***NOT SET***' }}"
           echo "================================"
           
@@ -83,8 +55,8 @@ jobs:
             exit 1
           fi
           
-          if [ -z "${{ secrets.SERVER_HOST }}" ]; then
-            echo "❌ ERREUR: SERVER_HOST n'est pas défini dans les secrets GitHub"
+          if [ -z "${{ secrets.HOST_VPS_HOSTINGER }}" ]; then
+            echo "❌ ERREUR: HOST_VPS_HOSTINGER n'est pas défini dans les secrets GitHub"
             exit 1
           fi
           
@@ -96,19 +68,19 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
           
           # Debug SSH key (sans afficher le contenu complet)
           echo "SSH key file created:"
           ls -la ~/.ssh/deploy_key
           echo "SSH key exists: $([ -s ~/.ssh/deploy_key ] && echo 'YES' || echo 'NO')"
           echo "SSH key size: $(wc -c < ~/.ssh/deploy_key) bytes"
-          echo "Connection details: ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}"
+          echo "Connection details: ${{ secrets.SERVER_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}"
 
       - name: Run server command via SSH
         uses: appleboy/ssh-action@v0.1.10
         with:
-          host: ${{ secrets.SERVER_HOST }}
+          host: ${{ secrets.HOST_VPS_HOSTINGER }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
