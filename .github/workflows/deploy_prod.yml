@@ -28,49 +28,48 @@ jobs:
       - name: Build project
         run: npm run build:prod
 
-      - name: Debug secrets
+      - name: Setup SSH and deploy
         run: |
-          echo "=== Debug des secrets ==="
-          echo "Tous les secrets disponibles:"
-          env | grep -i secret || echo "Aucun secret trouvé"
-          echo ""
-          echo "Vérification spécifique:"
-          echo "SSH_KEY_VPS_HOSTINGER existe: ${{ secrets.SSH_KEY_VPS_HOSTINGER != '' && 'OUI' || 'NON' }}"
-          echo "HOST_VPS_HOSTINGER existe: ${{ secrets.HOST_VPS_HOSTINGER != '' && 'OUI' || 'NON' }}"
-          echo "HOST_VPS_USER existe: ${{ secrets.HOST_VPS_USER != '' && 'OUI' || 'NON' }}"
-          echo "================================"
-
-      - name: Create SSH key file
-        run: |          
-          # Debug SSH key (sans afficher le contenu complet)
-          echo "SSH key file created:"
-          ls -la ~/.ssh/deploy_key
-          echo "SSH key exists: $([ -s ~/.ssh/deploy_key ] && echo 'YES' || echo 'NO')"
-          echo "SSH key size: $(wc -c < ~/.ssh/deploy_key) bytes"
-          echo "Connection details: ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}"
-
-      - name: Test SSH connection
-        run: |
-          echo "Testing SSH connection..."
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "echo 'SSH connection successful'"
-
-      - name: Clean and Copy files to server
-        run: |
-          # Clean existing dist files
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "rm -rf /root/apps/tontine/ || true"
-          # Copy new dist files
-          scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine
-
-      - name: Stop existing process and start new application
-        run: |
-          # Check if Node.js process is running
+          # Validation des secrets requis
+          if [ -z "${{ secrets.SSH_KEY_VPS_HOSTINGER }}" ]; then
+            echo "❌ ERREUR: SSH_KEY_VPS_HOSTINGER n'est pas définie"
+            exit 1
+          fi
+          
+          if [ -z "${{ secrets.HOST_VPS_HOSTINGER }}" ]; then
+            echo "❌ ERREUR: HOST_VPS_HOSTINGER n'est pas défini"
+            exit 1
+          fi
+          
+          if [ -z "${{ secrets.HOST_VPS_USER }}" ]; then
+            echo "❌ ERREUR: HOST_VPS_USER n'est pas défini"
+            exit 1
+          fi
+          
+          # Configuration SSH
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY_VPS_HOSTINGER }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
+          
+          # Test de connexion SSH
+          echo "🔗 Test de connexion SSH..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "echo '✅ Connexion SSH réussie'"
+          
+          # Nettoyage et copie des fichiers
+          echo "📁 Nettoyage et copie des fichiers..."
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "rm -rf /root/apps/tontine || true"
+          scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+          
+          # Arrêt du processus existant et démarrage
+          echo "🔄 Redémarrage de l'application..."
           if ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "pgrep -f 'node dist/main.js'"; then
-            # Stop any existing Node.js process
             ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "pkill -f 'node dist/main.js'"
           fi
-          # Install dependencies and start the new application in background
           ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "cd /root/apps/tontine && npm install --production && nohup node dist/main.js > app.log 2>&1 &"
-
-      - name: Verify deployment
-        run: |
+          
+          # Vérification du déploiement
+          echo "✅ Vérification du déploiement..."
           ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "ls -la /root/apps/tontine && ps aux | grep node"
+          
+          echo "🎉 Déploiement terminé avec succès !"
