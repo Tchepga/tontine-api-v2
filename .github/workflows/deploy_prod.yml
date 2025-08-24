@@ -70,6 +70,16 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
           
+          # Vérifier le format de la clé SSH
+          echo "Vérification du format de la clé SSH:"
+          if head -1 ~/.ssh/deploy_key | grep -q "-----BEGIN"; then
+            echo "✅ Format de clé SSH correct"
+          else
+            echo "❌ Format de clé SSH incorrect - doit commencer par '-----BEGIN'"
+            echo "Première ligne: $(head -1 ~/.ssh/deploy_key)"
+            exit 1
+          fi
+          
           # Debug SSH key (sans afficher le contenu complet)
           echo "SSH key file created:"
           ls -la ~/.ssh/deploy_key
@@ -77,14 +87,28 @@ jobs:
           echo "SSH key size: $(wc -c < ~/.ssh/deploy_key) bytes"
           echo "Connection details: ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}"
 
-      - name: Run server command via SSH
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.HOST_VPS_HOSTINGER }}
-          username: ${{ secrets.HOST_VPS_USER }}
-          key: ${{ secrets.HOST_VPS_SSH_KEY }}
-          script: |
-            cp config/.env-tontine-api apps/tontine/.env
-            cd /apps/tontine
-            npm install --production || true
-            nohup node dist/main.js &
+      - name: Test SSH connection
+        run: |
+          echo "Testing SSH connection..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "echo 'SSH connection successful'"
+
+      - name: Clean and Copy files to server
+        run: |
+          # Clean existing dist files
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "rm -rf /root/apps/tontine/dist || true"
+          # Copy new dist files
+          scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+
+      - name: Stop existing process and start new application
+        run: |
+          # Check if Node.js process is running
+          if ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "pgrep -f 'node dist/main.js'"; then
+            # Stop any existing Node.js process
+            ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "pkill -f 'node dist/main.js'"
+          fi
+          # Install dependencies and start the new application in background
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "cd /root/apps/tontine && npm install --production && nohup node dist/main.js > app.log 2>&1 &"
+
+      - name: Verify deployment
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "ls -la /root/apps/tontine && ps aux | grep node"
