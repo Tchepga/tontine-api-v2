@@ -72,7 +72,7 @@ jobs:
           
           # Vérifier le format de la clé SSH
           echo "Vérification du format de la clé SSH:"
-          if head -1 ~/.ssh/deploy_key | grep -q "-----BEGIN"; then
+          if head -1 ~/.ssh/deploy_key | grep -q -- "-----BEGIN"; then
             echo "✅ Format de clé SSH correct"
           else
             echo "❌ Format de clé SSH incorrect - doit commencer par '-----BEGIN'"
