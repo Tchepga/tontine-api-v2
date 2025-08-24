@@ -59,6 +59,13 @@ jobs:
       - name: Create SSH key file
         run: |
           # Vérifier que les secrets requis sont définis
+          echo "SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}"
+          echo "HOST: ${{ secrets.HOST }}"
+          echo "USER: ${{ secrets.USER }}"
+          echo "SERVER_HOST: ${{ secrets.SERVER_HOST }}"
+          echo "SERVER_USER: ${{ secrets.SERVER_USER }}"
+          echo "SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}"
+          echo "SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}"
           if [ -z "${{ secrets.SERVER_SSH_KEY }}" ]; then
             echo "❌ ERREUR: SERVER_SSH_KEY n'est pas définie dans les secrets GitHub"
             exit 1
