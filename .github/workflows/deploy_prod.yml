@@ -41,45 +41,7 @@ jobs:
           echo "================================"
 
       - name: Create SSH key file
-        run: |
-          # Vérifier que les secrets requis sont définis
-          echo "=== Vérification des secrets ==="
-          echo "SSH_KEY_VPS_HOSTINGER: ${{ secrets.SSH_KEY_VPS_HOSTINGER != '' && '***SET***' || '***NOT SET***' }}"
-          echo "HOST_VPS_HOSTINGER: ${{ secrets.HOST_VPS_HOSTINGER != '' && secrets.HOST_VPS_HOSTINGER || '***NOT SET***' }}"
-          echo "HOST_VPS_USER: ${{ secrets.HOST_VPS_USER != '' && secrets.HOST_VPS_USER || '***NOT SET***' }}"
-          echo "================================"
-          
-          if [ -z "${{ secrets.SSH_KEY_VPS_HOSTINGER }}" ]; then
-            echo "❌ ERREUR: SSH_KEY_VPS_HOSTINGER n'est pas définie dans les secrets GitHub"
-            echo "Vérifiez que le secret existe dans Settings > Secrets and variables > Actions"
-            exit 1
-          fi
-          
-          if [ -z "${{ secrets.HOST_VPS_HOSTINGER }}" ]; then
-            echo "❌ ERREUR: HOST_VPS_HOSTINGER n'est pas défini dans les secrets GitHub"
-            exit 1
-          fi
-          
-          if [ -z "${{ secrets.HOST_VPS_USER }}" ]; then
-            echo "❌ ERREUR: HOST_VPS_USER n'est pas défini dans les secrets GitHub"
-            exit 1
-          fi
-          
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY_VPS_HOSTINGER }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
-          
-          # Vérifier le format de la clé SSH
-          echo "Vérification du format de la clé SSH:"
-          if head -1 ~/.ssh/deploy_key | grep -q -- "-----BEGIN"; then
-            echo "✅ Format de clé SSH correct"
-          else
-            echo "❌ Format de clé SSH incorrect - doit commencer par '-----BEGIN'"
-            echo "Première ligne: $(head -1 ~/.ssh/deploy_key)"
-            exit 1
-          fi
-          
+        run: |          
           # Debug SSH key (sans afficher le contenu complet)
           echo "SSH key file created:"
           ls -la ~/.ssh/deploy_key
@@ -95,9 +57,9 @@ jobs:
       - name: Clean and Copy files to server
         run: |
           # Clean existing dist files
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "rm -rf /root/apps/tontine/dist || true"
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "rm -rf /root/apps/tontine/ || true"
           # Copy new dist files
-          scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+          scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine
 
       - name: Stop existing process and start new application
         run: |
