@@ -30,21 +30,6 @@ jobs:
 
       - name: Setup SSH and deploy
         run: |
-          # Validation des secrets requis
-          if [ -z "${{ secrets.SSH_KEY_VPS_HOSTINGER }}" ]; then
-            echo "❌ ERREUR: SSH_KEY_VPS_HOSTINGER n'est pas définie"
-            exit 1
-          fi
-          
-          if [ -z "${{ secrets.HOST_VPS_HOSTINGER }}" ]; then
-            echo "❌ ERREUR: HOST_VPS_HOSTINGER n'est pas défini"
-            exit 1
-          fi
-          
-          if [ -z "${{ secrets.HOST_VPS_USER }}" ]; then
-            echo "❌ ERREUR: HOST_VPS_USER n'est pas défini"
-            exit 1
-          fi
           
           # Configuration SSH
           mkdir -p ~/.ssh
@@ -60,6 +45,10 @@ jobs:
           echo "📁 Nettoyage et copie des fichiers..."
           ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "rm -rf /root/apps/tontine || true"
           scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+
+          # Copier les fichiers build sur le serveur
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "rm -rf /root/apps/tontine/dist || true"
+          scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
           
           # Installation de PM2 si pas déjà installé
           echo "📦 Installation de PM2..."
@@ -72,7 +61,7 @@ jobs:
           
           # Installation des dépendances et démarrage avec PM2
           echo "🚀 Démarrage de l'application avec PM2..."
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "cd /root/apps/tontine && npm install --production && pm2 start dist/main.js --name tontine-api --log /root/apps/tontine/app.log"
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "cd /root/apps/tontine && pm2 start dist/main.js --name tontine-api --log /root/apps/tontine/app.log"
           
           # Vérification du déploiement avec PM2
           echo "✅ Vérification du déploiement..."
