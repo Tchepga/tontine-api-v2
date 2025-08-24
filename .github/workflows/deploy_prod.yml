@@ -61,6 +61,6 @@ jobs:
           
           # Démarrage de l'application
           echo "🚀 Démarrage de l'application avec PM2..."
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "./runner/start-tontine.sh"
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "cd /root/starter && ./start-tontine.sh"
           
           echo "🎉 Déploiement terminé avec succès !"
