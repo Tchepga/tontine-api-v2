@@ -57,29 +57,25 @@ jobs:
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "echo '✅ Connexion SSH réussie'"
           
           # Nettoyage et copie des fichiers
-          echo "�� Nettoyage et copie des fichiers..."
+          echo "📁 Nettoyage et copie des fichiers..."
           ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "rm -rf /root/apps/tontine || true"
           scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
           
-          # Installation et configuration PM2
-          echo "🔧 Installation et configuration PM2..."
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
-            cd /root/apps/tontine &&
-            npm install --production &&
-            npm install -g pm2 &&
-            pm2 delete tontine-api || true &&
-            pm2 start dist/main.js --name tontine-api --max-memory-restart 300M &&
-            pm2 save &&
-            pm2 startup
-          "
+          # Installation de PM2 si pas déjà installé
+          echo "📦 Installation de PM2..."
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "npm install -g pm2 || true"
           
-          # Vérification du déploiement
+          # Arrêt du processus existant avec PM2
+          echo "🔄 Arrêt de l'application existante..."
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "pm2 stop tontine-api || true"
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "pm2 delete tontine-api || true"
+          
+          # Installation des dépendances et démarrage avec PM2
+          echo "🚀 Démarrage de l'application avec PM2..."
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "cd /root/apps/tontine && npm install --production && pm2 start dist/main.js --name tontine-api --log /root/apps/tontine/app.log"
+          
+          # Vérification du déploiement avec PM2
           echo "✅ Vérification du déploiement..."
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
-            echo '=== PM2 Status ===' &&
-            pm2 status &&
-            echo '=== Application Logs ===' &&
-            pm2 logs tontine-api --lines 10
-          "
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "ls -la /root/apps/tontine && pm2 status && pm2 logs tontine-api --lines 10"
           
-          echo "�� Déploiement terminé avec succès !"
+          echo "🎉 Déploiement terminé avec succès !"
