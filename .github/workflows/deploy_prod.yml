@@ -35,7 +35,7 @@ jobs:
           env | grep -i secret || echo "Aucun secret trouvé"
           echo ""
           echo "Vérification spécifique:"
-          echo "HOST_VPS_SSH_KEY existe: ${{ secrets.HOST_VPS_SSH_KEY != '' && 'OUI' || 'NON' }}"
+          echo "SSH_KEY_VPS_HOSTINGER existe: ${{ secrets.SSH_KEY_VPS_HOSTINGER != '' && 'OUI' || 'NON' }}"
           echo "HOST_VPS_HOSTINGER existe: ${{ secrets.HOST_VPS_HOSTINGER != '' && 'OUI' || 'NON' }}"
           echo "HOST_VPS_USER existe: ${{ secrets.HOST_VPS_USER != '' && 'OUI' || 'NON' }}"
           echo "================================"
@@ -44,13 +44,13 @@ jobs:
         run: |
           # Vérifier que les secrets requis sont définis
           echo "=== Vérification des secrets ==="
-          echo "HOST_VPS_SSH_KEY: ${{ secrets.HOST_VPS_SSH_KEY != '' && '***SET***' || '***NOT SET***' }}"
+          echo "SSH_KEY_VPS_HOSTINGER: ${{ secrets.SSH_KEY_VPS_HOSTINGER != '' && '***SET***' || '***NOT SET***' }}"
           echo "HOST_VPS_HOSTINGER: ${{ secrets.HOST_VPS_HOSTINGER != '' && secrets.HOST_VPS_HOSTINGER || '***NOT SET***' }}"
           echo "HOST_VPS_USER: ${{ secrets.HOST_VPS_USER != '' && secrets.HOST_VPS_USER || '***NOT SET***' }}"
           echo "================================"
           
-          if [ -z "${{ secrets.HOST_VPS_SSH_KEY }}" ]; then
-            echo "❌ ERREUR: HOST_VPS_SSH_KEY n'est pas définie dans les secrets GitHub"
+          if [ -z "${{ secrets.SSH_KEY_VPS_HOSTINGER }}" ]; then
+            echo "❌ ERREUR: SSH_KEY_VPS_HOSTINGER n'est pas définie dans les secrets GitHub"
             echo "Vérifiez que le secret existe dans Settings > Secrets and variables > Actions"
             exit 1
           fi
@@ -66,7 +66,7 @@ jobs:
           fi
           
           mkdir -p ~/.ssh
-          echo "${{ secrets.HOST_VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.SSH_KEY_VPS_HOSTINGER }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
           
