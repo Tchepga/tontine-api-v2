@@ -36,39 +36,9 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
           
-          # Copier les fichiers build sur le serveur
-          echo "📁 Copie des fichiers..."
-          scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
-          
-          # Une seule connexion SSH pour tout le déploiement
-          echo "🚀 Déploiement en cours..."
+          # Run deploy script
           ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
-            set -e
-            echo \"🔗 Connexion SSH réussie\"
-            
-            # Charger fnm avec le shell spécifié
-            export PATH=\\\$HOME/.local/share/fnm:\\\$PATH
-            eval \"\\\$(/root/.local/share/fnm/fnm env --shell bash)\"
-            /root/.local/share/fnm/fnm use default
-            
-            echo \"📦 Installation de PM2...\"
-            npm install -g pm2 || true
-            
-            echo \"📁 Nettoyage et préparation...\"
-            cd /root/apps/tontine
-            
-            echo \"🔄 Arrêt de l'application existante...\"
-            pm2 stop tontine-api || true
-            pm2 delete tontine-api || true
-            
-            echo \"🚀 Démarrage de l'application...\"
-            pm2 start dist/main.js --name tontine-api --log /root/apps/tontine/app.log
-            pm2 save
-            pm2 startup
-            
-            echo \"✅ Vérification du déploiement...\"
-            pm2 status
-            pm2 logs tontine-api --lines 5
-            
-            echo \"🎉 Déploiement terminé avec succès !\"
+            cd /root/starter
+            ./start-tontine.sh
           "
+          
