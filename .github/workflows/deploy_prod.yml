@@ -43,37 +43,37 @@ jobs:
           echo "🚀 Déploiement Docker en cours..."
           ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
             set -e
-            echo '🔗 Connexion SSH réussie'
+            echo \"🔗 Connexion SSH réussie\"
             
             cd /root/apps/tontine
             
             # Arrêter et supprimer les conteneurs existants
-            echo '🔄 Arrêt des conteneurs existants...'
+            echo \"🔄 Arrêt des conteneurs existants...\"
             docker-compose down || true
             docker system prune -f || true
             
             # Construire et démarrer les conteneurs
-            echo '🏗️  Construction de l\'image Docker...'
+            echo \"🏗️  Construction de l'image Docker...\"
             docker-compose build --no-cache
             
-            echo '🚀 Démarrage des conteneurs...'
+            echo \"🚀 Démarrage des conteneurs...\"
             docker-compose up -d
             
             # Vérification du déploiement
-            echo '✅ Vérification du déploiement...'
+            echo \"✅ Vérification du déploiement...\"
             sleep 10
             
             # Vérifier que le conteneur fonctionne
             if docker-compose ps | grep -q 'Up'; then
-              echo '🎉 Déploiement réussi !'
+              echo \"🎉 Déploiement réussi !\"
               docker-compose ps
               docker-compose logs --tail=10 tontine-api
             else
-              echo '❌ Erreur lors du déploiement'
+              echo \"❌ Erreur lors du déploiement\"
               docker-compose logs tontine-api
               exit 1
             fi
             
-            echo '🌐 Application accessible sur le port 8080'
+            echo \"🌐 Application accessible sur le port 8080\"
           "
           
