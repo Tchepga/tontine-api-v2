@@ -49,17 +49,18 @@ services:
       timeout: 10s
       retries: 3
 
-  # Reverse proxy Nginx (optionnel)
-  nginx:
-    image: nginx:alpine
-    container_name: tontine-nginx
+  # Reverse proxy Caddy (optionnel)
+  caddy:
+    image: caddy:2-alpine
+    container_name: tontine-caddy
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/ssl:/etc/nginx/ssl
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       - tontine-api
     networks:
@@ -67,6 +68,8 @@ services:
 
 volumes:
   mysql_data:
+  caddy_data:
+  caddy_config:
 
 networks:
   tontine-network:

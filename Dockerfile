@@ -32,9 +32,6 @@ COPY package*.json ./
 # Installer PM2 globalement
 RUN npm install -g pm2
 
-# Installer les dépendances de production
-RUN npm ci --only=production && npm cache clean --force
-
 # Copier les fichiers construits depuis le stage builder
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 

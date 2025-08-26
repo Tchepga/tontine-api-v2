@@ -35,6 +35,10 @@ jobs:
           scp -i ~/.ssh/deploy_key ecosystem.config.js ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
           scp -i ~/.ssh/deploy_key .dockerignore ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
           
+          # Créer le dossier caddy et copier la configuration
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "mkdir -p /root/apps/tontine/caddy"
+          scp -i ~/.ssh/deploy_key caddy/Caddyfile ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/caddy/
+          
           # Copier le code source
           echo "📦 Copie du code source..."
           scp -i ~/.ssh/deploy_key -r . ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/

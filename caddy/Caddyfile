@@ -1,0 +1,57 @@
+# Configuration Caddy pour Tontine API
+# Reverse proxy avec SSL automatique
+
+# Configuration pour le domaine principal
+api.tontine.devcoorp.net {
+    # Reverse proxy vers l'application
+    reverse_proxy tontine-api:8080 {
+        # Headers pour le proxy
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+        
+        # Timeout et retry
+        timeout 30s
+        health_uri /health
+        health_interval 30s
+        health_timeout 10s
+    }
+    
+    # Configuration de sécurité
+    header {
+        # Headers de sécurité
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+        
+        # Headers pour CORS (si nécessaire)
+        Access-Control-Allow-Origin "*"
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Content-Type, Authorization"
+    }
+    
+    # Compression
+    encode gzip
+    
+    # Logs
+    log {
+        output file /var/log/caddy/api.tontine.devcoorp.net.log
+        format json
+    }
+}
+
+# Configuration pour HTTP vers HTTPS redirect
+:80 {
+    redir https://{host}{uri} permanent
+}
+
+# Configuration pour les logs d'erreur
+:443 {
+    log {
+        output file /var/log/caddy/ssl.log
+        format json
+    }
+}
