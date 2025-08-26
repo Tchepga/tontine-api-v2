@@ -28,37 +28,51 @@ jobs:
       - name: Build project
         run: npm run build:prod
 
-      - name: Setup SSH and deploy
-        run: |
+      - - name: Deploy to server
+      run: |
+        # Configuration SSH
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_KEY_VPS_HOSTINGER }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
+        
+        # Copier les fichiers build sur le serveur
+        echo "�� Copie des fichiers..."
+        scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+        
+        # Une seule connexion SSH pour tout le déploiement
+        echo "🚀 Déploiement en cours..."
+        ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
+          set -e
+          echo '🔗 Connexion SSH réussie'
           
-          # Configuration SSH
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY_VPS_HOSTINGER }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
+          # Charger fnm
+          export PATH=\$HOME/.local/share/fnm:\$PATH
+          eval \"\$(fnm env --use-on-cd)\"
+          fnm use default
           
-          # Test de connexion SSH
-          echo "🔗 Test de connexion SSH..."
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "echo '✅ Connexion SSH réussie'"
+          echo '�� Installation de PM2...'
+          npm install -g pm2 || true
           
-          # Nettoyage et copie des fichiers
-          echo "📁 Nettoyage et copie des fichiers..."
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "rm -rf /root/apps/tontine || true"
-
-          # Copier les fichiers build sur le serveur
-          scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+          echo '📁 Nettoyage et préparation...'
+          cd /root/apps/tontine
+          rm -rf dist || true
           
-          # Installation de PM2 si pas déjà installé
-          echo "📦 Installation de PM2..."
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "npm install -g pm2 || true"
+          echo '📦 Installation des dépendances...'
+          npm install --production
           
-          # Arrêt du processus existant avec PM2
-          echo "🔄 Arrêt de l'application existante..."
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "pm2 stop tontine-api || true"
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "pm2 delete tontine-api || true"
+          echo '🔄 Arrêt de l\'application existante...'
+          pm2 stop tontine-api || true
+          pm2 delete tontine-api || true
           
-          # Démarrage de l'application
-          echo "🚀 Démarrage de l'application avec PM2..."
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "cd /root/starter && ./start-tontine.sh"
+          echo '🚀 Démarrage de l\'application...'
+          pm2 start dist/main.js --name tontine-api --log /root/apps/tontine/app.log
+          pm2 save
+          pm2 startup
           
-          echo "🎉 Déploiement terminé avec succès !"
+          echo '✅ Vérification du déploiement...'
+          pm2 status
+          pm2 logs tontine-api --lines 5
+          
+          echo '�� Déploiement terminé avec succès !'
+        "
