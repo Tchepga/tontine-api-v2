@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  tontine-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: tontine-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      # Variables d'environnement de base de données
+      - DB_HOST=${DB_HOST:-localhost}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_USERNAME=${DB_USERNAME:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-root}
+      - DB_DATABASE=${DB_DATABASE:-tontine}
+      - DB_SYNCHRONIZE=${DB_SYNCHRONIZE:-false}
+      # Variables JWT
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
+      # Variables de mot de passe
+      - PASSWORD_MIN_LENGTH=${PASSWORD_MIN_LENGTH:-8}
+      - PASSWORD_MAX_LENGTH=${PASSWORD_MAX_LENGTH:-100}
+      - DEFAULT_PASSWORD=${DEFAULT_PASSWORD:-changeme1@}
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - tontine-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Base de données MySQL (optionnel)
+  mysql:
+    image: mysql:8.0
+    container_name: tontine-mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-root}
+      - MYSQL_DATABASE=${DB_DATABASE:-tontine}
+      - MYSQL_USER=${DB_USERNAME:-root}
+      - MYSQL_PASSWORD=${DB_PASSWORD:-root}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - tontine-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Reverse proxy Nginx (optionnel)
+  nginx:
+    image: nginx:alpine
+    container_name: tontine-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - tontine-api
+    networks:
+      - tontine-network
+
+volumes:
+  mysql_data:
+
+networks:
+  tontine-network:
+    driver: bridge

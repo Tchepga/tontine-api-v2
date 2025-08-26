@@ -17,18 +17,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22'
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build project
-        run: npm run build:prod
-
-      - name: Deploy to server
+      - name: Deploy to server with Docker
         run: |
           # Configuration SSH
           mkdir -p ~/.ssh
@@ -36,9 +28,52 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
           
-          # Run deploy script
+          # Copier les fichiers Docker sur le serveur
+          echo "📁 Copie des fichiers Docker..."
+          scp -i ~/.ssh/deploy_key Dockerfile ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+          scp -i ~/.ssh/deploy_key docker-compose.yml ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+          scp -i ~/.ssh/deploy_key ecosystem.config.js ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+          scp -i ~/.ssh/deploy_key .dockerignore ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+          
+          # Copier le code source
+          echo "📦 Copie du code source..."
+          scp -i ~/.ssh/deploy_key -r . ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+          
+          # Déploiement Docker sur le serveur
+          echo "🚀 Déploiement Docker en cours..."
           ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
-            cd /root/starter
-            ./start-tontine.sh
+            set -e
+            echo '🔗 Connexion SSH réussie'
+            
+            cd /root/apps/tontine
+            
+            # Arrêter et supprimer les conteneurs existants
+            echo '🔄 Arrêt des conteneurs existants...'
+            docker-compose down || true
+            docker system prune -f || true
+            
+            # Construire et démarrer les conteneurs
+            echo '🏗️  Construction de l\'image Docker...'
+            docker-compose build --no-cache
+            
+            echo '🚀 Démarrage des conteneurs...'
+            docker-compose up -d
+            
+            # Vérification du déploiement
+            echo '✅ Vérification du déploiement...'
+            sleep 10
+            
+            # Vérifier que le conteneur fonctionne
+            if docker-compose ps | grep -q 'Up'; then
+              echo '🎉 Déploiement réussi !'
+              docker-compose ps
+              docker-compose logs --tail=10 tontine-api
+            else
+              echo '❌ Erreur lors du déploiement'
+              docker-compose logs tontine-api
+              exit 1
+            fi
+            
+            echo '🌐 Application accessible sur le port 8080'
           "
           
