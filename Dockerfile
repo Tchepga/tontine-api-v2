@@ -39,7 +39,6 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
 # Copier les fichiers de configuration
-COPY --chown=nestjs:nodejs .env* ./
 COPY --chown=nestjs:nodejs ecosystem.config.js ./
 
 # Changer vers l'utilisateur non-root
