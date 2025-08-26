@@ -46,9 +46,9 @@ jobs:
             set -e
             echo \"🔗 Connexion SSH réussie\"
             
-            # Charger fnm avec le chemin complet
+            # Charger fnm avec le shell spécifié
             export PATH=\\\$HOME/.local/share/fnm:\\\$PATH
-            eval \"\\\$(/root/.local/share/fnm/fnm env --use-on-cd)\"
+            eval \"\\\$(/root/.local/share/fnm/fnm env --shell bash)\"
             /root/.local/share/fnm/fnm use default
             
             echo \"📦 Installation de PM2...\"
