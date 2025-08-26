@@ -39,6 +39,13 @@ jobs:
           echo "📦 Copie du code source..."
           scp -i ~/.ssh/deploy_key -r . ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
           
+          # Copier le fichier de configuration d'environnement
+          echo "🔧 Copie du fichier de configuration..."
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
+            cp /root/config/.env-tontine-api /root/apps/tontine/.env
+            echo \"✅ Fichier .env copié avec succès\"
+          "
+          
           # Déploiement Docker sur le serveur
           echo "🚀 Déploiement Docker en cours..."
           ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
@@ -46,6 +53,14 @@ jobs:
             echo \"🔗 Connexion SSH réussie\"
             
             cd /root/apps/tontine
+            
+            # Vérifier et installer docker-compose si nécessaire
+            if ! command -v docker-compose &> /dev/null; then
+              echo \"📦 Installation de docker-compose...\"
+              sudo curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+              echo \"✅ docker-compose installé\"
+            fi
             
             # Arrêter et supprimer les conteneurs existants
             echo \"🔄 Arrêt des conteneurs existants...\"
