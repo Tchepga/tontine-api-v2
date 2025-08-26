@@ -44,31 +44,31 @@ jobs:
           echo "🚀 Déploiement en cours..."
           ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
             set -e
-            echo '🔗 Connexion SSH réussie'
+            echo \"🔗 Connexion SSH réussie\"
             
             # Charger fnm
-            export PATH=\$HOME/.local/share/fnm:\$PATH
-            eval \"\$(fnm env --use-on-cd)\"
+            export PATH=\\\$HOME/.local/share/fnm:\\\$PATH
+            eval \"\\\$(fnm env --use-on-cd)\"
             fnm use default
             
-            echo '📦 Installation de PM2...'
+            echo \"📦 Installation de PM2...\"
             npm install -g pm2 || true
             
-            echo '📁 Nettoyage et préparation...'
+            echo \"📁 Nettoyage et préparation...\"
             cd /root/apps/tontine
             
-            echo '🔄 Arrêt de l\'application existante...'
+            echo \"🔄 Arrêt de l'application existante...\"
             pm2 stop tontine-api || true
             pm2 delete tontine-api || true
             
-            echo '🚀 Démarrage de l\'application...'
+            echo \"🚀 Démarrage de l'application...\"
             pm2 start dist/main.js --name tontine-api --log /root/apps/tontine/app.log
             pm2 save
             pm2 startup
             
-            echo '✅ Vérification du déploiement...'
+            echo \"✅ Vérification du déploiement...\"
             pm2 status
             pm2 logs tontine-api --lines 5
             
-            echo '🎉 Déploiement terminé avec succès !'
+            echo \"🎉 Déploiement terminé avec succès !\"
           "
