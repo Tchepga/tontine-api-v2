@@ -37,8 +37,10 @@ jobs:
           ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
           
           # Copier les fichiers build sur le serveur
-          echo "�� Copie des fichiers..."
+          echo "📁 Copie des fichiers..."
           scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+          scp -i ~/.ssh/deploy_key package.json ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+          scp -i ~/.ssh/deploy_key package-lock.json ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/ || true
           
           # Une seule connexion SSH pour tout le déploiement
           echo "🚀 Déploiement en cours..."
@@ -51,12 +53,11 @@ jobs:
             eval \"\$(fnm env --use-on-cd)\"
             fnm use default
             
-            echo '�� Installation de PM2...'
+            echo '📦 Installation de PM2...'
             npm install -g pm2 || true
             
             echo '📁 Nettoyage et préparation...'
             cd /root/apps/tontine
-            rm -rf dist || true
             
             echo '📦 Installation des dépendances...'
             npm install --production
@@ -74,5 +75,5 @@ jobs:
             pm2 status
             pm2 logs tontine-api --lines 5
             
-            echo '�� Déploiement terminé avec succès !'
+            echo '🎉 Déploiement terminé avec succès !'
           "
