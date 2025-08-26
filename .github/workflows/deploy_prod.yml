@@ -39,8 +39,6 @@ jobs:
           # Copier les fichiers build sur le serveur
           echo "📁 Copie des fichiers..."
           scp -i ~/.ssh/deploy_key -r dist/* ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
-          scp -i ~/.ssh/deploy_key package.json ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
-          scp -i ~/.ssh/deploy_key package-lock.json ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/ || true
           
           # Une seule connexion SSH pour tout le déploiement
           echo "🚀 Déploiement en cours..."
