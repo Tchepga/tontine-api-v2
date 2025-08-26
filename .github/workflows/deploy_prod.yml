@@ -57,9 +57,6 @@ jobs:
             echo '📁 Nettoyage et préparation...'
             cd /root/apps/tontine
             
-            echo '📦 Installation des dépendances...'
-            npm install --production
-            
             echo '🔄 Arrêt de l\'application existante...'
             pm2 stop tontine-api || true
             pm2 delete tontine-api || true
