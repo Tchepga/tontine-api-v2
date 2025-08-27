@@ -19,28 +19,32 @@ fi
 # Créer le dossier de logs s'il n'existe pas et s'assurer des bonnes permissions
 echo "📁 Création du dossier de logs..."
 mkdir -p /tmp/logs
-chmod 755 /tmp/logs
+chmod 777 /tmp/logs
 
-# Nettoyer l'application PM2 existante
-echo "🧹 Nettoyage de l'application PM2 existante..."
-pm2 delete tontine-api 2>/dev/null || true
-
-# Démarrer l'application avec PM2
-echo "📦 Démarrage de l'application avec PM2..."
-pm2 start ecosystem.config.js
-
-# Attendre que l'application soit prête
-echo "⏳ Attente du démarrage de l'application..."
-sleep 10
-
-# Vérifier le statut de l'application
-echo "📊 Statut de l'application:"
-pm2 status
-
-# Afficher les logs récents
-echo "📋 Logs récents:"
-pm2 logs --lines 10
-
-# Garder le conteneur en vie et surveiller l'application
-echo "👀 Surveillance de l'application..."
-pm2-runtime start ecosystem.config.js --no-daemon
+# Changer vers l'utilisateur nestjs pour l'exécution de l'application
+echo "👤 Changement vers l'utilisateur nestjs..."
+su nestjs -c "
+    # Nettoyer l'application PM2 existante
+    echo '🧹 Nettoyage de l\'application PM2 existante...'
+    pm2 delete tontine-api 2>/dev/null || true
+    
+    # Démarrer l'application avec PM2
+    echo '📦 Démarrage de l\'application avec PM2...'
+    pm2 start ecosystem.config.js
+    
+    # Attendre que l'application soit prête
+    echo '⏳ Attente du démarrage de l\'application...'
+    sleep 10
+    
+    # Vérifier le statut de l'application
+    echo '📊 Statut de l\'application:'
+    pm2 status
+    
+    # Afficher les logs récents
+    echo '📋 Logs récents:'
+    pm2 logs --lines 10
+    
+    # Garder le conteneur en vie et surveiller l'application
+    echo '👀 Surveillance de l\'application...'
+    pm2-runtime start ecosystem.config.js --no-daemon
+"

@@ -40,8 +40,7 @@ COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
 # Créer les dossiers de logs avec les bonnes permissions
 RUN mkdir -p /tmp/logs && \
-    chown -R nestjs:nodejs /tmp/logs && \
-    chmod -R 755 /tmp/logs
+    chmod -R 777 /tmp/logs
 
 # Copier les fichiers de configuration
 COPY --chown=nestjs:nodejs ecosystem.config.js ./
@@ -50,9 +49,6 @@ COPY --chown=nestjs:nodejs start.sh ./
 # Rendre le script exécutable
 RUN chmod +x start.sh
 
-# Changer vers l'utilisateur non-root
-USER nestjs
-
 # Exposer le port
 EXPOSE 8080
 
@@ -60,5 +56,5 @@ EXPOSE 8080
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Script de démarrage
+# Script de démarrage (exécuté en tant que root)
 CMD ["./start.sh"]
