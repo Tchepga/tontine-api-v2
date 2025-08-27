@@ -111,9 +111,14 @@ jobs:
               echo \"🚀 Démarrage d'un nouveau processus Caddy...\"
             fi
             
-            # Démarrer Caddy reverse-proxy pour le domaine
-            nohup caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 > /dev/null 2>&1 &
-            CADDY_PID=\$!
+            # Démarrer Caddy reverse-proxy pour le domaine (avec gestion d'erreur)
+            if nohup caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 > /dev/null 2>&1 & then
+              CADDY_PID=\$!
+              echo \"✅ Caddy reverse-proxy démarré (PID: \$CADDY_PID)\"
+            else
+              echo \"❌ Erreur lors du démarrage de Caddy\"
+              exit 1
+            fi
             
             # Vérification finale
             sleep 3

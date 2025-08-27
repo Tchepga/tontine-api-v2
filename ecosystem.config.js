@@ -15,9 +15,9 @@ module.exports = {
     // Configuration pour Docker
     watch: false,
     max_memory_restart: '1G',
-    error_file: './logs/err.log',
-    out_file: './logs/out.log',
-    log_file: './logs/combined.log',
+    error_file: '/tmp/err.log',
+    out_file: '/tmp/out.log',
+    log_file: '/tmp/combined.log',
     time: true,
     // Redémarrage automatique
     autorestart: true,
