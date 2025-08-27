@@ -96,3 +96,30 @@ jobs:
             echo \"🌐 Application accessible sur le port 8080\"
           "
           
+          # Configuration Caddy pour le domaine
+          echo "🌐 Configuration Caddy pour le domaine..."
+          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
+            set -e
+            echo \"🔧 Configuration Caddy en cours...\"
+            
+            # Arrêter les processus Caddy existants
+            pkill -f 'caddy reverse-proxy' || true
+            sleep 2
+            
+            # Démarrer Caddy reverse-proxy pour le domaine
+            nohup caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 > /dev/null 2>&1 &
+            
+            # Vérification finale
+            sleep 3
+            if pgrep -f 'caddy reverse-proxy' > /dev/null; then
+              echo \"✅ Caddy reverse-proxy démarré avec succès\"
+              ps aux | grep 'caddy reverse-proxy' | grep -v grep
+            else
+              echo \"❌ Erreur lors du démarrage de Caddy\"
+              exit 1
+            fi
+            
+            echo \"🎉 Configuration Caddy terminée !\"
+            echo \"🌐 Application accessible sur https://api.tontine.devcoorp.net\"
+          "
+          
