@@ -100,39 +100,49 @@ jobs:
           # Configuration Caddy pour le domaine
           echo "🌐 Configuration Caddy pour le domaine..."
           ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
-            echo \"🔧 Configuration Caddy en cours...\"
+            set -e
+            echo '🔧 Configuration Caddy en cours...'
             
-            # Vérifier si un processus Caddy existe déjà pour ce domaine
-            if pgrep -f 'caddy.*api.tontine.devcoorp.net' > /dev/null; then
-              echo \"🔄 Mise à jour de la configuration Caddy existante...\"
-              # Arrêter seulement le processus pour ce domaine spécifique
-              pkill -f 'caddy.*api.tontine.devcoorp.net' || echo \"Aucun processus spécifique à arrêter\"
-              sleep 2
-            else
-              echo \"🚀 Démarrage d'un nouveau processus Caddy...\"
+            # Vérifier si Caddy est installé
+            if ! command -v caddy &> /dev/null; then
+              echo '📦 Installation de Caddy...'
+              sudo apt-get update
+              sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https
+              curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+              curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+              sudo apt-get update
+              sudo apt-get install -y caddy
+              echo '✅ Caddy installé'
             fi
             
-            # Démarrer Caddy reverse-proxy pour le domaine (avec gestion d'erreur)
-            if nohup caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 > /dev/null 2>&1 & then
-              CADDY_PID=\$!
-              echo \"✅ Caddy reverse-proxy démarré (PID: \$CADDY_PID)\"
-            else
-              echo \"❌ Erreur lors du démarrage de Caddy\"
-              exit 1
-            fi
+            # Arrêter seulement le processus Caddy pour cette application
+            echo '🔄 Arrêt du processus Caddy pour cette application...'
+            sudo pkill -f 'caddy.*api.tontine.devcoorp.net' || echo 'Aucun processus Caddy spécifique à arrêter'
+            sleep 2
             
-            # Vérification finale
-            sleep 3
+            # Démarrer Caddy reverse-proxy pour le domaine
+            echo '🚀 Démarrage de Caddy reverse-proxy...'
+            nohup sudo caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 > /tmp/caddy.log 2>&1 &
+            CADDY_PID=\$!
+            
+            # Attendre un peu et vérifier que Caddy a démarré
+            sleep 5
+            
+            # Vérification que Caddy fonctionne
             if ps -p \$CADDY_PID > /dev/null; then
-              echo \"✅ Caddy reverse-proxy démarré avec succès (PID: \$CADDY_PID)\"
-              echo \"📋 Processus Caddy actifs:\"
+              echo '✅ Caddy reverse-proxy démarré avec succès'
+              echo '📋 Processus Caddy actifs:'
               ps aux | grep caddy | grep -v grep
+              echo '📋 Logs Caddy:'
+              tail -5 /tmp/caddy.log
             else
-              echo \"❌ Erreur lors du démarrage de Caddy\"
+              echo '❌ Erreur lors du démarrage de Caddy'
+              echo '📋 Logs d\'erreur Caddy:'
+              cat /tmp/caddy.log
               exit 1
             fi
             
-            echo \"🎉 Configuration Caddy terminée !\"
-            echo \"🌐 Application accessible sur https://api.tontine.devcoorp.net\"
+            echo '🎉 Configuration Caddy terminée !'
+            echo '🌐 Application accessible sur https://api.tontine.devcoorp.net'
           "
           
