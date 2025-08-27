@@ -33,6 +33,7 @@ jobs:
           scp -i ~/.ssh/deploy_key Dockerfile ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
           scp -i ~/.ssh/deploy_key docker-compose.yml ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
           scp -i ~/.ssh/deploy_key ecosystem.config.js ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+          scp -i ~/.ssh/deploy_key start.sh ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
           scp -i ~/.ssh/deploy_key .dockerignore ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
           
           # Créer le dossier caddy et copier la configuration
