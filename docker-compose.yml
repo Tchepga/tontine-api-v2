@@ -66,11 +66,6 @@ services:
   #   networks:
   #     - tontine-network
 
-volumes:
-  # mysql_data:  # Commenté car MySQL est désactivé
-  # caddy_data:  # Commenté car Caddy est désactivé
-  # caddy_config:  # Commenté car Caddy est désactivé
-
 networks:
   tontine-network:
     driver: bridge
