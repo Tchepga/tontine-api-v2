@@ -16,8 +16,10 @@ if [ ! -f "dist/main.js" ]; then
     exit 1
 fi
 
-# Créer le dossier de logs s'il n'existe pas
+# Créer le dossier de logs s'il n'existe pas et s'assurer des bonnes permissions
+echo "📁 Création du dossier de logs..."
 mkdir -p /tmp/logs
+chmod 755 /tmp/logs
 
 # Nettoyer l'application PM2 existante
 echo "🧹 Nettoyage de l'application PM2 existante..."

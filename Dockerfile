@@ -39,7 +39,9 @@ RUN npm install -g pm2
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
 # Créer les dossiers de logs avec les bonnes permissions
-RUN mkdir -p /tmp/logs && chown -R nestjs:nodejs /tmp/logs
+RUN mkdir -p /tmp/logs && \
+    chown -R nestjs:nodejs /tmp/logs && \
+    chmod -R 755 /tmp/logs
 
 # Copier les fichiers de configuration
 COPY --chown=nestjs:nodejs ecosystem.config.js ./
