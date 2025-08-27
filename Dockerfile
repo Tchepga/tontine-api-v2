@@ -19,6 +19,9 @@ RUN npm run build:prod
 # Stage de production
 FROM node:20-alpine AS production
 
+# Installer curl pour le healthcheck
+RUN apk add --no-cache curl
+
 # Créer un utilisateur non-root
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nestjs -u 1001
@@ -51,5 +54,20 @@ EXPOSE 8080
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Script de démarrage
-CMD ["pm2-runtime", "start", "ecosystem.config.js"]
+# Script de démarrage intégré
+CMD ["sh", "-c", "echo '🚀 Démarrage de l\'application Tontine API...' && \
+     if [ ! -d 'dist' ]; then echo '❌ Erreur: Le dossier dist n\'existe pas'; exit 1; fi && \
+     if [ ! -f 'dist/main.js' ]; then echo '❌ Erreur: Le fichier dist/main.js n\'existe pas'; exit 1; fi && \
+     mkdir -p /tmp/logs && \
+     echo '🧹 Nettoyage des processus PM2 existants...' && \
+     pm2 delete all 2>/dev/null || true && \
+     echo '📦 Démarrage de l\'application avec PM2...' && \
+     pm2 start ecosystem.config.js && \
+     echo '⏳ Attente du démarrage de l\'application...' && \
+     sleep 10 && \
+     echo '📊 Statut de l\'application:' && \
+     pm2 status && \
+     echo '📋 Logs récents:' && \
+     pm2 logs --lines 10 && \
+     echo '👀 Surveillance de l\'application...' && \
+     pm2-runtime start ecosystem.config.js --no-daemon"]

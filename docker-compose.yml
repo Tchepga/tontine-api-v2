@@ -16,55 +16,15 @@ services:
       - NODE_ENV=production
       - PORT=8080
     volumes:
-      - ./logs:/app/logs
+      - ./logs:/tmp/logs
     networks:
       - tontine-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # Base de données MySQL (optionnel - commenté car déjà en cours d'utilisation)
-  # mysql:
-  #   image: mysql:8.0
-  #   container_name: tontine-mysql
-  #   restart: unless-stopped
-  #   environment:
-  #     - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-root}
-  #     - MYSQL_DATABASE=${DB_DATABASE:-tontine}
-  #     - MYSQL_USER=${DB_USERNAME:-root}
-  #     - MYSQL_PASSWORD=${DB_PASSWORD:-root}
-  #   ports:
-  #     - "3306:3306"
-  #   volumes:
-  #     - mysql_data:/var/lib/mysql
-  #     - ./mysql/init:/docker-entrypoint-initdb.d
-  #   networks:
-  #     - tontine-network
-  #   healthcheck:
-  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-
-  # Reverse proxy Caddy (optionnel - commenté car déjà en cours d'utilisation)
-  # caddy:
-  #   image: caddy:2-alpine
-  #   container_name: tontine-caddy
-  #   restart: unless-stopped
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./caddy/Caddyfile:/etc/caddy/Caddyfile
-  #     - caddy_data:/data
-  #     - caddy_config:/config
-  #   depends_on:
-  #     - tontine-api
-  #   networks:
-  #     - tontine-network
+      interval: 60s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
 
 networks:
   tontine-network:
