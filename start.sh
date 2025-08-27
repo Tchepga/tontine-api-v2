@@ -19,9 +19,9 @@ fi
 # Créer le dossier de logs s'il n'existe pas
 mkdir -p /tmp/logs
 
-# Nettoyer les processus PM2 existants
-echo "🧹 Nettoyage des processus PM2 existants..."
-pm2 delete all 2>/dev/null || true
+# Nettoyer l'application PM2 existante
+echo "🧹 Nettoyage de l'application PM2 existante..."
+pm2 delete tontine-api 2>/dev/null || true
 
 # Démarrer l'application avec PM2
 echo "📦 Démarrage de l'application avec PM2..."
