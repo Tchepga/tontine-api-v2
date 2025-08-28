@@ -94,7 +94,7 @@ jobs:
             
             # Utiliser les chemins absolus Volta
             NODE_PATH=\"/root/.volta/bin/node\"
-            NPM_PATH=\"/root/.volta/tools/image/node/24.7.0/lib/node_modules/npm\"
+            NPM_PATH=\"/root/.volta/bin/npm\"
             
             echo \"✅ Utilisation de Node.js: \$NODE_PATH\"
             echo \"✅ Utilisation de npm: \$NPM_PATH\"
