@@ -1,0 +1,61 @@
+module.exports = {
+  moduleFileExtensions: ['js', 'json', 'ts'],
+  rootDir: 'src',
+  testRegex: '.*\\.spec\\.ts$',
+  transform: {
+    '^.+\\.(t|j)s$': 'ts-jest',
+  },
+  collectCoverageFrom: [
+    '**/*.(t|j)s',
+    '!**/*.module.ts',
+    '!**/index.ts',
+    '!**/main.ts',
+    '!**/*.dto.ts',
+    '!**/*.entity.ts',
+    '!**/*.enum.ts',
+    '!**/*.interface.ts',
+    '!**/*.decorator.ts',
+    '!**/*.guard.ts',
+    '!**/*.strategy.ts',
+    '!**/*.pipe.ts',
+    '!**/*.filter.ts',
+    '!**/*.interceptor.ts',
+    '!**/*.middleware.ts',
+  ],
+  coverageDirectory: '../coverage',
+  coverageReporters: ['text', 'lcov', 'html', 'json'],
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 70,
+      lines: 70,
+      statements: 70,
+    },
+  },
+  testEnvironment: 'node',
+  setupFilesAfterEnv: ['<rootDir>/../test/jest-setup.ts'],
+  moduleNameMapping: {
+    '^src/(.*)$': '<rootDir>/$1',
+  },
+  testTimeout: 10000,
+  verbose: true,
+  clearMocks: true,
+  restoreMocks: true,
+  collectCoverage: true,
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    '/coverage/',
+    '/test/',
+  ],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    '/coverage/',
+  ],
+  globals: {
+    'ts-jest': {
+      tsconfig: '<rootDir>/../tsconfig.json',
+    },
+  },
+};

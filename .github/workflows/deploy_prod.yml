@@ -20,6 +20,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run unit tests
+        run: npm run test:cov
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+      - name: Build application
+        run: npm run build:prod
+
       - name: Deploy to server with Docker
         run: |
           # Configuration SSH
