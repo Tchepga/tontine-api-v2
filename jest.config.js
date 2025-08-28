@@ -54,4 +54,6 @@ module.exports = {
     '/test/',
   ],
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/coverage/'],
+  moduleDirectories: ['node_modules', 'src'],
+  modulePaths: ['<rootDir>'],
 };

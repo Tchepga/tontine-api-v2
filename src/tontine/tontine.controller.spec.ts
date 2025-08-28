@@ -9,6 +9,8 @@ import { CreateMemberDto } from '../member/dto/create-member.dto';
 import { NotFoundException } from '@nestjs/common';
 import { Role } from '../authentification/entities/roles/roles.enum';
 import { StatusDeposit } from './enum/status-deposit';
+import { Currency } from './enum/shared';
+import { SystemType } from './enum/system-type';
 
 describe('TontineController', () => {
   let controller: TontineController;
@@ -79,10 +81,29 @@ describe('TontineController', () => {
   describe('create', () => {
     it('should create a new tontine', async () => {
       const createTontineDto: CreateTontineDto = {
-        name: 'Test Tontine',
-        description: 'Test Description',
-        amount: 1000,
-        frequency: 'monthly',
+        title: 'Test Tontine',
+        legacy: 'Test Legacy',
+        currency: 'FCFA',
+        members: [
+          {
+            username: 'testuser',
+            firstname: 'Test',
+            lastname: 'User',
+            phone: '1234567890',
+            country: 'FR',
+          },
+        ],
+        config: {
+          defaultLoanRate: 5,
+          defaultLoanDuration: 30,
+          loopPeriod: 'MONTHLY',
+          minLoanAmount: 1000,
+          countPersonPerMovement: 1,
+          movementType: 'CUMULATIVE',
+          countMaxMember: 10,
+          systemType: SystemType.PART,
+          rateMaps: [],
+        },
       };
 
       const expectedResult = {
@@ -111,7 +132,7 @@ describe('TontineController', () => {
 
       const mockTontine = {
         id: 1,
-        name: 'Test Tontine',
+        title: 'Test Tontine',
         members: [{ username: 'testuser' }],
       };
 
@@ -138,7 +159,7 @@ describe('TontineController', () => {
 
       const mockTontine = {
         id: 1,
-        name: 'Test Tontine',
+        title: 'Test Tontine',
         members: [{ username: 'otheruser' }],
       };
 
@@ -171,15 +192,9 @@ describe('TontineController', () => {
 
       mockTontineService.setSelectedTontine.mockResolvedValue(expectedResult);
 
-      const result = await controller.setSelectedTontine(
-        tontineId,
-        mockRequest,
-      );
+      const result = await controller.setSelectedTontine(tontineId, mockRequest);
 
-      expect(tontineService.setSelectedTontine).toHaveBeenCalledWith(
-        1,
-        'testuser',
-      );
+      expect(tontineService.setSelectedTontine).toHaveBeenCalledWith(1, 'testuser');
       expect(result).toEqual(expectedResult);
     });
   });
@@ -188,8 +203,8 @@ describe('TontineController', () => {
     it('should return tontines for a member', async () => {
       const username = 'testuser';
       const expectedTontines = [
-        { id: 1, name: 'Tontine 1' },
-        { id: 2, name: 'Tontine 2' },
+        { id: 1, title: 'Tontine 1' },
+        { id: 2, title: 'Tontine 2' },
       ];
 
       mockTontineService.findByMember.mockResolvedValue(expectedTontines);
@@ -215,8 +230,8 @@ describe('TontineController', () => {
     it('should update a tontine', async () => {
       const tontineId = '1';
       const updateTontineDto: UpdateTontineDto = {
-        name: 'Updated Tontine',
-        description: 'Updated Description',
+        title: 'Updated Tontine',
+        legacy: 'Updated Legacy',
       };
 
       const expectedResult = {
@@ -254,10 +269,12 @@ describe('TontineController', () => {
     it('should add a new member from scratch', async () => {
       const tontineId = '1';
       const createMemberDto: CreateMemberDto = {
-        firstName: 'John',
-        lastName: 'Doe',
+        username: 'john',
+        firstname: 'John',
+        lastname: 'Doe',
         email: 'john@example.com',
         phone: '1234567890',
+        country: 'FR',
       };
 
       const expectedResult = {
@@ -268,15 +285,9 @@ describe('TontineController', () => {
 
       mockTontineService.addMemberFromScratch.mockResolvedValue(expectedResult);
 
-      const result = await controller.addMemberFromScratch(
-        tontineId,
-        createMemberDto,
-      );
+      const result = await controller.addMemberFromScratch(tontineId, createMemberDto);
 
-      expect(tontineService.addMemberFromScratch).toHaveBeenCalledWith(
-        1,
-        createMemberDto,
-      );
+      expect(tontineService.addMemberFromScratch).toHaveBeenCalledWith(1, createMemberDto);
       expect(result).toEqual(expectedResult);
     });
   });
@@ -317,7 +328,11 @@ describe('TontineController', () => {
       const tontineId = '1';
       const createDepositDto: CreateDepositDto = {
         amount: 100,
-        description: 'Test deposit',
+        currency: Currency.FCFA,
+        memberId: 1,
+        status: StatusDeposit.PENDING,
+        cashFlowId: 1,
+        reasons: 'Test deposit',
       };
 
       const mockUser = {
@@ -338,11 +353,7 @@ describe('TontineController', () => {
 
       mockTontineService.createDeposit.mockResolvedValue(expectedResult);
 
-      const result = await controller.createDeposit(
-        tontineId,
-        createDepositDto,
-        mockRequest,
-      );
+      const result = await controller.createDeposit(tontineId, createDepositDto, mockRequest);
 
       expect(tontineService.createDeposit).toHaveBeenCalledWith(
         1,
@@ -357,7 +368,11 @@ describe('TontineController', () => {
       const tontineId = '1';
       const createDepositDto: CreateDepositDto = {
         amount: 100,
-        description: 'Test deposit',
+        currency: Currency.FCFA,
+        memberId: 1,
+        status: StatusDeposit.APPROVED,
+        cashFlowId: 1,
+        reasons: 'Test deposit',
       };
 
       const mockUser = {
@@ -378,11 +393,7 @@ describe('TontineController', () => {
 
       mockTontineService.createDeposit.mockResolvedValue(expectedResult);
 
-      const result = await controller.createDeposit(
-        tontineId,
-        createDepositDto,
-        mockRequest,
-      );
+      const result = await controller.createDeposit(tontineId, createDepositDto, mockRequest);
 
       expect(tontineService.createDeposit).toHaveBeenCalledWith(
         1,
@@ -417,7 +428,11 @@ describe('TontineController', () => {
       const depositId = '123';
       const updateDepositDto: CreateDepositDto = {
         amount: 150,
-        description: 'Updated deposit',
+        currency: Currency.FCFA,
+        memberId: 1,
+        status: StatusDeposit.APPROVED,
+        cashFlowId: 1,
+        reasons: 'Updated deposit',
       };
 
       const mockUser = {
@@ -437,19 +452,9 @@ describe('TontineController', () => {
 
       mockTontineService.updateDeposit.mockResolvedValue(expectedResult);
 
-      const result = await controller.updateDeposit(
-        tontineId,
-        depositId,
-        updateDepositDto,
-        mockRequest,
-      );
+      const result = await controller.updateDeposit(tontineId, depositId, updateDepositDto, mockRequest);
 
-      expect(tontineService.updateDeposit).toHaveBeenCalledWith(
-        1,
-        123,
-        updateDepositDto,
-        mockUser,
-      );
+      expect(tontineService.updateDeposit).toHaveBeenCalledWith(1, 123, updateDepositDto, mockUser);
       expect(result).toEqual(expectedResult);
     });
   });
@@ -472,17 +477,9 @@ describe('TontineController', () => {
 
       mockTontineService.removeDeposit.mockResolvedValue(expectedResult);
 
-      const result = await controller.deleteDeposit(
-        tontineId,
-        depositId,
-        mockRequest,
-      );
+      const result = await controller.deleteDeposit(tontineId, depositId, mockRequest);
 
-      expect(tontineService.removeDeposit).toHaveBeenCalledWith(
-        1,
-        123,
-        mockUser,
-      );
+      expect(tontineService.removeDeposit).toHaveBeenCalledWith(1, 123, mockUser);
       expect(result).toEqual(expectedResult);
     });
   });
