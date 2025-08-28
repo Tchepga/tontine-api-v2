@@ -95,12 +95,14 @@ jobs:
             # Utiliser les chemins absolus Volta
             NODE_PATH=\"/root/.volta/bin/node\"
             NPM_PATH=\"/root/.volta/bin/npm\"
+            PM2_PATH=\"/root/.volta/bin/pm2\"
             
             echo \"✅ Utilisation de Node.js: \$NODE_PATH\"
             echo \"✅ Utilisation de npm: \$NPM_PATH\"
+            echo \"✅ Utilisation de PM2: \$PM2_PATH\"
             
             # Vérifier et installer PM2 si nécessaire
-            if ! command -v pm2 &> /dev/null; then
+            if [ ! -f \"\$PM2_PATH\" ]; then
               echo \"📦 Installation de PM2...\"
               \$NPM_PATH install -g pm2
               echo \"✅ PM2 installé\"
@@ -112,36 +114,36 @@ jobs:
             
             # Arrêter l'application PM2 existante
             echo \"🔄 Arrêt de l'application existante...\"
-            pm2 stop tontine-api || echo \"Aucune application à arrêter\"
-            pm2 delete tontine-api || echo \"Aucune application à supprimer\"
+            \$PM2_PATH stop tontine-api || echo \"Aucune application à arrêter\"
+            \$PM2_PATH delete tontine-api || echo \"Aucune application à supprimer\"
             
             # Démarrer l'application avec PM2
             echo \"🚀 Démarrage de l'application avec PM2...\"
-            pm2 start ecosystem.config.js
+            \$PM2_PATH start ecosystem.config.js
             
             # Sauvegarder la configuration PM2
             echo \"💾 Sauvegarde de la configuration PM2...\"
-            pm2 save
+            \$PM2_PATH save
             
             # Configurer le démarrage automatique
             echo \"⚙️  Configuration du démarrage automatique...\"
-            pm2 startup || echo \"Démarrage automatique déjà configuré\"
+            \$PM2_PATH startup || echo \"Démarrage automatique déjà configuré\"
             
             # Vérification du déploiement
             echo \"✅ Vérification du déploiement...\"
             sleep 10
             
             # Vérifier que l'application fonctionne
-            if pm2 list | grep -q 'tontine-api.*online'; then
+            if \$PM2_PATH list | grep -q 'tontine-api.*online'; then
               echo \"🎉 Déploiement réussi !\"
-              pm2 list
-              pm2 logs tontine-api --lines 10
+              \$PM2_PATH list
+              \$PM2_PATH logs tontine-api --lines 10
               
               # Nettoyer l'ancienne version si tout va bien
               rm -rf /root/apps/tontine.old
             else
               echo \"❌ Erreur lors du déploiement\"
-              pm2 logs tontine-api
+              \$PM2_PATH logs tontine-api
               
               # Restaurer l'ancienne version en cas d'erreur
               echo \"🔄 Restauration de l'ancienne version...\"
@@ -149,7 +151,7 @@ jobs:
               rm -rf tontine
               mv tontine.old tontine
               cd tontine
-              pm2 start ecosystem.config.js || true
+              \$PM2_PATH start ecosystem.config.js || true
               exit 1
             fi
             
