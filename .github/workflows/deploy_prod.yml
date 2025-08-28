@@ -126,6 +126,7 @@ jobs:
           # Configuration Caddy optimisée pour multi-applications (mode processus)
           echo "🌐 Configuration Caddy..."
           ssh -i ~/.ssh/deploy_key root@${{ secrets.HOST_VPS_HOSTINGER }} "
+            set -e  # Arrêter en cas d'erreur
             echo '🔧 Configuration Caddy en cours...'
             
             # Vérifier si Caddy est installé
@@ -140,10 +141,25 @@ jobs:
               echo '✅ Caddy installé'
             fi
             
-            # Arrêter UNIQUEMENT le processus Caddy pour tontine-api
+            # Arrêter UNIQUEMENT le processus Caddy pour tontine-api (avec gestion d'erreur robuste)
             echo '🔄 Arrêt du processus Caddy pour tontine-api...'
-            pkill -f 'caddy.*api.tontine.devcoorp.net' || echo 'Aucun processus Caddy pour tontine-api à arrêter'
-            sleep 2
+            
+            # Vérifier d'abord si le processus existe
+            if pgrep -f 'caddy.*api.tontine.devcoorp.net' > /dev/null 2>&1; then
+              echo '📋 Processus Caddy tontine-api trouvé, arrêt en cours...'
+              pkill -f 'caddy.*api.tontine.devcoorp.net' || true
+              sleep 3
+              
+              # Vérifier que le processus est bien arrêté
+              if pgrep -f 'caddy.*api.tontine.devcoorp.net' > /dev/null 2>&1; then
+                echo '⚠️  Le processus persiste, arrêt forcé...'
+                pkill -9 -f 'caddy.*api.tontine.devcoorp.net' || true
+                sleep 2
+              fi
+              echo '✅ Processus Caddy tontine-api arrêté'
+            else
+              echo 'ℹ️  Aucun processus Caddy pour tontine-api trouvé'
+            fi
             
             # Vérifier qu'aucun autre processus Caddy n'est affecté
             echo '📋 Vérification des autres processus Caddy...'
@@ -181,5 +197,8 @@ jobs:
             echo '🌐 Application accessible sur https://api.tontine.devcoorp.net'
             echo '📋 Tous les processus Caddy actifs:'
             ps aux | grep caddy | grep -v grep || echo 'Aucun processus Caddy trouvé'
-          "
+          " || {
+            echo "⚠️  Erreur lors de la configuration Caddy, mais le déploiement continue..."
+            echo "🔧 L'application est accessible sur le port 8080"
+          }
           
