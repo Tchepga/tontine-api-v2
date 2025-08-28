@@ -18,7 +18,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
   app.setGlobalPrefix('api');
   await app.listen({
-    port: 8098,
+    port: 8080,
     host: '0.0.0.0',
   });
 }

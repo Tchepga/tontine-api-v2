@@ -7,11 +7,11 @@ module.exports = {
     exec_mode: 'fork',
     env: {
       NODE_ENV: 'production',
-      PORT: 8098
+      PORT: 8080
     },
     env_production: {
       NODE_ENV: 'production',
-      PORT: 8098
+      PORT: 8080
     },
     // Configuration optimisée pour production
     watch: false,
