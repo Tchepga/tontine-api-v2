@@ -32,10 +32,7 @@ export class NotificationGateway {
 
   @SubscribeMessage('updateNotification')
   update(@MessageBody() updateNotificationDto: UpdateNotificationDto) {
-    return this.notificationService.update(
-      updateNotificationDto.id,
-      updateNotificationDto,
-    );
+    return this.notificationService.update(updateNotificationDto.id);
   }
 
   @SubscribeMessage('removeNotification')

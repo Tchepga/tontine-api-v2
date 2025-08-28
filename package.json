@@ -22,7 +22,14 @@
     "test:integration": "jest --testPathPattern=test --testNamePattern='\\.e2e-spec\\.ts$'",
     "test:ci": "jest --ci --coverage --watchAll=false --verbose",
     "test:validate": "./scripts/test-validation.sh",
-    "build:prod": "NODE_ENV=production nest build"
+    "build:prod": "npm run lint && npm run test:cov && nest build",
+    "deploy:pm2": "./scripts/deploy-pm2.sh",
+    "deploy:pm2:local": "npm run build:prod && ./scripts/deploy-pm2.sh",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop tontine-api",
+    "pm2:restart": "pm2 restart tontine-api",
+    "pm2:logs": "pm2 logs tontine-api",
+    "pm2:status": "pm2 status"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

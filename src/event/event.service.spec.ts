@@ -29,7 +29,6 @@ describe('EventService', () => {
     }).compile();
 
     service = module.get<EventService>(EventService);
-    dataSource = module.get<DataSource>(DataSource);
   });
 
   it('should be defined', () => {
@@ -47,7 +46,11 @@ describe('EventService', () => {
         participants: [1, 2],
       };
 
-      const mockUser = { username: 'testuser' };
+      const mockUser = {
+        username: 'testuser',
+        password: 'password',
+        roles: [],
+      };
       const mockTontine = { id: 1 };
       const mockAuthor = { id: 1, user: { username: 'testuser' } };
       const mockMember = { id: 1 };
@@ -82,7 +85,11 @@ describe('EventService', () => {
       mockDataSource.getRepository().findOne.mockResolvedValue(null);
 
       await expect(
-        service.create(createEventDto, { username: 'test' }),
+        service.create(createEventDto, {
+          username: 'test',
+          password: 'password',
+          roles: [],
+        }),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -129,6 +136,8 @@ describe('EventService', () => {
 
       const result = await service.update(1, updateEventDto, {
         username: 'testuser',
+        password: 'password',
+        roles: [],
       });
 
       expect(result.title).toBe(updateEventDto.title);
@@ -143,7 +152,7 @@ describe('EventService', () => {
       mockDataSource.getRepository().findOne.mockResolvedValue(mockEvent);
 
       await expect(
-        service.update(1, { title: 'New Title' }, { username: 'testuser' }),
+        service.update(1, { title: 'New Title' }, { username: 'testuser', password: 'password', roles: [] }),
       ).rejects.toThrow(BadRequestException);
     });
   });

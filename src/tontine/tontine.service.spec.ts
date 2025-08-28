@@ -44,7 +44,9 @@ describe('TontineService', () => {
     }).compile();
 
     service = module.get<TontineService>(TontineService);
-    tontineRepository = module.get<Repository<Tontine>>(getRepositoryToken(Tontine));
+    tontineRepository = module.get<Repository<Tontine>>(
+      getRepositoryToken(Tontine),
+    );
   });
 
   afterEach(() => {
@@ -126,7 +128,9 @@ describe('TontineService', () => {
 
       mockTontineRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.findOne(tontineId)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(tontineId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -197,7 +201,9 @@ describe('TontineService', () => {
 
       mockTontineRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.remove(tontineId)).rejects.toThrow(NotFoundException);
+      await expect(service.remove(tontineId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -221,9 +227,17 @@ describe('TontineService', () => {
 
       const result = await service.findByMember(username);
 
-      expect(tontineRepository.createQueryBuilder).toHaveBeenCalledWith('tontine');
-      expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('tontine.members', 'member');
-      expect(queryBuilder.where).toHaveBeenCalledWith('member.username = :username', { username });
+      expect(tontineRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'tontine',
+      );
+      expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'tontine.members',
+        'member',
+      );
+      expect(queryBuilder.where).toHaveBeenCalledWith(
+        'member.username = :username',
+        { username },
+      );
       expect(result).toEqual(mockTontines);
     });
   });
@@ -268,7 +282,12 @@ describe('TontineService', () => {
         reasons: 'Test deposit',
       };
       const status = StatusDeposit.PENDING;
-      const user = { username: 'testuser', id: 1, password: 'password', roles: [] };
+      const user = {
+        username: 'testuser',
+        id: 1,
+        password: 'password',
+        roles: [],
+      };
 
       const mockTontine = {
         id: tontineId,
@@ -291,7 +310,12 @@ describe('TontineService', () => {
         deposits: [mockDeposit],
       });
 
-      const result = await service.createDeposit(tontineId, createDepositDto, status, user);
+      const result = await service.createDeposit(
+        tontineId,
+        createDepositDto,
+        status,
+        user,
+      );
 
       expect(tontineRepository.findOne).toHaveBeenCalledWith({
         where: { id: tontineId },
@@ -312,7 +336,12 @@ describe('TontineService', () => {
         reasons: 'Test deposit',
       };
       const status = StatusDeposit.PENDING;
-      const user = { username: 'testuser', id: 1, password: 'password', roles: [] };
+      const user = {
+        username: 'testuser',
+        id: 1,
+        password: 'password',
+        roles: [],
+      };
 
       mockTontineRepository.findOne.mockResolvedValue(null);
 
@@ -350,7 +379,9 @@ describe('TontineService', () => {
 
       mockTontineRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.getDeposits(tontineId)).rejects.toThrow(NotFoundException);
+      await expect(service.getDeposits(tontineId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -366,7 +397,12 @@ describe('TontineService', () => {
         cashFlowId: 1,
         reasons: 'Updated deposit',
       };
-      const user = { username: 'testuser', id: 1, password: 'password', roles: [] };
+      const user = {
+        username: 'testuser',
+        id: 1,
+        password: 'password',
+        roles: [],
+      };
 
       const mockTontine = {
         id: tontineId,
@@ -393,7 +429,12 @@ describe('TontineService', () => {
         ],
       });
 
-      const result = await service.updateDeposit(tontineId, depositId, updateDepositDto, user);
+      const result = await service.updateDeposit(
+        tontineId,
+        depositId,
+        updateDepositDto,
+        user,
+      );
 
       expect(tontineRepository.findOne).toHaveBeenCalledWith({
         where: { id: tontineId },
@@ -408,7 +449,12 @@ describe('TontineService', () => {
     it('should remove a deposit', async () => {
       const tontineId = 1;
       const depositId = 123;
-      const user = { username: 'accountmanager', id: 1, password: 'password', roles: [Role.ACCOUNT_MANAGER] };
+      const user = {
+        username: 'accountmanager',
+        id: 1,
+        password: 'password',
+        roles: [Role.ACCOUNT_MANAGER],
+      };
 
       const mockTontine = {
         id: tontineId,

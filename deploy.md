@@ -8,43 +8,91 @@ Ce document décrit le pipeline de déploiement continu pour le projet `tontine-
 
 #### **1. Vue d'ensemble**
 
-Le processus est entièrement automatisé via GitHub Actions. Chaque `push` sur la branche `master` déclenche un workflow qui construit une nouvelle image Docker de l'application, la publie sur Docker Hub, puis se connecte à un serveur de production pour mettre à jour le service en cours d'exécution.
+Le processus est entièrement automatisé via GitHub Actions. Chaque `push` sur la branche `deploy` déclenche un workflow qui construit l'application, exécute les tests, puis se connecte à un serveur de production pour déployer l'application avec PM2.
 
 #### **2. Déclenchement du Workflow**
 
-*   **Événement :** Le workflow est déclenché par un `git push` sur la branche `master`.
+*   **Événement :** Le workflow est déclenché par un `git push` sur la branche `deploy`.
 *   **Fichier de configuration :** `.github/workflows/deploy_prod.yml`
 
 #### **3. Étapes du Pipeline CI/CD (GitHub Actions)**
 
-Le pipeline se déroule en deux étapes principales sur un runner `ubuntu-latest`.
+Le pipeline se déroule en plusieurs étapes sur un runner `ubuntu-latest`.
 
-1.  **Build et Push de l'image Docker :**
+1.  **Setup et Tests :**
     *   Le code source est récupéré (`actions/checkout`).
-    *   Le workflow se connecte à Docker Hub en utilisant des secrets (`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`).
-    *   Une image Docker est construite en se basant sur le `Dockerfile` à la racine du projet.
-    *   L'image est taguée `tchep/tontine-api-v2:latest` et poussée sur Docker Hub.
+    *   Node.js 20.x est configuré (`actions/setup-node`).
+    *   Les dépendances sont installées (`npm ci`).
+    *   Les tests de linting sont exécutés (`npm run lint`).
+    *   Les tests unitaires sont exécutés avec couverture (`npm run test:cov`).
+    *   Les tests E2E sont exécutés (`npm run test:e2e`).
+    *   L'application est compilée pour la production (`npm run build:prod`).
 
 2.  **Déploiement sur le serveur :**
-    *   Le workflow se connecte au serveur de production via SSH en utilisant des secrets (`SSH_HOST`, `SSH_USERNAME`, etc.).
-    *   Une fois connecté, il exécute le script `start-tontine.sh` situé dans le répertoire `/home/tchep/tontine-api-v2` du serveur.
+    *   Le workflow se connecte au serveur de production via SSH en utilisant des secrets (`SSH_KEY_VPS_HOSTINGER`, `HOST_VPS_HOSTINGER`, etc.).
+    *   Une archive tar.gz est créée avec tous les fichiers nécessaires (excluant `node_modules`, `.git`, etc.).
+    *   L'archive est transférée sur le serveur via SCP.
+    *   Le script de déploiement PM2 est exécuté sur le serveur.
 
 #### **4. Exécution sur le Serveur de Production**
 
-Le script `start-tontine.sh` orchestre la mise à jour sur le serveur :
+Le script de déploiement orchestre la mise à jour sur le serveur :
 
-1.  Il se connecte à Docker Hub (ce qui est redondant si l'image est publique).
-2.  Il télécharge la dernière version de l'image : `docker pull tchep/tontine-api-v2:latest`.
-3.  Il utilise `docker-compose` pour arrêter et supprimer l'ancien conteneur (`docker-compose down`). **Cela entraîne une courte période d'indisponibilité (downtime)**.
-4.  Il démarre un nouveau conteneur avec la nouvelle image en utilisant la configuration du fichier `docker-compose.yml` (`docker-compose up -d`).
-5.  Le `docker-compose.yml` charge les variables d'environnement à partir d'un fichier `.env` présent sur le serveur.
-6.  Enfin, le script nettoie les anciennes images Docker non utilisées pour libérer de l'espace disque (`docker image prune -f`).
+1.  **Préparation de l'environnement :**
+    *   Vérification et installation de Node.js 20.x si nécessaire.
+    *   Vérification et installation de PM2 si nécessaire.
+    *   Sauvegarde de l'ancienne version pour rollback.
 
-#### **5. Reverse Proxy avec Caddy**
+2.  **Déploiement de l'application :**
+    *   Extraction de l'archive tar.gz.
+    *   Copie du fichier d'environnement de production.
+    *   Installation des dépendances de production (`npm ci --only=production`).
+    *   Arrêt de l'application PM2 existante.
+    *   Démarrage de la nouvelle version avec PM2.
+    *   Sauvegarde de la configuration PM2.
+    *   Configuration du démarrage automatique.
 
-*   Un conteneur Caddy est configuré (via `caddy/Caddyfile`) pour agir comme reverse proxy.
-*   Il redirige le trafic entrant de `tontine.tchep.com` vers le port `3000` du conteneur `tontine-api-v2`.
-*   Caddy gère automatiquement la terminaison SSL/TLS, fournissant le HTTPS.
+3.  **Vérification et rollback :**
+    *   Vérification que l'application fonctionne correctement.
+    *   En cas d'échec, restauration automatique de l'ancienne version.
+    *   Nettoyage des fichiers temporaires.
+
+#### **5. Configuration PM2**
+
+L'application utilise PM2 pour la gestion des processus en production :
+
+*   **Fichier de configuration :** `ecosystem.config.js`
+*   **Nom de l'application :** `tontine-api`
+*   **Port :** 8080
+*   **Mode d'exécution :** `fork` (une seule instance)
+*   **Redémarrage automatique :** Activé
+*   **Logs :** Stockés dans `./logs/`
+*   **Monitoring :** Intégré avec PM2
+
+#### **6. Reverse Proxy avec Caddy**
+
+*   Caddy est utilisé comme reverse proxy pour gérer HTTPS.
+*   Il redirige le trafic entrant de `api.tontine.devcoorp.net` vers le port `8080` de l'application.
+*   Caddy gère automatiquement la terminaison SSL/TLS.
+*   Configuration en mode processus pour éviter les conflits avec d'autres applications.
+
+---
+
+### **Avantages du Déploiement PM2 vs Docker**
+
+#### **Avantages PM2 :**
+*   **Simplicité :** Pas de conteneurs, configuration plus directe
+*   **Légèreté :** Moins de ressources système utilisées
+*   **Rapidité :** Déploiement plus rapide
+*   **Débogage :** Logs directs, plus facile à diagnostiquer
+*   **Flexibilité :** Plus facile de modifier la configuration
+*   **Monitoring :** Interface PM2 intégrée
+
+#### **Avantages Docker :**
+*   **Isolation :** Environnement complètement isolé
+*   **Portabilité :** Fonctionne identiquement sur tous les environnements
+*   **Versioning :** Gestion des versions d'images
+*   **Scalabilité :** Plus facile de scaler horizontalement
 
 ---
 
@@ -52,108 +100,231 @@ Le script `start-tontine.sh` orchestre la mise à jour sur le serveur :
 
 Voici plusieurs suggestions pour rendre votre processus de déploiement plus robuste, sécurisé et efficace.
 
-#### **1. Versioning des Images Docker (Critique)**
+#### **1. Versioning des Déploiements (Critique)**
 
-*   **Problème :** Vous utilisez le tag `:latest`. C'est une mauvaise pratique car il est imprévisible. Il est difficile de savoir quelle version du code tourne en production et les rollbacks sont compliqués.
-*   **Solution :** Taguez vos images avec un identifiant unique et immuable. Le plus simple est d'utiliser le SHA du commit Git.
+*   **Problème :** Il n'y a pas de versioning explicite des déploiements, ce qui rend les rollbacks difficiles.
+*   **Solution :** Utilisez le SHA du commit Git comme identifiant de version.
 *   **Implémentation :** Modifiez votre fichier `deploy_prod.yml` :
     ```yaml
-    # Dans la section "build and push"
-    - name: Build and push
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: tchep/tontine-api-v2:${{ github.sha }},tchep/tontine-api-v2:latest
-    
-    # Dans la section "deploy on server", modifiez le script pour utiliser le SHA
-    - name: Deploy on server
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        # ... vos secrets ssh
-        script: |
-          export APP_VERSION=${{ github.sha }}
-          cd /home/tchep/tontine-api-v2
-          sh start-tontine.sh
-    ```
-    Et dans `start-tontine.sh`, utilisez la variable `$APP_VERSION` au lieu de `:latest`.
-
-#### **2. Optimisation du Dockerfile avec un Build Multi-Stage (Bonne Pratique)**
-
-*   **Problème :** Votre image finale contient toutes les dépendances de développement (`devDependencies`) et les outils de build (`npm`, `typescript`), ce qui la rend plus lourde et moins sécurisée que nécessaire.
-*   **Solution :** Utilisez un build multi-stage. Une première étape ("builder") construit l'application, et une seconde étape copie uniquement les artéfacts nécessaires dans une image de base "propre".
-*   **Implémentation :** Remplacez votre `Dockerfile` par celui-ci :
-    ```dockerfile
-    # ---- Stage 1: Build ----
-    FROM node:18-alpine AS builder
-    WORKDIR /usr/src/app
-    COPY package*.json ./
-    RUN npm install
-    COPY . .
-    RUN npm run build
-
-    # ---- Stage 2: Production ----
-    FROM node:18-alpine
-    WORKDIR /usr/src/app
-    # Copier les dépendances de production depuis le stage "builder"
-    COPY --from=builder /usr/src/app/node_modules ./node_modules
-    # Copier l'application compilée depuis le stage "builder"
-    COPY --from=builder /usr/src/app/dist ./dist
-    # Copier package.json pour référence
-    COPY --from=builder /usr/src/app/package.json ./
-
-    EXPOSE 3000
-    CMD ["node", "dist/main"]
+    # Dans la section "Deploy to server with PM2"
+    - name: Deploy to server with PM2
+      run: |
+        # ... configuration SSH ...
+        
+        # Ajouter le SHA du commit dans l'archive
+        echo "${{ github.sha }}" > VERSION
+        tar -czf deploy.tar.gz \
+          --exclude='node_modules' \
+          --exclude='.git' \
+          --exclude='.env' \
+          --exclude='upload' \
+          --exclude='test' \
+          --exclude='docs' \
+          --exclude='google-cloud-sdk' \
+          --exclude='deploy.tar.gz' \
+          --exclude='coverage' \
+          VERSION \
+          ecosystem.config.js \
+          # ... autres fichiers ...
     ```
 
-#### **3. Déploiement sans Temps d'Arrêt (Zero-Downtime)**
+#### **2. Gestion des Secrets et de la Configuration**
 
-*   **Problème :** La séquence `docker-compose down` puis `up` crée une interruption de service.
-*   **Solution :** Mettez à jour le service sans l'arrêter. `docker-compose` peut le faire nativement.
-*   **Implémentation :** Modifiez votre script `start-tontine.sh` pour éviter le `down`.
-    ```bash
-    #!/bin/bash
-    set -e # Arrête le script si une commande échoue
-
-    # La variable APP_VERSION est définie par la GitHub Action
-    IMAGE_TAG="tchep/tontine-api-v2:${APP_VERSION:-latest}"
-
-    echo "Déploiement de l'image $IMAGE_TAG"
-
-    # Pull de la nouvelle image
-    docker pull $IMAGE_TAG
-
-    # Mise à jour du service en cours d'exécution sans l'arrêter
-    # Docker-compose va recréer uniquement les conteneurs dont l'image a changé
-    docker-compose up -d --remove-orphans
-
-    # Nettoyage des anciennes images
-    docker image prune -f
-    ```
-    **Note :** Pour que cela fonctionne, votre `docker-compose.yml` doit utiliser une variable pour le tag de l'image, qui sera lue depuis le fichier `.env` mis à jour par votre pipeline.
-
-#### **4. Gestion des Secrets et de la Configuration**
-
-*   **Problème :** Le fichier `.env` est géré manuellement sur le serveur, ce qui peut entraîner des erreurs et des oublis. Le `docker login` dans le script est aussi un risque de sécurité mineur (historique du shell).
+*   **Problème :** Le fichier `.env` est géré manuellement sur le serveur, ce qui peut entraîner des erreurs et des oublis.
 *   **Solution :** Générez le fichier `.env` directement depuis la GitHub Action en utilisant les secrets du repository.
-*   **Implémentation :** Dans votre étape `deploy on server` :
+*   **Implémentation :** Dans votre étape de déploiement :
     ```yaml
-    - name: Deploy on server
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        # ... vos secrets ssh
-        script: |
-          cd /home/tchep/tontine-api-v2
-          
-          # Création du fichier .env à partir des secrets GitHub
-          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
-          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
-          # ... ajoutez toutes vos variables d'environnement
-          
-          # Définition de la version de l'image à déployer
-          echo "IMAGE_TAG=tchep/tontine-api-v2:${{ github.sha }}" >> .env
-
-          # Lancement du script de déploiement (qui n'a plus besoin de gérer les versions)
-          sh start-tontine.sh 
+    # Création du fichier .env à partir des secrets GitHub
+    ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
+      # ... autres commandes ...
+      
+      # Création du fichier .env à partir des secrets
+      cat > .env << EOF
+      DATABASE_URL=${{ secrets.DATABASE_URL }}
+      JWT_SECRET=${{ secrets.JWT_SECRET }}
+      NODE_ENV=production
+      PORT=8080
+      # ... autres variables d'environnement ...
+      EOF
+      
+      # ... suite du déploiement ...
+    "
     ```
-    Votre `docker-compose.yml` et `start-tontine.sh` utiliseront alors ces variables.
+
+#### **3. Monitoring et Alertes**
+
+*   **Problème :** Pas de monitoring automatique des performances et de la santé de l'application.
+*   **Solution :** Intégrer un système de monitoring avec PM2 et des alertes.
+*   **Implémentation :**
+    ```bash
+    # Configuration PM2 avec monitoring
+    pm2 install pm2-server-monit
+    pm2 set pm2-server-monit:email your-email@example.com
+    
+    # Script de vérification de santé
+    #!/bin/bash
+    if ! curl -f http://localhost:8080/health > /dev/null 2>&1; then
+      echo "Application down!" | mail -s "Alert: Tontine API Down" your-email@example.com
+      pm2 restart tontine-api
+    fi
+    ```
+
+#### **4. Déploiement sans Temps d'Arrêt (Zero-Downtime)**
+
+*   **Problème :** Le redémarrage de l'application crée une courte interruption de service.
+*   **Solution :** Utiliser le reload PM2 pour un redémarrage sans interruption.
+*   **Implémentation :** Modifiez le script de déploiement :
+    ```bash
+    # Au lieu de stop/start, utiliser reload
+    if pm2 list | grep -q 'tontine-api.*online'; then
+      echo "Reloading application..."
+      pm2 reload tontine-api
+    else
+      echo "Starting application..."
+      pm2 start ecosystem.config.js
+    fi
+    ```
+
+#### **5. Sauvegarde et Rollback Automatisés**
+
+*   **Problème :** Le rollback manuel peut être complexe et prendre du temps.
+*   **Solution :** Automatiser le processus de sauvegarde et de rollback.
+*   **Implémentation :**
+    ```bash
+    # Script de rollback automatique
+    #!/bin/bash
+    if [ "$1" = "rollback" ]; then
+      echo "Rolling back to previous version..."
+      cd /root/apps
+      if [ -d "tontine.old" ]; then
+        rm -rf tontine
+        mv tontine.old tontine
+        cd tontine
+        pm2 start ecosystem.config.js
+        echo "Rollback completed successfully"
+      else
+        echo "No previous version available for rollback"
+        exit 1
+      fi
+    fi
+    ```
+
+#### **6. Tests de Régression Automatisés**
+
+*   **Problème :** Pas de vérification automatique que l'application fonctionne correctement après déploiement.
+*   **Solution :** Ajouter des tests de santé et de régression après le déploiement.
+*   **Implémentation :**
+    ```yaml
+    # Dans le workflow GitHub Actions
+    - name: Health Check
+      run: |
+        ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
+          sleep 30  # Attendre que l'application démarre
+          
+          # Test de santé
+          if curl -f http://localhost:8080/health; then
+            echo 'Health check passed'
+          else
+            echo 'Health check failed'
+            exit 1
+          fi
+          
+          # Tests de régression
+          curl -f http://localhost:8080/api/tontine || exit 1
+          curl -f http://localhost:8080/api/auth/login || exit 1
+        "
+    ```
+
+#### **7. Logs Centralisés**
+
+*   **Problème :** Les logs sont dispersés et difficiles à consulter.
+*   **Solution :** Centraliser les logs avec un système comme ELK Stack ou un service cloud.
+*   **Implémentation :**
+    ```bash
+    # Configuration PM2 pour logs centralisés
+    pm2 install pm2-logrotate
+    pm2 set pm2-logrotate:max_size 10M
+    pm2 set pm2-logrotate:retain 7
+    pm2 set pm2-logrotate:compress true
+    ```
+
+#### **8. Sécurité Renforcée**
+
+*   **Problème :** L'application tourne avec des permissions élevées.
+*   **Solution :** Utiliser un utilisateur dédié et des permissions minimales.
+*   **Implémentation :**
+    ```bash
+    # Créer un utilisateur dédié
+    sudo useradd -r -s /bin/false tontine-app
+    
+    # Modifier ecosystem.config.js
+    module.exports = {
+      apps: [{
+        name: 'tontine-api',
+        script: 'dist/main.js',
+        user: 'tontine-app',
+        group: 'tontine-app',
+        # ... autres configurations
+      }]
+    };
+    ```
+
+---
+
+### **Commandes Utiles**
+
+#### **Gestion PM2 :**
+```bash
+# Voir le statut
+pm2 status
+
+# Voir les logs
+pm2 logs tontine-api
+
+# Redémarrer
+pm2 restart tontine-api
+
+# Arrêter
+pm2 stop tontine-api
+
+# Monitoring en temps réel
+pm2 monit
+
+# Interface web
+pm2 web
+```
+
+#### **Déploiement Manuel :**
+```bash
+# Déploiement complet
+npm run deploy:pm2:local
+
+# Build uniquement
+npm run build:prod
+
+# Tests uniquement
+npm run test:validate
+```
+
+#### **Maintenance :**
+```bash
+# Vérifier l'espace disque
+df -h
+
+# Vérifier l'utilisation mémoire
+free -h
+
+# Vérifier les processus
+ps aux | grep node
+
+# Nettoyer les logs
+pm2 flush
+```
+
+---
+
+### **Conclusion**
+
+Le passage de Docker à PM2 a simplifié significativement le processus de déploiement tout en conservant la robustesse et la fiabilité. Les améliorations proposées permettront d'optimiser davantage le pipeline CI/CD et d'améliorer la maintenance de l'application en production.
+
+**Note :** Ce document remplace l'ancienne documentation Docker. L'application utilise maintenant PM2 pour un déploiement plus simple et plus efficace.

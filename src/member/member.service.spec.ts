@@ -55,8 +55,6 @@ describe('MemberService', () => {
     }).compile();
 
     service = module.get<MemberService>(MemberService);
-    authService = module.get<AuthentificationService>(AuthentificationService);
-    dataSource = module.get<DataSource>(DataSource);
   });
 
   it('should be defined', () => {

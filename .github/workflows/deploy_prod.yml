@@ -17,8 +17,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -35,7 +38,7 @@ jobs:
       - name: Build application
         run: npm run build:prod
 
-      - name: Deploy to server with Docker
+      - name: Deploy to server with PM2
         run: |
           # Configuration SSH
           mkdir -p ~/.ssh
@@ -48,21 +51,19 @@ jobs:
           tar -czf deploy.tar.gz \
             --exclude='node_modules' \
             --exclude='.git' \
-            --exclude='dist' \
             --exclude='.env' \
             --exclude='upload' \
             --exclude='test' \
             --exclude='docs' \
             --exclude='google-cloud-sdk' \
             --exclude='deploy.tar.gz' \
-            Dockerfile \
-            docker-compose.yml \
+            --exclude='coverage' \
             ecosystem.config.js \
             start.sh \
             start-tontine.sh \
-            .dockerignore \
             caddy/ \
             src/ \
+            dist/ \
             package.json \
             package-lock.json \
             tsconfig.json \
@@ -71,7 +72,7 @@ jobs:
             .eslintrc.js \
             .prettierrc
           
-          # TRANSFERT UNIQUE de l'archive (remplace tous les SCP multiples)
+          # TRANSFERT UNIQUE de l'archive
           echo "📤 Transfert de l'archive..."
           scp -i ~/.ssh/deploy_key deploy.tar.gz ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/tmp/
           
@@ -97,33 +98,57 @@ jobs:
             echo \"🔧 Configuration de l'environnement...\"
             cp /root/config/.env-tontine-api .env
             
-            # Arrêter les conteneurs existants
-            echo \"🔄 Arrêt des conteneurs existants...\"
-            docker-compose down || true
-            docker system prune -f || true
+            # Vérifier et installer Node.js si nécessaire
+            if ! command -v node &> /dev/null; then
+              echo \"📦 Installation de Node.js...\"
+              curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+              apt-get install -y nodejs
+              echo \"✅ Node.js installé\"
+            fi
             
-            # Construire et démarrer les conteneurs
-            echo \"🏗️  Construction de l'image Docker...\"
-            docker-compose build --no-cache
+            # Vérifier et installer PM2 si nécessaire
+            if ! command -v pm2 &> /dev/null; then
+              echo \"📦 Installation de PM2...\"
+              npm install -g pm2
+              echo \"✅ PM2 installé\"
+            fi
             
-            echo \"🚀 Démarrage des conteneurs...\"
-            docker-compose up -d
+            # Installer les dépendances de production
+            echo \"📦 Installation des dépendances...\"
+            npm ci --only=production
+            
+            # Arrêter l'application PM2 existante
+            echo \"🔄 Arrêt de l'application existante...\"
+            pm2 stop tontine-api || echo \"Aucune application à arrêter\"
+            pm2 delete tontine-api || echo \"Aucune application à supprimer\"
+            
+            # Démarrer l'application avec PM2
+            echo \"🚀 Démarrage de l'application avec PM2...\"
+            pm2 start ecosystem.config.js
+            
+            # Sauvegarder la configuration PM2
+            echo \"💾 Sauvegarde de la configuration PM2...\"
+            pm2 save
+            
+            # Configurer le démarrage automatique
+            echo \"⚙️  Configuration du démarrage automatique...\"
+            pm2 startup || echo \"Démarrage automatique déjà configuré\"
             
             # Vérification du déploiement
             echo \"✅ Vérification du déploiement...\"
-            sleep 15
+            sleep 10
             
-            # Vérifier que le conteneur fonctionne
-            if docker-compose ps | grep -q 'Up'; then
+            # Vérifier que l'application fonctionne
+            if pm2 list | grep -q 'tontine-api.*online'; then
               echo \"🎉 Déploiement réussi !\"
-              docker-compose ps
-              docker-compose logs --tail=10 tontine-api
+              pm2 list
+              pm2 logs tontine-api --lines 10
               
               # Nettoyer l'ancienne version si tout va bien
               rm -rf /root/apps/tontine.old
             else
               echo \"❌ Erreur lors du déploiement\"
-              docker-compose logs tontine-api
+              pm2 logs tontine-api
               
               # Restaurer l'ancienne version en cas d'erreur
               echo \"🔄 Restauration de l'ancienne version...\"
@@ -131,7 +156,7 @@ jobs:
               rm -rf tontine
               mv tontine.old tontine
               cd tontine
-              docker-compose up -d || true
+              pm2 start ecosystem.config.js || true
               exit 1
             fi
             
