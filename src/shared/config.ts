@@ -1,6 +1,7 @@
 import { environment as devEnvironment } from './environement';
 
 // Configuration de production basée sur les variables d'environnement
+// TODO: .env ne marche pas lorsqu'on fait node dist/main.js
 const prodEnvironment = {
   production: true,
   jwtConfig: {
@@ -12,8 +13,8 @@ const prodEnvironment = {
     type: 'mysql',
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '3306', 10),
-    username: process.env.DB_USERNAME || 'root',
-    password: process.env.DB_PASSWORD || 'root',
+    username: process.env.DB_USERNAME || 'user',
+    password: process.env.DB_PASSWORD || 'changeme',
     database: process.env.DB_DATABASE || 'tontine',
     synchronize: process.env.DB_SYNCHRONIZE === 'true',
     autoLoadEntities: true,
