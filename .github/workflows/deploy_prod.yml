@@ -92,46 +92,23 @@ jobs:
             echo \"🔧 Configuration de l'environnement...\"
             cp /root/config/.env-tontine-api .env
             
-            # Vérifier et installer Node.js si nécessaire
-            if ! command -v node &> /dev/null; then
-              echo \"📦 Installation de Node.js...\"
-              curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-              apt-get install -y nodejs
-              echo \"✅ Node.js installé\"
-            fi
+            # Utiliser les chemins absolus Volta
+            NODE_PATH=\"/root/.volta/bin/node\"
+            NPM_PATH=\"/root/.volta/tools/image/node/24.7.0/lib/node_modules/npm\"
             
-            # Configurer le PATH pour Volta si disponible
-            if [ -f \"\$HOME/.volta/volta.sh\" ]; then
-              echo \"📦 Volta détecté, configuration du PATH...\"
-              export PATH=\"\$HOME/.volta/bin:\$PATH\"
-              source \"\$HOME/.volta/volta.sh\"
-            else
-              # Recharger le PATH standard
-              export PATH=\"/usr/bin:/usr/local/bin:\$PATH\"
-            fi
-            
-            # Vérifier npm
-            if ! command -v npm &> /dev/null; then
-              echo \"❌ npm non trouvé\"
-              echo \"Node.js path: \$(which node)\"
-              echo \"NPM path: \$(which npm 2>/dev/null || echo 'npm non trouvé')\"
-              echo \"PATH: \$PATH\"
-              exit 1
-            fi
-            
-            echo \"✅ npm trouvé: \$(which npm)\"
-            echo \"✅ npm version: \$(npm --version)\"
+            echo \"✅ Utilisation de Node.js: \$NODE_PATH\"
+            echo \"✅ Utilisation de npm: \$NPM_PATH\"
             
             # Vérifier et installer PM2 si nécessaire
             if ! command -v pm2 &> /dev/null; then
               echo \"📦 Installation de PM2...\"
-              npm install -g pm2
+              \$NPM_PATH install -g pm2
               echo \"✅ PM2 installé\"
             fi
             
             # Installer les dépendances de production
             echo \"📦 Installation des dépendances...\"
-            npm ci --only=production
+            \$NPM_PATH ci --only=production
             
             # Arrêter l'application PM2 existante
             echo \"🔄 Arrêt de l'application existante...\"
