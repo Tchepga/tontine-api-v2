@@ -28,46 +28,60 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
           
-          # Copier les fichiers Docker sur le serveur
-          echo "📁 Copie des fichiers Docker..."
-          scp -i ~/.ssh/deploy_key Dockerfile ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
-          scp -i ~/.ssh/deploy_key docker-compose.yml ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
-          scp -i ~/.ssh/deploy_key ecosystem.config.js ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
-          scp -i ~/.ssh/deploy_key start.sh ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
-          scp -i ~/.ssh/deploy_key .dockerignore ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
+          # Créer un tar.gz avec tous les fichiers nécessaires (UN SEUL TRANSFERT)
+          echo "📦 Création de l'archive de déploiement..."
+          tar -czf deploy.tar.gz \
+            Dockerfile \
+            docker-compose.yml \
+            ecosystem.config.js \
+            start.sh \
+            start-tontine.sh \
+            .dockerignore \
+            caddy/ \
+            src/ \
+            package.json \
+            package-lock.json \
+            tsconfig.json \
+            tsconfig.build.json \
+            nest-cli.json \
+            .eslintrc.js \
+            .prettierrc \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='dist' \
+            --exclude='.env' \
+            --exclude='upload' \
+            --exclude='test' \
+            --exclude='docs' \
+            --exclude='google-cloud-sdk'
           
-          # Créer le dossier caddy et copier la configuration
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "mkdir -p /root/apps/tontine/caddy"
-          scp -i ~/.ssh/deploy_key caddy/Caddyfile ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/caddy/
+          # TRANSFERT UNIQUE de l'archive (remplace tous les SCP multiples)
+          echo "📤 Transfert de l'archive..."
+          scp -i ~/.ssh/deploy_key deploy.tar.gz ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/tmp/
           
-          # Copier le code source
-          echo "📦 Copie du code source..."
-          scp -i ~/.ssh/deploy_key -r . ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/root/apps/tontine/
-          
-          # Copier le fichier de configuration d'environnement
-          echo "🔧 Copie du fichier de configuration..."
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
-            cp /root/config/.env-tontine-api /root/apps/tontine/.env
-            echo \"✅ Fichier .env copié avec succès\"
-          "
-          
-          # Déploiement Docker sur le serveur
-          echo "🚀 Déploiement Docker en cours..."
+          # Déploiement complet sur le serveur
+          echo "🚀 Déploiement sur le serveur..."
           ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
             set -e
             echo \"🔗 Connexion SSH réussie\"
             
-            cd /root/apps/tontine
+            # Préparer le répertoire de déploiement avec rollback
+            cd /root/apps
+            rm -rf tontine.old
+            mv tontine tontine.old 2>/dev/null || true
+            mkdir -p tontine
+            cd tontine
             
-            # Vérifier et installer docker-compose si nécessaire
-            if ! command -v docker-compose &> /dev/null; then
-              echo \"📦 Installation de docker-compose...\"
-              sudo curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
-              echo \"✅ docker-compose installé\"
-            fi
+            # Extraire l'archive
+            echo \"📦 Extraction de l'archive...\"
+            tar -xzf /tmp/deploy.tar.gz
+            rm /tmp/deploy.tar.gz
             
-            # Arrêter et supprimer les conteneurs existants
+            # Copier le fichier d'environnement
+            echo \"🔧 Configuration de l'environnement...\"
+            cp /root/config/.env-tontine-api .env
+            
+            # Arrêter les conteneurs existants
             echo \"🔄 Arrêt des conteneurs existants...\"
             docker-compose down || true
             docker system prune -f || true
@@ -81,24 +95,35 @@ jobs:
             
             # Vérification du déploiement
             echo \"✅ Vérification du déploiement...\"
-            sleep 10
+            sleep 15
             
             # Vérifier que le conteneur fonctionne
             if docker-compose ps | grep -q 'Up'; then
               echo \"🎉 Déploiement réussi !\"
               docker-compose ps
               docker-compose logs --tail=10 tontine-api
+              
+              # Nettoyer l'ancienne version si tout va bien
+              rm -rf /root/apps/tontine.old
             else
               echo \"❌ Erreur lors du déploiement\"
               docker-compose logs tontine-api
+              
+              # Restaurer l'ancienne version en cas d'erreur
+              echo \"🔄 Restauration de l'ancienne version...\"
+              cd /root/apps
+              rm -rf tontine
+              mv tontine.old tontine
+              cd tontine
+              docker-compose up -d || true
               exit 1
             fi
             
             echo \"🌐 Application accessible sur le port 8080\"
           "
           
-          # Configuration Caddy pour le domaine (avec utilisateur root)
-          echo "🌐 Configuration Caddy pour le domaine..."
+          # Configuration Caddy optimisée pour multi-applications (mode processus)
+          echo "🌐 Configuration Caddy..."
           ssh -i ~/.ssh/deploy_key root@${{ secrets.HOST_VPS_HOSTINGER }} "
             echo '🔧 Configuration Caddy en cours...'
             
@@ -114,34 +139,46 @@ jobs:
               echo '✅ Caddy installé'
             fi
             
-            # Arrêter seulement le processus Caddy pour cette application
-            echo '🔄 Arrêt du processus Caddy pour cette application...'
-            pkill -f 'caddy.*api.tontine.devcoorp.net' || true
+            # Arrêter UNIQUEMENT le processus Caddy pour tontine-api
+            echo '🔄 Arrêt du processus Caddy pour tontine-api...'
+            pkill -f 'caddy.*api.tontine.devcoorp.net' || echo 'Aucun processus Caddy pour tontine-api à arrêter'
             sleep 2
             
-            # Démarrer Caddy reverse-proxy pour le domaine
-            echo '🚀 Démarrage de Caddy reverse-proxy...'
-            nohup caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 > /tmp/caddy.log 2>&1 &
-            CADDY_PID=\$!
-            
-            # Attendre un peu et vérifier que Caddy a démarré
-            sleep 5
-            
-            # Vérification que Caddy fonctionne
-            if ps -p \$CADDY_PID > /dev/null 2>&1; then
-              echo '✅ Caddy reverse-proxy démarré avec succès'
-              echo '📋 Processus Caddy actifs:'
-              ps aux | grep caddy | grep -v grep || echo 'Aucun processus Caddy trouvé'
-              echo '📋 Logs Caddy:'
-              tail -5 /tmp/caddy.log 2>/dev/null || echo 'Aucun log disponible'
+            # Vérifier qu'aucun autre processus Caddy n'est affecté
+            echo '📋 Vérification des autres processus Caddy...'
+            CADDY_PROCESSES=\$(ps aux | grep caddy | grep -v grep | grep -v 'api.tontine.devcoorp.net' || true)
+            if [ -n \"\$CADDY_PROCESSES\" ]; then
+              echo '✅ Autres processus Caddy actifs:'
+              echo \"\$CADDY_PROCESSES\"
             else
-              echo '❌ Erreur lors du démarrage de Caddy'
-              echo '📋 Logs d\'erreur Caddy:'
-              cat /tmp/caddy.log 2>/dev/null || echo 'Aucun log disponible'
-              echo '⚠️  Continuation malgré l\'erreur Caddy...'
+              echo 'ℹ️  Aucun autre processus Caddy détecté'
             fi
             
-            echo '🎉 Configuration Caddy terminée !'
+            # Démarrer Caddy pour tontine-api uniquement
+            echo '🚀 Démarrage de Caddy pour tontine-api...'
+            nohup caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 > /tmp/caddy-tontine.log 2>&1 &
+            TONTINE_CADDY_PID=\$!
+            
+            # Vérification du démarrage
+            sleep 3
+            if ps -p \$TONTINE_CADDY_PID > /dev/null 2>&1; then
+              echo '✅ Caddy pour tontine-api démarré avec succès (PID: '\$TONTINE_CADDY_PID')'
+              echo '📋 Logs Caddy tontine-api:'
+              tail -5 /tmp/caddy-tontine.log 2>/dev/null || echo 'Aucun log disponible'
+              
+              # Sauvegarder le PID pour référence future
+              echo \$TONTINE_CADDY_PID > /tmp/caddy-tontine.pid
+              echo '💾 PID sauvegardé dans /tmp/caddy-tontine.pid'
+            else
+              echo '❌ Erreur lors du démarrage de Caddy pour tontine-api'
+              echo '📋 Logs d\'erreur:'
+              cat /tmp/caddy-tontine.log 2>/dev/null || echo 'Aucun log disponible'
+              exit 1
+            fi
+            
+            echo '🎉 Configuration Caddy pour tontine-api terminée !'
             echo '🌐 Application accessible sur https://api.tontine.devcoorp.net'
+            echo '📋 Tous les processus Caddy actifs:'
+            ps aux | grep caddy | grep -v grep || echo 'Aucun processus Caddy trouvé'
           "
           
