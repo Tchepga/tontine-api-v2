@@ -161,61 +161,18 @@ jobs:
             
             echo \"🌐 Application accessible sur le port 8080\"
           "
-          
-          # Configuration Caddy avec commandes natives
-          echo "🌐 Configuration Caddy..."
-          ssh -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -i ~/.ssh/deploy_key root@${{ secrets.HOST_VPS_HOSTINGER }} "
-            echo '🔄 Arrêt des processus Caddy existants...'
-            pkill -f 'caddy.*reverse-proxy' || echo 'Aucun processus Caddy à arrêter'
-            sleep 2
-            
-            echo '🚀 Démarrage de Caddy pour tontine-api...'
-            caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 &
-            CADDY_PID=\$!
-            
-            echo '✅ Caddy démarré pour tontine-api (PID: '\$CADDY_PID')'
-            echo '🌐 Application accessible sur https://api.tontine.devcoorp.net'
-            
-            # Vérifier que Caddy fonctionne
-            sleep 3
-            if ps -p \$CADDY_PID > /dev/null 2>&1; then
-              echo '✅ Caddy fonctionne correctement'
-            else
-              echo '⚠️  Caddy ne fonctionne pas, redémarrage...'
-              pkill -f 'caddy.*reverse-proxy' || true
-              sleep 1
-              caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 &
-              echo '✅ Caddy redémarré'
-            fi
-            
-            # Vérifier que l'application répond
-            echo '🔍 Vérification de l\'application sur le port 8080...'
-            sleep 5
-            if curl -f -s http://localhost:8080/health > /dev/null 2>&1; then
-              echo '✅ Application répond sur le port 8080'
-            else
-              echo '⚠️  Application ne répond pas sur le port 8080'
-              echo '📋 Vérification des processus PM2:'
-              \$PM2_PATH list
-              echo '📋 Logs PM2:'
-              \$PM2_PATH logs tontine-api --lines 5 --nostream
-            fi
-          " || {
-            echo "⚠️  Erreur lors de la configuration Caddy, mais le déploiement continue..."
-            echo "🔧 L'application est accessible sur le port 8080"
-          }
-          
-          # Vérification que l'application fonctionne (optionnelle)
-          echo "🔍 Vérification de l'application..."
+                  
+          # Vérification finale de l'application
+          echo "🔍 Vérification finale de l'application..."
           sleep 5
           
-          # Test de connectivité (ne bloque pas le déploiement)
-          if curl -f -s --connect-timeout 10 https://api.tontine.devcoorp.net/health > /dev/null 2>&1; then
-            echo "✅ Application accessible via HTTPS"
-          elif curl -f -s --connect-timeout 10 http://${{ secrets.HOST_VPS_HOSTINGER }}:8080/health > /dev/null 2>&1; then
-            echo "✅ Application accessible via HTTP sur le port 8080"
+          # Test de connectivité directe sur le serveur
+          if curl -f -s --connect-timeout 10 http://${{ secrets.HOST_VPS_HOSTINGER }}:8080/health > /dev/null 2>&1; then
+            echo "✅ Application accessible sur le port 8080"
+            echo "🎉 Déploiement réussi !"
           else
-            echo "⚠️  Application non accessible, mais le déploiement continue..."
+            echo "⚠️  Application non accessible sur le port 8080"
             echo "🔧 Vérifiez manuellement: curl http://${{ secrets.HOST_VPS_HOSTINGER }}:8080/health"
+            echo "📋 Consultez les logs PM2 sur le serveur pour diagnostiquer"
           fi
           
