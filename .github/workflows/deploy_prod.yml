@@ -40,31 +40,16 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
           
-          # Créer un tar.gz avec tous les fichiers nécessaires (UN SEUL TRANSFERT)
+          # Créer un tar.gz avec seulement les fichiers nécessaires pour le déploiement
           echo "📦 Création de l'archive de déploiement..."
           tar -czf deploy.tar.gz \
-            --exclude='node_modules' \
-            --exclude='.git' \
-            --exclude='.env' \
-            --exclude='upload' \
-            --exclude='test' \
-            --exclude='docs' \
-            --exclude='google-cloud-sdk' \
-            --exclude='deploy.tar.gz' \
-            --exclude='coverage' \
+            dist/ \
             ecosystem.config.js \
             start.sh \
             start-tontine.sh \
             caddy/ \
-            src/ \
-            dist/ \
             package.json \
-            package-lock.json \
-            tsconfig.json \
-            tsconfig.build.json \
-            nest-cli.json \
-            .eslintrc.js \
-            .prettierrc
+            package-lock.json
           
           # TRANSFERT UNIQUE de l'archive
           echo "📤 Transfert de l'archive..."
