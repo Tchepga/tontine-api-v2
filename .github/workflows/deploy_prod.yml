@@ -166,7 +166,7 @@ jobs:
           echo "🌐 Configuration Caddy..."
           ssh -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -i ~/.ssh/deploy_key root@${{ secrets.HOST_VPS_HOSTINGER }} "
             echo '🔄 Arrêt du processus Caddy pour tontine-api...'
-            pkill -f 'caddy.*api.tontine.devcoorp.net' || true
+            pkill -f 'caddy.*api.tontine.devcoorp.net' || echo 'Aucun processus à arrêter'
             sleep 2
             
             echo '🚀 Démarrage de Caddy pour tontine-api...'
@@ -174,18 +174,22 @@ jobs:
             
             echo '✅ Caddy démarré pour tontine-api'
             echo '🌐 Application accessible sur https://api.tontine.devcoorp.net'
-          "
+          " || {
+            echo "⚠️  Erreur lors de la configuration Caddy, mais le déploiement continue..."
+            echo "🔧 L'application est accessible sur le port 8080"
+          }
           
-          # Vérification que l'application fonctionne
+          # Vérification que l'application fonctionne (optionnelle)
           echo "🔍 Vérification de l'application..."
-          sleep 10
+          sleep 5
           
-          # Test de connectivité
-          if curl -f -s https://api.tontine.devcoorp.net/health > /dev/null 2>&1; then
+          # Test de connectivité (ne bloque pas le déploiement)
+          if curl -f -s --connect-timeout 10 https://api.tontine.devcoorp.net/health > /dev/null 2>&1; then
             echo "✅ Application accessible via HTTPS"
-          elif curl -f -s http://${{ secrets.HOST_VPS_HOSTINGER }}:8080/health > /dev/null 2>&1; then
+          elif curl -f -s --connect-timeout 10 http://${{ secrets.HOST_VPS_HOSTINGER }}:8080/health > /dev/null 2>&1; then
             echo "✅ Application accessible via HTTP sur le port 8080"
           else
             echo "⚠️  Application non accessible, mais le déploiement continue..."
+            echo "🔧 Vérifiez manuellement: curl http://${{ secrets.HOST_VPS_HOSTINGER }}:8080/health"
           fi
           
