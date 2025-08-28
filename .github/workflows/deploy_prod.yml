@@ -31,6 +31,15 @@ jobs:
           # Créer un tar.gz avec tous les fichiers nécessaires (UN SEUL TRANSFERT)
           echo "📦 Création de l'archive de déploiement..."
           tar -czf deploy.tar.gz \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='dist' \
+            --exclude='.env' \
+            --exclude='upload' \
+            --exclude='test' \
+            --exclude='docs' \
+            --exclude='google-cloud-sdk' \
+            --exclude='deploy.tar.gz' \
             Dockerfile \
             docker-compose.yml \
             ecosystem.config.js \
@@ -45,15 +54,7 @@ jobs:
             tsconfig.build.json \
             nest-cli.json \
             .eslintrc.js \
-            .prettierrc \
-            --exclude='node_modules' \
-            --exclude='.git' \
-            --exclude='dist' \
-            --exclude='.env' \
-            --exclude='upload' \
-            --exclude='test' \
-            --exclude='docs' \
-            --exclude='google-cloud-sdk'
+            .prettierrc
           
           # TRANSFERT UNIQUE de l'archive (remplace tous les SCP multiples)
           echo "📤 Transfert de l'archive..."
