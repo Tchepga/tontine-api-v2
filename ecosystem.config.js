@@ -2,6 +2,7 @@ module.exports = {
   apps: [{
     name: 'tontine-api',
     script: 'dist/main.js',
+    interpreter: '/root/.volta/bin/node',
     instances: 1,
     exec_mode: 'fork',
     env: {
