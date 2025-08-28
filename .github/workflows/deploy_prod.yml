@@ -162,7 +162,7 @@ jobs:
             echo \"🌐 Application accessible sur le port 8080\"
           "
           
-          # Configuration Caddy simplifiée
+          # Configuration Caddy avec rechargement de domaine
           echo "🌐 Configuration Caddy..."
           ssh -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -i ~/.ssh/deploy_key root@${{ secrets.HOST_VPS_HOSTINGER }} "
             echo '🔄 Arrêt du processus Caddy pour tontine-api...'
@@ -170,10 +170,23 @@ jobs:
             sleep 2
             
             echo '🚀 Démarrage de Caddy pour tontine-api...'
-            nohup caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 > /dev/null 2>&1 &
+            caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 &
+            CADDY_PID=\$!
             
-            echo '✅ Caddy démarré pour tontine-api'
+            echo '✅ Caddy démarré pour tontine-api (PID: '\$CADDY_PID')'
             echo '🌐 Application accessible sur https://api.tontine.devcoorp.net'
+            
+            # Vérifier que Caddy fonctionne
+            sleep 3
+            if ps -p \$CADDY_PID > /dev/null 2>&1; then
+              echo '✅ Caddy fonctionne correctement'
+            else
+              echo '⚠️  Caddy ne fonctionne pas, redémarrage...'
+              pkill -f 'caddy.*api.tontine.devcoorp.net' || true
+              sleep 1
+              caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 &
+              echo '✅ Caddy redémarré'
+            fi
           " || {
             echo "⚠️  Erreur lors de la configuration Caddy, mais le déploiement continue..."
             echo "🔧 L'application est accessible sur le port 8080"
