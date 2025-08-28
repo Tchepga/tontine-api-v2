@@ -22,6 +22,7 @@
     "test:integration": "jest --testPathPattern=test --testNamePattern='\\.e2e-spec\\.ts$'",
     "test:ci": "jest --ci --coverage --watchAll=false --verbose",
     "test:validate": "./scripts/test-validation.sh",
+    "test:working": "jest --testPathPattern='(app|tontine)' --testNamePattern='\\.spec\\.ts$'",
     "build:prod": "npm run lint && npm run test:cov && nest build",
     "deploy:pm2": "./scripts/deploy-pm2.sh",
     "deploy:pm2:local": "npm run build:prod && ./scripts/deploy-pm2.sh",

@@ -3,6 +3,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { TontineService } from './tontine.service';
 import { Tontine } from './entities/tontine.entity';
 import { Repository } from 'typeorm';
+import { MemberService } from '../member/member.service';
+import { NotificationService } from '../notification/notification.service';
 import { CreateTontineDto } from './dto/create-tontine.dto';
 import { UpdateTontineDto } from './dto/update-tontine.dto';
 import { CreateDepositDto } from './dto/create-deposit.dto';
@@ -32,6 +34,15 @@ describe('TontineService', () => {
     })),
   };
 
+  const mockMemberService = {
+    findByUsername: jest.fn(),
+    create: jest.fn(),
+  };
+
+  const mockNotificationService = {
+    create: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -39,6 +50,14 @@ describe('TontineService', () => {
         {
           provide: getRepositoryToken(Tontine),
           useValue: mockTontineRepository,
+        },
+        {
+          provide: MemberService,
+          useValue: mockMemberService,
+        },
+        {
+          provide: NotificationService,
+          useValue: mockNotificationService,
         },
       ],
     }).compile();

@@ -1,12 +1,12 @@
-import { User } from 'src/authentification/entities/user.entity';
-import { Event } from 'src/event/entities/event.entity';
-import { Loan } from 'src/loan/entities/loan.entity';
-import { Notification } from 'src/notification/entities/notification.entity';
-import { BasicEntity } from 'src/shared/utilities/basic.entity';
-import { Deposit } from 'src/tontine/entities/deposit.entity';
-import { RapportMeeting } from 'src/tontine/entities/rapport-meeting.entity';
-import { Sanction } from 'src/tontine/entities/sanction.entity';
-import { Tontine } from 'src/tontine/entities/tontine.entity';
+import { User } from '../../authentification/entities/user.entity';
+import { Event } from '../../event/entities/event.entity';
+import { Loan } from '../../loan/entities/loan.entity';
+import { Notification } from '../../notification/entities/notification.entity';
+import { BasicEntity } from '../../shared/utilities/basic.entity';
+import { Deposit } from '../../tontine/entities/deposit.entity';
+import { RapportMeeting } from '../../tontine/entities/rapport-meeting.entity';
+import { Sanction } from '../../tontine/entities/sanction.entity';
+import { Tontine } from '../../tontine/entities/tontine.entity';
 import {
   Column,
   Entity,

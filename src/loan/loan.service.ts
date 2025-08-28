@@ -1,16 +1,16 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Member } from 'src/member/entities/member.entity';
-import { Tontine } from 'src/tontine/entities/tontine.entity';
+import { Member } from '../member/entities/member.entity';
+import { Tontine } from '../tontine/entities/tontine.entity';
 import { DataSource } from 'typeorm';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto } from './dto/update-loan.dto';
 import { Loan } from './entities/loan.entity';
 import { StatusLoan } from './enum/status-loan';
-import { Role } from 'src/authentification/entities/roles/roles.enum';
-import { User } from 'src/authentification/entities/user.entity';
-import { Action } from 'src/notification/utility/message-notification';
-import { NotificationService } from 'src/notification/notification.service';
-import { TypeNotification } from 'src/notification/enum/type-notification';
+import { Role } from '../authentification/entities/roles/roles.enum';
+import { User } from '../authentification/entities/user.entity';
+import { Action } from '../notification/utility/message-notification';
+import { NotificationService } from '../notification/notification.service';
+import { TypeNotification } from '../notification/enum/type-notification';
 
 @Injectable()
 export class LoanService {

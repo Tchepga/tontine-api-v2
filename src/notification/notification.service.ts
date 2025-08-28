@@ -3,9 +3,9 @@ import { DataSource } from 'typeorm';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { Notification } from './entities/notification.entity';
 import { messageNotification } from './utility/message-notification';
-import { Tontine } from 'src/tontine/entities/tontine.entity';
-import { User } from 'src/authentification/entities/user.entity';
-import { Member } from 'src/member/entities/member.entity';
+import { Tontine } from '../tontine/entities/tontine.entity';
+import { User } from '../authentification/entities/user.entity';
+import { Member } from '../member/entities/member.entity';
 
 @Injectable()
 export class NotificationService {

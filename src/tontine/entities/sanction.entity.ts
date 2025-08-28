@@ -1,4 +1,4 @@
-import { Member } from 'src/member/entities/member.entity';
+import { Member } from '../../member/entities/member.entity';
 import {
   Column,
   Entity,

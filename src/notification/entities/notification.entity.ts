@@ -1,7 +1,7 @@
-import { Member } from 'src/member/entities/member.entity';
+import { Member } from '../../member/entities/member.entity';
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { TypeNotification } from '../enum/type-notification';
-import { Tontine } from 'src/tontine/entities/tontine.entity';
+import { Tontine } from '../../tontine/entities/tontine.entity';
 
 @Entity()
 export class Notification {

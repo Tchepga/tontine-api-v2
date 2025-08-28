@@ -1,6 +1,6 @@
-import { Deposit } from 'src/tontine/entities/deposit.entity';
+import { Deposit } from '../../tontine/entities/deposit.entity';
 import { CreateNotificationDto } from '../dto/create-notification.dto';
-import { Loan } from 'src/loan/entities/loan.entity';
+import { Loan } from '../../loan/entities/loan.entity';
 
 export const messageNotificationCreate = {
   event: 'Un évènement a été créé',

@@ -13,11 +13,11 @@ import {
 import { CreateMemberDto } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { MemberService } from './member.service';
-import { validateEmail } from 'src/shared/utilities/custom-validator';
-import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
-import { Roles } from 'src/authentification/entities/roles/roles.decorator';
-import { Role } from 'src/authentification/entities/roles/roles.enum';
-import { Public } from 'src/authentification/entities/public.decorator';
+import { validateEmail } from '../shared/utilities/custom-validator';
+import { RolesGuard } from '../authentification/entities/roles/roles.guard';
+import { Roles } from '../authentification/entities/roles/roles.decorator';
+import { Role } from '../authentification/entities/roles/roles.enum';
+import { Public } from '../authentification/entities/public.decorator';
 
 @Controller('member')
 @UseGuards(RolesGuard)

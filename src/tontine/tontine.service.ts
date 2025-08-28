@@ -1,9 +1,9 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
-import { Role } from 'src/authentification/entities/roles/roles.enum';
-import { User } from 'src/authentification/entities/user.entity';
-import { Member } from 'src/member/entities/member.entity';
-import { MemberService } from 'src/member/member.service';
-import { ErrorCode } from 'src/shared/utilities/error-code';
+import { Role } from '../authentification/entities/roles/roles.enum';
+import { User } from '../authentification/entities/user.entity';
+import { Member } from '../member/entities/member.entity';
+import { MemberService } from '../member/member.service';
+import { ErrorCode } from '../shared/utilities/error-code';
 import { DataSource } from 'typeorm';
 import { CreateDepositDto } from './dto/create-deposit.dto';
 import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
@@ -24,11 +24,11 @@ import { RateMap } from './entities/rate-map.entity';
 import { Sanction } from './entities/sanction.entity';
 import { Tontine } from './entities/tontine.entity';
 import { StatusDeposit } from './enum/status-deposit';
-import { Action } from 'src/notification/utility/message-notification';
-import { NotificationService } from 'src/notification/notification.service';
-import { TypeNotification } from 'src/notification/enum/type-notification';
 import { PartOrder } from './entities/part-order.entity';
-import { CreateMemberDto } from 'src/member/dto/create-member.dto';
+import { Action } from '../notification/utility/message-notification';
+import { NotificationService } from '../notification/notification.service';
+import { TypeNotification } from '../notification/enum/type-notification';
+import { CreateMemberDto } from '../member/dto/create-member.dto';
 
 @Injectable()
 export class TontineService {

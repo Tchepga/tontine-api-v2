@@ -9,9 +9,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { Role } from 'src/authentification/entities/roles/roles.enum';
-import { Roles } from 'src/authentification/entities/roles/roles.decorator';
-import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
+import { Role } from '../authentification/entities/roles/roles.enum';
+import { Roles } from '../authentification/entities/roles/roles.decorator';
+import { RolesGuard } from '../authentification/entities/roles/roles.guard';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 
 @Controller('notification')

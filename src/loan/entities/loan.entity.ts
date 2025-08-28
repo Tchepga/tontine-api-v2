@@ -1,4 +1,3 @@
-// import { Member } from 'src/member/entities/member.entity';
 import {
   Column,
   Entity,
@@ -7,8 +6,8 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { StatusLoan } from '../enum/status-loan';
-import { Tontine } from 'src/tontine/entities/tontine.entity';
-import { Member } from 'src/member/entities/member.entity';
+import { Tontine } from '../../tontine/entities/tontine.entity';
+import { Member } from '../../member/entities/member.entity';
 
 @Entity()
 export class Loan {

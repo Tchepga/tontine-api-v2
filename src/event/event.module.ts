@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
-import { EventService } from './event.service';
-import { EventController } from './event.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Member } from 'src/member/entities/member.entity';
-import { Tontine } from 'src/tontine/entities/tontine.entity';
-import { TontineService } from 'src/tontine/tontine.service';
-import { MemberService } from 'src/member/member.service';
-import { AuthentificationService } from 'src/authentification/authentification.service';
-import { NotificationService } from 'src/notification/notification.service';
+import { EventController } from './event.controller';
+import { EventService } from './event.service';
+import { Member } from '../member/entities/member.entity';
+import { Tontine } from '../tontine/entities/tontine.entity';
+import { TontineService } from '../tontine/tontine.service';
+import { MemberService } from '../member/member.service';
+import { AuthentificationService } from '../authentification/authentification.service';
+import { NotificationService } from '../notification/notification.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Event, Member, Tontine])],

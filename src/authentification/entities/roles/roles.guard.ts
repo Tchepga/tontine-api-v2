@@ -1,4 +1,3 @@
-// src/auth/roles.guard.ts
 import {
   Injectable,
   CanActivate,
@@ -9,8 +8,8 @@ import { Reflector } from '@nestjs/core';
 import { Role } from './roles.enum';
 import { ROLES_KEY } from './roles.decorator';
 import { JwtService } from '@nestjs/jwt';
-import { environment } from 'src/shared/environement';
-import { TontineService } from 'src/tontine/tontine.service';
+import { environment } from '../../../shared/environement';
+import { TontineService } from '../../../tontine/tontine.service';
 
 @Injectable()
 export class RolesGuard implements CanActivate {

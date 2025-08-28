@@ -8,7 +8,7 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
-import { CreateMemberDto } from 'src/member/dto/create-member.dto';
+import { CreateMemberDto } from '../../member/dto/create-member.dto';
 import { ConfigTontine } from '../entities/config-tontine.entity';
 import { SystemType } from '../enum/system-type';
 

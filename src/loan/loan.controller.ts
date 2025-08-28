@@ -12,9 +12,9 @@ import {
 import { LoanService } from './loan.service';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto } from './dto/update-loan.dto';
-import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
-import { Role } from 'src/authentification/entities/roles/roles.enum';
-import { Roles } from 'src/authentification/entities/roles/roles.decorator';
+import { RolesGuard } from '../authentification/entities/roles/roles.guard';
+import { Role } from '../authentification/entities/roles/roles.enum';
+import { Roles } from '../authentification/entities/roles/roles.decorator';
 
 @Controller('loan')
 @UseGuards(RolesGuard)

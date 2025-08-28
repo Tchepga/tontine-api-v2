@@ -1,4 +1,3 @@
-// src/auth/dto/login.dto.ts
 import { IsIn, IsString } from 'class-validator';
 import { User } from '../entities/user.entity';
 import { Role } from '../entities/roles/roles.enum';

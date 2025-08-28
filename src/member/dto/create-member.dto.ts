@@ -1,7 +1,7 @@
 import { IsString, Length } from 'class-validator';
 import { Member } from '../entities/member.entity';
-import { User } from 'src/authentification/entities/user.entity';
-import { Role } from 'src/authentification/entities/roles/roles.enum';
+import { User } from '../../authentification/entities/user.entity';
+import { Role } from '../../authentification/entities/roles/roles.enum';
 
 export class CreateMemberDto {
   username: string;

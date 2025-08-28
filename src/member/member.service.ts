@@ -3,9 +3,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuthentificationService } from 'src/authentification/authentification.service';
-import { LoginDto } from 'src/authentification/dto/login-dto';
-import { Role } from 'src/authentification/entities/roles/roles.enum';
+import { AuthentificationService } from '../authentification/authentification.service';
+import { LoginDto } from '../authentification/dto/login-dto';
+import { Role } from '../authentification/entities/roles/roles.enum';
 import { DataSource } from 'typeorm';
 import {
   CreateMemberDto,
@@ -13,7 +13,7 @@ import {
 } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { Member } from './entities/member.entity';
-import { environment } from 'src/shared/environement';
+import { environment } from '../shared/environement';
 
 @Injectable()
 export class MemberService {

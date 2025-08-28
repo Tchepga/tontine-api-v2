@@ -11,10 +11,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import * as fs from 'fs';
-import { AuthentificationService } from 'src/authentification/authentification.service';
-import { Roles } from 'src/authentification/entities/roles/roles.decorator';
-import { Role } from 'src/authentification/entities/roles/roles.enum';
-import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
+import { AuthentificationService } from '../authentification/authentification.service';
+import { Roles } from '../authentification/entities/roles/roles.decorator';
+import { Role } from '../authentification/entities/roles/roles.enum';
+import { RolesGuard } from '../authentification/entities/roles/roles.guard';
 import { CreateDepositDto } from './dto/create-deposit.dto';
 import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
 import { CreateSanctionDto } from './dto/create-sanction.dto';
@@ -28,7 +28,7 @@ import { Tontine } from './entities/tontine.entity';
 import { StatusDeposit } from './enum/status-deposit';
 import { TontineService } from './tontine.service';
 import { isMemberOfTontine } from './utilities/service.helper';
-import { CreateMemberDto } from 'src/member/dto/create-member.dto';
+import { CreateMemberDto } from '../member/dto/create-member.dto';
 
 @UseGuards(RolesGuard)
 @Controller('tontine')
