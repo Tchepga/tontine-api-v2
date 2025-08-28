@@ -187,6 +187,19 @@ jobs:
               caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 &
               echo '✅ Caddy redémarré'
             fi
+            
+            # Vérifier que l'application répond
+            echo '🔍 Vérification de l\'application sur le port 8080...'
+            sleep 5
+            if curl -f -s http://localhost:8080/health > /dev/null 2>&1; then
+              echo '✅ Application répond sur le port 8080'
+            else
+              echo '⚠️  Application ne répond pas sur le port 8080'
+              echo '📋 Vérification des processus PM2:'
+              \$PM2_PATH list
+              echo '📋 Logs PM2:'
+              \$PM2_PATH logs tontine-api --lines 5 --nostream
+            fi
           " || {
             echo "⚠️  Erreur lors de la configuration Caddy, mais le déploiement continue..."
             echo "🔧 L'application est accessible sur le port 8080"
