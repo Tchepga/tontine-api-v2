@@ -1,13 +1,12 @@
+import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { EventService } from './event.service';
 import { DataSource } from 'typeorm';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventType } from './enum/event-type';
-import { BadRequestException } from '@nestjs/common';
+import { EventService } from './event.service';
 
 describe('EventService', () => {
   let service: EventService;
-  let dataSource: DataSource;
 
   const mockDataSource = {
     getRepository: jest.fn().mockReturnValue({
@@ -83,7 +82,7 @@ describe('EventService', () => {
       mockDataSource.getRepository().findOne.mockResolvedValue(null);
 
       await expect(
-        service.create(createEventDto, { username: 'test' })
+        service.create(createEventDto, { username: 'test' }),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -144,7 +143,7 @@ describe('EventService', () => {
       mockDataSource.getRepository().findOne.mockResolvedValue(mockEvent);
 
       await expect(
-        service.update(1, { title: 'New Title' }, { username: 'testuser' })
+        service.update(1, { title: 'New Title' }, { username: 'testuser' }),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -174,7 +173,7 @@ describe('EventService', () => {
       mockDataSource.getRepository().findOne.mockResolvedValue(null);
 
       await expect(service.addParticipant(999, 1)).rejects.toThrow(
-        BadRequestException
+        BadRequestException,
       );
     });
   });

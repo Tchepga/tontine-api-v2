@@ -38,4 +38,4 @@ import { PartOrder } from './entities/part-order.entity';
   providers: [TontineService, AuthentificationService, NotificationService],
   exports: [TontineService],
 })
-export class TontineModule { }
+export class TontineModule {}

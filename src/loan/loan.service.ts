@@ -17,7 +17,7 @@ export class LoanService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly notificationService: NotificationService,
-  ) { }
+  ) {}
 
   async create(createLoanDto: CreateLoanDto, user: User) {
     const { amount, currency, tontineId } = createLoanDto;
@@ -48,13 +48,14 @@ export class LoanService {
     loan.tontine = tontine;
     const loanSaved = await this.dataSource.getRepository(Loan).save(loan);
 
-    this.notificationService.create({
-      action: Action.CREATE,
-      loanId: loanSaved.id,
-      type: TypeNotification.LOAN,
-      tontineId: tontine.id,
-    },
-      user
+    this.notificationService.create(
+      {
+        action: Action.CREATE,
+        loanId: loanSaved.id,
+        type: TypeNotification.LOAN,
+        tontineId: tontine.id,
+      },
+      user,
     );
 
     return loanSaved;

@@ -25,6 +25,5 @@ const prodEnvironment = {
   },
 };
 
-export const environment = process.env.NODE_ENV === 'production'
-    ? prodEnvironment
-    : devEnvironment; 
+export const environment =
+  process.env.NODE_ENV === 'production' ? prodEnvironment : devEnvironment;

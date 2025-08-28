@@ -36,8 +36,8 @@ export class TontineController {
   private relativePathUploadFiles = 'upload/rapports/';
   constructor(
     private readonly tontineService: TontineService,
-    private readonly userService: AuthentificationService
-  ) { }
+    private readonly userService: AuthentificationService,
+  ) {}
 
   @Post()
   create(@Body() createTontineDto: CreateTontineDto) {
@@ -87,7 +87,7 @@ export class TontineController {
   @Roles(Role.PRESIDENT)
   updateConfig(
     @Param('id') id: string,
-    @Body() updateConfigDto: CreateConfigTontineDto
+    @Body() updateConfigDto: CreateConfigTontineDto,
   ) {
     return this.tontineService.updateConfig(+id, updateConfigDto);
   }
@@ -105,20 +105,27 @@ export class TontineController {
 
   @Patch(':id/config/part-order/:partOrderId')
   @Roles(Role.PRESIDENT)
-  updatePartOrder(@Param('id') tontineId: string, @Param('partOrderId') partOrderId: string, @Body() data: PartOrderDto) {
+  updatePartOrder(
+    @Param('id') tontineId: string,
+    @Param('partOrderId') partOrderId: string,
+    @Body() data: PartOrderDto,
+  ) {
     return this.tontineService.updatePartOrder(+tontineId, +partOrderId, data);
   }
 
   @Delete(':id/config/part-order/:partOrderId')
   @Roles(Role.PRESIDENT)
-  deletePartOrder(@Param('id') tontineId: string, @Param('partOrderId') partOrderId: string) {
+  deletePartOrder(
+    @Param('id') tontineId: string,
+    @Param('partOrderId') partOrderId: string,
+  ) {
     return this.tontineService.deletePartOrder(+tontineId, +partOrderId);
   }
 
   @Patch(':id/member')
   @Roles(Role.PRESIDENT)
   addMember(@Param('id') id: string, @Body() data: { memberId: number }) {
-    console.log("addMember", id, data);
+    console.log('addMember', id, data);
     return this.tontineService.addMember(+id, data.memberId);
   }
 
@@ -151,7 +158,7 @@ export class TontineController {
   async createRapport(
     @Req() req: any,
     @Param('id') id: string,
-    @Body() rapport: CreateMeetingRapportDto
+    @Body() rapport: CreateMeetingRapportDto,
   ) {
     if (rapport.attachment) {
       // Décode et sauvegarde le fichier
@@ -161,7 +168,7 @@ export class TontineController {
 
       await fs.promises.writeFile(
         filePath,
-        Buffer.from(rapport.attachment, 'base64')
+        Buffer.from(rapport.attachment, 'base64'),
       );
 
       rapport.attachmentFilename = fileName;
@@ -174,7 +181,7 @@ export class TontineController {
   @Roles(Role.ACCOUNT_MANAGER)
   updateRapport(
     @Param('id') id: string,
-    @Body() rapport: CreateMeetingRapportDto
+    @Body() rapport: CreateMeetingRapportDto,
   ) {
     return this.tontineService.updateRapport(+id, rapport);
   }
@@ -183,7 +190,7 @@ export class TontineController {
   @Roles(Role.ACCOUNT_MANAGER)
   deleteRapport(
     @Param('id') id: string,
-    @Param('rapportId') rapportId: string
+    @Param('rapportId') rapportId: string,
   ) {
     return this.tontineService.removeRapport(+id, +rapportId);
   }
@@ -192,7 +199,7 @@ export class TontineController {
   @Roles(Role.TONTINARD)
   async getAttachment(
     @Param('id') id: string,
-    @Param('rapportId') rapportId: string
+    @Param('rapportId') rapportId: string,
   ) {
     const tontine = await this.tontineService.findOne(+id);
     if (!tontine) {
@@ -203,7 +210,7 @@ export class TontineController {
       throw new NotFoundException('Rapport not found');
     }
     const file = fs.readFileSync(
-      `${this.relativePathUploadFiles}${rapport.attachmentFilename}`
+      `${this.relativePathUploadFiles}${rapport.attachmentFilename}`,
     );
     return file;
   }
@@ -219,7 +226,7 @@ export class TontineController {
   updateSanction(
     @Param('id') id: string,
     @Param('sanctionId') sanctionId: string,
-    @Body() sanction: any
+    @Body() sanction: any,
   ) {
     return this.tontineService.updateSanction(+id, +sanctionId, sanction);
   }
@@ -228,7 +235,7 @@ export class TontineController {
   @Roles(Role.OFFICE_MANAGER)
   deleteSanction(
     @Param('id') id: string,
-    @Param('sanctionId') sanctionId: string
+    @Param('sanctionId') sanctionId: string,
   ) {
     return this.tontineService.removeSanction(+id, +sanctionId);
   }
@@ -245,18 +252,23 @@ export class TontineController {
   createDeposit(
     @Param('id') id: string,
     @Body() createDepositDto: CreateDepositDto,
-    @Req() req: any
+    @Req() req: any,
   ) {
     const user = req.user;
     let status: StatusDeposit = StatusDeposit.PENDING;
     if (
       user.role.find(
-        (role) => role === Role.PRESIDENT || role === Role.ACCOUNT_MANAGER
+        (role) => role === Role.PRESIDENT || role === Role.ACCOUNT_MANAGER,
       )
     ) {
       status = StatusDeposit.APPROVED;
     }
-    return this.tontineService.createDeposit(+id, createDepositDto, status, user);
+    return this.tontineService.createDeposit(
+      +id,
+      createDepositDto,
+      status,
+      user,
+    );
   }
 
   @Patch(':id/deposit/:depositId')
@@ -265,9 +277,14 @@ export class TontineController {
     @Param('id') id: string,
     @Param('depositId') depositId: string,
     @Body() createDepositDto: CreateDepositDto,
-    @Req() req: any
+    @Req() req: any,
   ) {
-    return this.tontineService.updateDeposit(+id, +depositId, createDepositDto, req.user);
+    return this.tontineService.updateDeposit(
+      +id,
+      +depositId,
+      createDepositDto,
+      req.user,
+    );
   }
 
   @Delete(':id/deposit/:depositId')
@@ -275,9 +292,8 @@ export class TontineController {
   deleteDeposit(
     @Param('id') id: string,
     @Param('depositId') depositId: string,
-    @Req() req: any
+    @Req() req: any,
   ) {
     return this.tontineService.removeDeposit(+id, +depositId, req.user);
   }
-
 }

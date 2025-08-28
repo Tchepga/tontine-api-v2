@@ -1,16 +1,14 @@
 import {
-  HttpException,
   Injectable,
-  UnauthorizedException,
+  UnauthorizedException
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import * as bcrypt from 'bcrypt';
-import { User } from './entities/user.entity';
-import { ErrorCode } from 'src/shared/utilities/error-code';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import { ErrorCode } from 'src/shared/utilities/error-code';
+import { DataSource, EntityManager } from 'typeorm';
 import { LoginDto } from './dto/login-dto';
 import { Role } from './entities/roles/roles.enum';
-import { DataSource, EntityManager } from 'typeorm';
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class AuthentificationService {
@@ -18,7 +16,7 @@ export class AuthentificationService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly jwtService: JwtService,
-    private readonly entityManager: EntityManager
+    private readonly entityManager: EntityManager,
   ) {}
 
   public async verify(token: string): Promise<boolean> {

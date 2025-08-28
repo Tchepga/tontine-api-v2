@@ -1,17 +1,15 @@
 import {
+  IsDateString,
+  IsEnum,
   IsIn,
   IsNotEmpty,
   IsNotEmptyObject,
   IsNumber,
-  IsString,
-  IsEnum,
   IsOptional,
-  ValidateNested,
-  IsDateString,
+  IsString,
 } from 'class-validator';
 import { CreateMemberDto } from 'src/member/dto/create-member.dto';
 import { ConfigTontine } from '../entities/config-tontine.entity';
-import { Type } from 'class-transformer';
 import { SystemType } from '../enum/system-type';
 
 export class CreateConfigTontineDto {
@@ -43,7 +41,6 @@ export class CreateConfigTontineDto {
 
   @IsEnum(SystemType)
   systemType: SystemType;
-
 }
 
 export class RateMapDto {
@@ -77,7 +74,7 @@ export class CreateTontineDto {
 }
 
 export function createToConfigTontineDtoToConfigTontine(
-  createConfigTontineDto: CreateConfigTontineDto
+  createConfigTontineDto: CreateConfigTontineDto,
 ) {
   const {
     defaultLoanRate,

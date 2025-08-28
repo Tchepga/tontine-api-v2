@@ -37,6 +37,9 @@ export class ConfigTontine {
   })
   rateMaps: RateMap[];
 
-  @OneToMany(() => PartOrder, partOrder => partOrder.config, { eager: true, cascade: true })
+  @OneToMany(() => PartOrder, (partOrder) => partOrder.config, {
+    eager: true,
+    cascade: true,
+  })
   partOrders: PartOrder[];
 }

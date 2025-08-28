@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuthentificationService } from 'src/authentification/authentification.service';
 import { LoginDto } from 'src/authentification/dto/login-dto';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
@@ -15,8 +19,8 @@ import { environment } from 'src/shared/environement';
 export class MemberService {
   constructor(
     private readonly dataSource: DataSource,
-    private readonly authentificationService: AuthentificationService
-  ) { }
+    private readonly authentificationService: AuthentificationService,
+  ) {}
 
   async create(createMemberDto: CreateMemberDto) {
     const member = createToMemberDtoToMember(createMemberDto);
@@ -25,7 +29,7 @@ export class MemberService {
 
     if (createMemberDto.username) {
       const user = await this.authentificationService.findByUsername(
-        createMemberDto.username
+        createMemberDto.username,
       );
       if (user) {
         throw new BadRequestException('Username already used');
@@ -109,10 +113,14 @@ export class MemberService {
     }
     const { minLength, maxLength } = environment.passwordConfig;
     if (createMemberDto.password.length < minLength) {
-      throw new BadRequestException(`Password must be at least ${minLength} characters long`);
+      throw new BadRequestException(
+        `Password must be at least ${minLength} characters long`,
+      );
     }
     if (createMemberDto.password.length > maxLength) {
-      throw new BadRequestException(`Password must be less than ${maxLength} characters long`);
+      throw new BadRequestException(
+        `Password must be less than ${maxLength} characters long`,
+      );
     }
   }
 }

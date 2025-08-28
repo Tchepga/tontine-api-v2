@@ -10,10 +10,13 @@ import { Req } from '@nestjs/common';
 
 @WebSocketGateway()
 export class NotificationGateway {
-  constructor(private readonly notificationService: NotificationService) { }
+  constructor(private readonly notificationService: NotificationService) {}
 
   @SubscribeMessage('createNotification')
-  create(@MessageBody() createNotificationDto: CreateNotificationDto, @Req() req: any) {
+  create(
+    @MessageBody() createNotificationDto: CreateNotificationDto,
+    @Req() req: any,
+  ) {
     return this.notificationService.create(createNotificationDto, req.user);
   }
 

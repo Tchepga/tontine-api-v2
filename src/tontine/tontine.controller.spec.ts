@@ -171,9 +171,15 @@ describe('TontineController', () => {
 
       mockTontineService.setSelectedTontine.mockResolvedValue(expectedResult);
 
-      const result = await controller.setSelectedTontine(tontineId, mockRequest);
+      const result = await controller.setSelectedTontine(
+        tontineId,
+        mockRequest,
+      );
 
-      expect(tontineService.setSelectedTontine).toHaveBeenCalledWith(1, 'testuser');
+      expect(tontineService.setSelectedTontine).toHaveBeenCalledWith(
+        1,
+        'testuser',
+      );
       expect(result).toEqual(expectedResult);
     });
   });
@@ -262,9 +268,15 @@ describe('TontineController', () => {
 
       mockTontineService.addMemberFromScratch.mockResolvedValue(expectedResult);
 
-      const result = await controller.addMemberFromScratch(tontineId, createMemberDto);
+      const result = await controller.addMemberFromScratch(
+        tontineId,
+        createMemberDto,
+      );
 
-      expect(tontineService.addMemberFromScratch).toHaveBeenCalledWith(1, createMemberDto);
+      expect(tontineService.addMemberFromScratch).toHaveBeenCalledWith(
+        1,
+        createMemberDto,
+      );
       expect(result).toEqual(expectedResult);
     });
   });
@@ -326,7 +338,11 @@ describe('TontineController', () => {
 
       mockTontineService.createDeposit.mockResolvedValue(expectedResult);
 
-      const result = await controller.createDeposit(tontineId, createDepositDto, mockRequest);
+      const result = await controller.createDeposit(
+        tontineId,
+        createDepositDto,
+        mockRequest,
+      );
 
       expect(tontineService.createDeposit).toHaveBeenCalledWith(
         1,
@@ -362,7 +378,11 @@ describe('TontineController', () => {
 
       mockTontineService.createDeposit.mockResolvedValue(expectedResult);
 
-      const result = await controller.createDeposit(tontineId, createDepositDto, mockRequest);
+      const result = await controller.createDeposit(
+        tontineId,
+        createDepositDto,
+        mockRequest,
+      );
 
       expect(tontineService.createDeposit).toHaveBeenCalledWith(
         1,
@@ -417,9 +437,19 @@ describe('TontineController', () => {
 
       mockTontineService.updateDeposit.mockResolvedValue(expectedResult);
 
-      const result = await controller.updateDeposit(tontineId, depositId, updateDepositDto, mockRequest);
+      const result = await controller.updateDeposit(
+        tontineId,
+        depositId,
+        updateDepositDto,
+        mockRequest,
+      );
 
-      expect(tontineService.updateDeposit).toHaveBeenCalledWith(1, 123, updateDepositDto, mockUser);
+      expect(tontineService.updateDeposit).toHaveBeenCalledWith(
+        1,
+        123,
+        updateDepositDto,
+        mockUser,
+      );
       expect(result).toEqual(expectedResult);
     });
   });
@@ -442,9 +472,17 @@ describe('TontineController', () => {
 
       mockTontineService.removeDeposit.mockResolvedValue(expectedResult);
 
-      const result = await controller.deleteDeposit(tontineId, depositId, mockRequest);
+      const result = await controller.deleteDeposit(
+        tontineId,
+        depositId,
+        mockRequest,
+      );
 
-      expect(tontineService.removeDeposit).toHaveBeenCalledWith(1, 123, mockUser);
+      expect(tontineService.removeDeposit).toHaveBeenCalledWith(
+        1,
+        123,
+        mockUser,
+      );
       expect(result).toEqual(expectedResult);
     });
   });

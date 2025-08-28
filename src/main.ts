@@ -11,7 +11,7 @@ async function bootstrap() {
     AppModule,
     new FastifyAdapter({
       bodyLimit: 10 * 1024 * 1024, // 10MB
-    })
+    }),
   );
 
   // TODO: need to restrict validation

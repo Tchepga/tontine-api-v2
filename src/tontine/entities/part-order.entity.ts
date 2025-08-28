@@ -4,18 +4,18 @@ import { ConfigTontine } from './config-tontine.entity';
 
 @Entity()
 export class PartOrder {
-    @PrimaryGeneratedColumn()
-    id: number;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @ManyToOne(() => Member)
-    member: Member;
+  @ManyToOne(() => Member)
+  member: Member;
 
-    @Column()
-    order: number;
+  @Column()
+  order: number;
 
-    @ManyToOne(() => ConfigTontine, config => config.partOrders)
-    config: ConfigTontine;
+  @ManyToOne(() => ConfigTontine, (config) => config.partOrders)
+  config: ConfigTontine;
 
-    @Column()
-    period: Date;
-} 
+  @Column()
+  period: Date;
+}

@@ -46,4 +46,4 @@ import { TontineModule } from './tontine/tontine.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

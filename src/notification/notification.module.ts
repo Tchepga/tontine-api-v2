@@ -15,16 +15,18 @@ import { Sanction } from 'src/tontine/entities/sanction.entity';
 import { Event } from 'src/event/entities/event.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([
-    Notification,
-    Tontine,
-    Member,
-    User,
-    Event,
-    Deposit,
-    Loan,
-    Sanction,
-  ])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Notification,
+      Tontine,
+      Member,
+      User,
+      Event,
+      Deposit,
+      Loan,
+      Sanction,
+    ]),
+  ],
   controllers: [NotificationController],
   providers: [
     TontineService,
@@ -34,4 +36,4 @@ import { Event } from 'src/event/entities/event.entity';
   ],
   exports: [NotificationService],
 })
-export class NotificationModule { }
+export class NotificationModule {}

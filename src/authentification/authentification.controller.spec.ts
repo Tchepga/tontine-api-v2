@@ -10,7 +10,7 @@ describe('AuthentificationController', () => {
     }).compile();
 
     controller = module.get<AuthentificationController>(
-      AuthentificationController
+      AuthentificationController,
     );
   });
 

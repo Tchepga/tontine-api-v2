@@ -1,14 +1,12 @@
+import { HttpException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
-import { MemberService } from './member.service';
 import { AuthentificationService } from '../authentification/authentification.service';
-import { HttpException } from '@nestjs/common';
 import { CreateMemberDto } from './dto/create-member.dto';
+import { MemberService } from './member.service';
 
 describe('MemberService', () => {
   let service: MemberService;
-  let authService: AuthentificationService;
-  let dataSource: DataSource;
 
   const mockQueryBuilder = {
     innerJoinAndSelect: jest.fn().mockReturnThis(),
@@ -109,7 +107,7 @@ describe('MemberService', () => {
       };
 
       mockAuthService.create.mockRejectedValue(
-        new Error('User creation failed')
+        new Error('User creation failed'),
       );
 
       await expect(service.create(mockCreateMemberDto)).rejects.toThrow();
@@ -189,7 +187,7 @@ describe('MemberService', () => {
       mockDataSource.getRepository().findOne.mockResolvedValue(null);
 
       await expect(service.update(999, { firstname: 'Test' })).rejects.toThrow(
-        HttpException
+        HttpException,
       );
     });
   });

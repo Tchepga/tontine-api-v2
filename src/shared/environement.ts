@@ -21,5 +21,3 @@ export const environment = {
     defaultPassword: 'changeme1@',
   },
 };
-
-

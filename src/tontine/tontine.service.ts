@@ -27,18 +27,16 @@ import { StatusDeposit } from './enum/status-deposit';
 import { Action } from 'src/notification/utility/message-notification';
 import { NotificationService } from 'src/notification/notification.service';
 import { TypeNotification } from 'src/notification/enum/type-notification';
-import { SystemType } from './enum/system-type';
 import { PartOrder } from './entities/part-order.entity';
 import { CreateMemberDto } from 'src/member/dto/create-member.dto';
 
 @Injectable()
 export class TontineService {
-
   constructor(
     private readonly dataSource: DataSource,
     private readonly memberService: MemberService,
     private readonly notificationService: NotificationService,
-  ) { }
+  ) {}
 
   async findByMember(username: string): Promise<Tontine[]> {
     const member = await this.memberService.findByUsername(username);
@@ -346,12 +344,10 @@ export class TontineService {
     deposit.currency = createDepositDto.currency;
 
     // update cashflow
-    const cashflow = await this.dataSource
-      .getRepository(CashFlow)
-      .findOne({
-        where: { id: tontine.cashFlow.id },
-        relations: ['deposits']
-      });
+    const cashflow = await this.dataSource.getRepository(CashFlow).findOne({
+      where: { id: tontine.cashFlow.id },
+      relations: ['deposits'],
+    });
     if (!cashflow) {
       throw new NotFoundException('Cashflow not found');
     }
@@ -366,27 +362,25 @@ export class TontineService {
       .getRepository(Deposit)
       .save(deposit);
 
-    this.notificationService.create({
-      action: Action.CREATE,
-      depositId: depositSaved.id,
-      memberId: depositSaved.author.id,
-      tontineId: tontine.id,
-      type: TypeNotification.DEPOSIT,
-    },
-      user
+    this.notificationService.create(
+      {
+        action: Action.CREATE,
+        depositId: depositSaved.id,
+        memberId: depositSaved.author.id,
+        tontineId: tontine.id,
+        type: TypeNotification.DEPOSIT,
+      },
+      user,
     );
 
     return depositSaved;
   }
 
-
   private async updateCashflow(cashFlowId: number, amount: number) {
-    const cashflow = await this.dataSource
-      .getRepository(CashFlow)
-      .findOne({
-        where: { id: cashFlowId },
-        relations: ['deposits']
-      });
+    const cashflow = await this.dataSource.getRepository(CashFlow).findOne({
+      where: { id: cashFlowId },
+      relations: ['deposits'],
+    });
     if (!cashflow) {
       throw new NotFoundException('Cashflow not found');
     }
@@ -397,12 +391,10 @@ export class TontineService {
     }
 
     // add all deposit attached to this tontine
-    const deposits = await this.dataSource
-      .getRepository(Deposit)
-      .find({
-        where: { cashFlow: { id: cashFlowId } },
-        relations: ['cashFlow']
-      });
+    const deposits = await this.dataSource.getRepository(Deposit).find({
+      where: { cashFlow: { id: cashFlowId } },
+      relations: ['cashFlow'],
+    });
     const totalDeposit = deposits
       .filter((deposit) => deposit.status === StatusDeposit.APPROVED)
       .reduce((acc, deposit) => acc + deposit.amount, 0);
@@ -438,14 +430,15 @@ export class TontineService {
       ...deposit,
     });
 
-    this.notificationService.create({
-      action: Action.UPDATE,
-      depositId: depositSaved.id,
-      memberId: depositSaved.author.id,
-      tontineId: tontine.id,
-      type: TypeNotification.DEPOSIT,
-    },
-      user
+    this.notificationService.create(
+      {
+        action: Action.UPDATE,
+        depositId: depositSaved.id,
+        memberId: depositSaved.author.id,
+        tontineId: tontine.id,
+        type: TypeNotification.DEPOSIT,
+      },
+      user,
     );
 
     return depositSaved;
@@ -473,14 +466,15 @@ export class TontineService {
       .getRepository(Deposit)
       .remove(deposit);
 
-    this.notificationService.create({
-      action: Action.DELETE,
-      depositId: depositRemoved.id,
-      memberId: depositRemoved.author.id,
-      tontineId: tontine.id,
-      type: TypeNotification.DEPOSIT,
-    },
-      user
+    this.notificationService.create(
+      {
+        action: Action.DELETE,
+        depositId: depositRemoved.id,
+        memberId: depositRemoved.author.id,
+        tontineId: tontine.id,
+        type: TypeNotification.DEPOSIT,
+      },
+      user,
     );
 
     return depositRemoved;
@@ -604,7 +598,10 @@ export class TontineService {
     if (!member) {
       throw new NotFoundException('Member not found');
     }
-    const memberRole = await this.getMemberRole(member.user.username, tontineId);
+    const memberRole = await this.getMemberRole(
+      member.user.username,
+      tontineId,
+    );
     if (memberRole) {
       await this.dataSource.getRepository(MemberRole).delete(memberRole.id);
     }
@@ -628,7 +625,11 @@ export class TontineService {
     return this.dataSource.getRepository(PartOrder).save(partOrder);
   }
 
-  async updatePartOrder(tontineId: number, partOrderId: number, data: PartOrderDto) {
+  async updatePartOrder(
+    tontineId: number,
+    partOrderId: number,
+    data: PartOrderDto,
+  ) {
     const tontine = await this.findOne(tontineId);
     if (!tontine) {
       throw new NotFoundException('Tontine not found');
@@ -672,7 +673,7 @@ export class TontineService {
       where: {
         config: { id: tontine.config.id },
       },
-      relations: ['member', 'member.user',]
+      relations: ['member', 'member.user'],
     });
   }
 
@@ -681,7 +682,9 @@ export class TontineService {
     if (!tontine) {
       throw new NotFoundException('Tontine not found');
     }
-    const member = await this.memberService.findByUsername(data.username) ?? await this.memberService.create(data);
+    const member =
+      (await this.memberService.findByUsername(data.username)) ??
+      (await this.memberService.create(data));
 
     return this.addMember(tontineId, member.id);
   }

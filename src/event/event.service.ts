@@ -14,8 +14,8 @@ import { TypeNotification } from 'src/notification/enum/type-notification';
 export class EventService {
   constructor(
     private readonly dataSource: DataSource,
-    private readonly notificationService: NotificationService
-  ) { }
+    private readonly notificationService: NotificationService,
+  ) {}
 
   async create(createEventDto: CreateEventDto, user: User) {
     const {
@@ -66,13 +66,14 @@ export class EventService {
 
     const eventSaved = await this.dataSource.getRepository(Event).save(event);
 
-    this.notificationService.create({
-      action: Action.CREATE,
-      tontineId,
-      eventId: eventSaved.id,
-      type: TypeNotification.EVENT
-    },
-      user
+    this.notificationService.create(
+      {
+        action: Action.CREATE,
+        tontineId,
+        eventId: eventSaved.id,
+        type: TypeNotification.EVENT,
+      },
+      user,
     );
 
     return eventSaved;
