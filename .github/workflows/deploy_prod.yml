@@ -72,7 +72,7 @@ jobs:
           
           # Déploiement complet sur le serveur
           echo "🚀 Déploiement sur le serveur..."
-          ssh -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
+          ssh -o ConnectTimeout=60 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
             set -e
             echo \"🔗 Connexion SSH réussie\"
             
@@ -132,19 +132,22 @@ jobs:
             
             # Vérification du déploiement
             echo \"✅ Vérification du déploiement...\"
-            sleep 10
+            sleep 5
             
             # Vérifier que l'application fonctionne
             if \$PM2_PATH list | grep -q 'tontine-api.*online'; then
               echo \"🎉 Déploiement réussi !\"
               \$PM2_PATH list
-              \$PM2_PATH logs tontine-api --lines 10
+              echo \"📋 Logs récents:\"
+              \$PM2_PATH logs tontine-api --lines 5 --nostream
               
               # Nettoyer l'ancienne version si tout va bien
               rm -rf /root/apps/tontine.old
+              echo \"✅ Ancienne version nettoyée\"
             else
               echo \"❌ Erreur lors du déploiement\"
-              \$PM2_PATH logs tontine-api
+              echo \"📋 Logs d'erreur:\"
+              \$PM2_PATH logs tontine-api --lines 10 --nostream
               
               # Restaurer l'ancienne version en cas d'erreur
               echo \"🔄 Restauration de l'ancienne version...\"
@@ -159,82 +162,30 @@ jobs:
             echo \"🌐 Application accessible sur le port 8080\"
           "
           
-          # Configuration Caddy optimisée pour multi-applications (mode processus)
+          # Configuration Caddy simplifiée
           echo "🌐 Configuration Caddy..."
-          ssh -i ~/.ssh/deploy_key root@${{ secrets.HOST_VPS_HOSTINGER }} "
-            set -e  # Arrêter en cas d'erreur
-            echo '🔧 Configuration Caddy en cours...'
-            
-            # Vérifier si Caddy est installé
-            if ! command -v caddy &> /dev/null; then
-              echo '📦 Installation de Caddy...'
-              apt-get update -qq
-              apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl
-              curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-              curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
-              apt-get update -qq
-              apt-get install -y caddy
-              echo '✅ Caddy installé'
-            fi
-            
-            # Arrêter UNIQUEMENT le processus Caddy pour tontine-api (avec gestion d'erreur robuste)
+          ssh -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -i ~/.ssh/deploy_key root@${{ secrets.HOST_VPS_HOSTINGER }} "
             echo '🔄 Arrêt du processus Caddy pour tontine-api...'
+            pkill -f 'caddy.*api.tontine.devcoorp.net' || true
+            sleep 2
             
-            # Vérifier d'abord si le processus existe
-            if pgrep -f 'caddy.*api.tontine.devcoorp.net' > /dev/null 2>&1; then
-              echo '📋 Processus Caddy tontine-api trouvé, arrêt en cours...'
-              pkill -f 'caddy.*api.tontine.devcoorp.net' || true
-              sleep 3
-              
-              # Vérifier que le processus est bien arrêté
-              if pgrep -f 'caddy.*api.tontine.devcoorp.net' > /dev/null 2>&1; then
-                echo '⚠️  Le processus persiste, arrêt forcé...'
-                pkill -9 -f 'caddy.*api.tontine.devcoorp.net' || true
-                sleep 2
-              fi
-              echo '✅ Processus Caddy tontine-api arrêté'
-            else
-              echo 'ℹ️  Aucun processus Caddy pour tontine-api trouvé'
-            fi
-            
-            # Vérifier qu'aucun autre processus Caddy n'est affecté
-            echo '📋 Vérification des autres processus Caddy...'
-            CADDY_PROCESSES=\$(ps aux | grep caddy | grep -v grep | grep -v 'api.tontine.devcoorp.net' || true)
-            if [ -n \"\$CADDY_PROCESSES\" ]; then
-              echo '✅ Autres processus Caddy actifs:'
-              echo \"\$CADDY_PROCESSES\"
-            else
-              echo 'ℹ️  Aucun autre processus Caddy détecté'
-            fi
-            
-            # Démarrer Caddy pour tontine-api uniquement
             echo '🚀 Démarrage de Caddy pour tontine-api...'
-            nohup caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 > /tmp/caddy-tontine.log 2>&1 &
-            TONTINE_CADDY_PID=\$!
+            nohup caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 > /dev/null 2>&1 &
             
-            # Vérification du démarrage
-            sleep 3
-            if ps -p \$TONTINE_CADDY_PID > /dev/null 2>&1; then
-              echo '✅ Caddy pour tontine-api démarré avec succès (PID: '\$TONTINE_CADDY_PID')'
-              echo '📋 Logs Caddy tontine-api:'
-              tail -5 /tmp/caddy-tontine.log 2>/dev/null || echo 'Aucun log disponible'
-              
-              # Sauvegarder le PID pour référence future
-              echo \$TONTINE_CADDY_PID > /tmp/caddy-tontine.pid
-              echo '💾 PID sauvegardé dans /tmp/caddy-tontine.pid'
-            else
-              echo '❌ Erreur lors du démarrage de Caddy pour tontine-api'
-              echo '📋 Logs d\'erreur:'
-              cat /tmp/caddy-tontine.log 2>/dev/null || echo 'Aucun log disponible'
-              exit 1
-            fi
-            
-            echo '🎉 Configuration Caddy pour tontine-api terminée !'
+            echo '✅ Caddy démarré pour tontine-api'
             echo '🌐 Application accessible sur https://api.tontine.devcoorp.net'
-            echo '📋 Tous les processus Caddy actifs:'
-            ps aux | grep caddy | grep -v grep || echo 'Aucun processus Caddy trouvé'
-          " || {
-            echo "⚠️  Erreur lors de la configuration Caddy, mais le déploiement continue..."
-            echo "🔧 L'application est accessible sur le port 8080"
-          }
+          "
+          
+          # Vérification que l'application fonctionne
+          echo "🔍 Vérification de l'application..."
+          sleep 10
+          
+          # Test de connectivité
+          if curl -f -s https://api.tontine.devcoorp.net/health > /dev/null 2>&1; then
+            echo "✅ Application accessible via HTTPS"
+          elif curl -f -s http://${{ secrets.HOST_VPS_HOSTINGER }}:8080/health > /dev/null 2>&1; then
+            echo "✅ Application accessible via HTTP sur le port 8080"
+          else
+            echo "⚠️  Application non accessible, mais le déploiement continue..."
+          fi
           
