@@ -48,6 +48,7 @@ export class EventService {
     event.type = type;
     event.description = description;
     event.startDate = startDate;
+    event.participants = [];
     if (endDate) {
       event.endDate = endDate;
     }
