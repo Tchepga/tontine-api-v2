@@ -2,7 +2,11 @@ import { HttpException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { MemberService } from './member.service';
-import { mockProviders, mockAuthentificationService, mockDataSource } from '../testing.helpers';
+import {
+  mockProviders,
+  mockAuthentificationService,
+  mockDataSource,
+} from '../testing.helpers';
 
 describe('MemberService', () => {
   let service: MemberService;
@@ -37,7 +41,7 @@ describe('MemberService', () => {
         username: 'test',
         email: 'test@test.com',
         roles: [],
-        password: 'hashedpassword'
+        password: 'hashedpassword',
       };
 
       mockAuthentificationService.register.mockResolvedValue(mockUser);
@@ -82,8 +86,13 @@ describe('MemberService', () => {
         user: { username: 'test' },
       };
 
-      mockAuthentificationService.findByUsername.mockResolvedValue(mockMember.user as any);
-      mockDataSource.getRepository().createQueryBuilder().getOne.mockResolvedValue(mockMember);
+      mockAuthentificationService.findByUsername.mockResolvedValue(
+        mockMember.user as any,
+      );
+      mockDataSource
+        .getRepository()
+        .createQueryBuilder()
+        .getOne.mockResolvedValue(mockMember);
 
       const result = await service.findByUsername('test');
       expect(result).toEqual(mockMember);
@@ -132,10 +141,12 @@ describe('MemberService', () => {
       };
 
       mockDataSource.getRepository().findOne.mockResolvedValue(mockMember);
-      mockDataSource.getRepository().save.mockImplementation((entity) => Promise.resolve({
-        ...mockMember,
-        ...entity,
-      }));
+      mockDataSource.getRepository().save.mockImplementation((entity) =>
+        Promise.resolve({
+          ...mockMember,
+          ...entity,
+        }),
+      );
 
       const result = await service.update(1, updateDto);
 
@@ -160,10 +171,15 @@ describe('MemberService', () => {
       };
 
       mockDataSource.getRepository().findOne.mockResolvedValue(mockMember);
-      mockDataSource.getRepository().save.mockResolvedValue({ ...mockMember, isActive: false });
+      mockDataSource
+        .getRepository()
+        .save.mockResolvedValue({ ...mockMember, isActive: false });
 
       await service.remove(1);
-      expect(mockDataSource.getRepository().save).toHaveBeenCalledWith({ ...mockMember, isActive: false });
+      expect(mockDataSource.getRepository().save).toHaveBeenCalledWith({
+        ...mockMember,
+        isActive: false,
+      });
     });
 
     it('should throw error if member not found', async () => {

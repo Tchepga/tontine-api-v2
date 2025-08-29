@@ -13,10 +13,7 @@ describe('TontineService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        TontineService,
-        ...mockProviders,
-      ],
+      providers: [TontineService, ...mockProviders],
     }).compile();
 
     service = module.get<TontineService>(TontineService);
@@ -65,8 +62,12 @@ describe('TontineService', () => {
         updatedAt: new Date(),
       };
 
-      jest.spyOn(tontineRepository, 'create').mockReturnValue(mockTontine as any);
-      jest.spyOn(tontineRepository, 'save').mockResolvedValue(mockTontine as any);
+      jest
+        .spyOn(tontineRepository, 'create')
+        .mockReturnValue(mockTontine as any);
+      jest
+        .spyOn(tontineRepository, 'save')
+        .mockResolvedValue(mockTontine as any);
 
       const result = await service.create(createTontineDto);
 

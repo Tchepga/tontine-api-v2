@@ -1,11 +1,9 @@
-import { DataSource, EntityManager, Repository } from 'typeorm';
-import { JwtService } from '@nestjs/jwt';
-import { AuthentificationService } from './authentification/authentification.service';
-import { NotificationService } from './notification/notification.service';
-import { MemberService } from './member/member.service';
-import { TontineService } from './tontine/tontine.service';
 import { Reflector } from '@nestjs/core';
-import { Tontine } from './tontine/entities/tontine.entity';
+import { JwtService } from '@nestjs/jwt';
+import { DataSource, EntityManager } from 'typeorm';
+import { AuthentificationService } from './authentification/authentification.service';
+import { MemberService } from './member/member.service';
+import { NotificationService } from './notification/notification.service';
 
 export const mockDataSource = {
   getRepository: jest.fn().mockReturnValue({

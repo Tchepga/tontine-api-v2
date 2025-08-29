@@ -155,7 +155,9 @@ describe('EventService', () => {
       mockDataSource.getRepository().findOne.mockResolvedValue(mockEvent);
 
       await expect(
-        service.update(1, { title: 'New Title' }, { username: 'testuser' } as User),
+        service.update(1, { title: 'New Title' }, {
+          username: 'testuser',
+        } as User),
       ).rejects.toThrow(BadRequestException);
     });
   });

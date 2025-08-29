@@ -1,16 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { mockProviders } from '../testing.helpers';
+import { CreateTontineDto } from './dto/create-tontine.dto';
+import { SystemType } from './enum/system-type';
 import { TontineController } from './tontine.controller';
 import { TontineService } from './tontine.service';
-import { CreateTontineDto } from './dto/create-tontine.dto';
-import { UpdateTontineDto } from './dto/update-tontine.dto';
-import { CreateDepositDto } from './dto/create-deposit.dto';
-import { CreateMemberDto } from '../member/dto/create-member.dto';
-import { NotFoundException } from '@nestjs/common';
-import { Role } from '../authentification/entities/roles/roles.enum';
-import { StatusDeposit } from './enum/status-deposit';
-import { Currency } from './enum/shared';
-import { SystemType } from './enum/system-type';
-import { mockProviders } from '../testing.helpers';
 
 describe('TontineController', () => {
   let controller: TontineController;
@@ -69,7 +62,9 @@ describe('TontineController', () => {
         updatedAt: new Date(),
       };
 
-      jest.spyOn(tontineService, 'create').mockResolvedValue(expectedResult as any);
+      jest
+        .spyOn(tontineService, 'create')
+        .mockResolvedValue(expectedResult as any);
 
       const result = await controller.create(createTontineDto);
 
