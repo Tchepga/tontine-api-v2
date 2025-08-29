@@ -40,16 +40,31 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
           
-          # Créer un tar.gz avec seulement les fichiers nécessaires pour le déploiement
+          # Créer un tar.gz avec tous les fichiers nécessaires
           echo "📦 Création de l'archive de déploiement..."
           tar -czf deploy.tar.gz \
-            dist/ \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='upload' \
+            --exclude='test' \
+            --exclude='docs' \
+            --exclude='google-cloud-sdk' \
+            --exclude='deploy.tar.gz' \
+            --exclude='coverage' \
             ecosystem.config.js \
             start.sh \
             start-tontine.sh \
             caddy/ \
+            src/ \
+            dist/ \
             package.json \
-            package-lock.json
+            package-lock.json \
+            tsconfig.json \
+            tsconfig.build.json \
+            nest-cli.json \
+            .eslintrc.js \
+            .prettierrc
           
           # TRANSFERT UNIQUE de l'archive
           echo "📤 Transfert de l'archive..."
@@ -98,6 +113,9 @@ jobs:
             echo \"📦 Installation des dépendances...\"
             \$NPM_PATH ci --only=production
             
+            # Créer le répertoire de logs
+            mkdir -p logs
+            
             # Arrêter l'application PM2 existante
             echo \"🔄 Arrêt de l'application existante...\"
             \$PM2_PATH stop tontine-api || echo \"Aucune application à arrêter\"
@@ -115,16 +133,26 @@ jobs:
             echo \"⚙️  Configuration du démarrage automatique...\"
             \$PM2_PATH startup || echo \"Démarrage automatique déjà configuré\"
             
-            # Vérification du déploiement
+            # Vérification du déploiement avec plus de temps d'attente
             echo \"✅ Vérification du déploiement...\"
-            sleep 5
+            sleep 15
             
             # Vérifier que l'application fonctionne
             if \$PM2_PATH list | grep -q 'tontine-api.*online'; then
               echo \"🎉 Déploiement réussi !\"
               \$PM2_PATH list
               echo \"📋 Logs récents:\"
-              \$PM2_PATH logs tontine-api --lines 5 --nostream
+              \$PM2_PATH logs tontine-api --lines 10 --nostream
+              
+              # Test de connectivité locale
+              echo \"🔍 Test de connectivité locale...\"
+              if curl -f -s --connect-timeout 10 http://localhost:8080/health > /dev/null 2>&1; then
+                echo \"✅ Application répond sur localhost:8080\"
+              else
+                echo \"⚠️  Application ne répond pas sur localhost:8080\"
+                echo \"📋 Logs d'erreur détaillés:\"
+                \$PM2_PATH logs tontine-api --lines 20 --nostream
+              fi
               
               # Nettoyer l'ancienne version si tout va bien
               rm -rf /root/apps/tontine.old
@@ -132,7 +160,7 @@ jobs:
             else
               echo \"❌ Erreur lors du déploiement\"
               echo \"📋 Logs d'erreur:\"
-              \$PM2_PATH logs tontine-api --lines 10 --nostream
+              \$PM2_PATH logs tontine-api --lines 20 --nostream
               
               # Restaurer l'ancienne version en cas d'erreur
               echo \"🔄 Restauration de l'ancienne version...\"
@@ -149,15 +177,21 @@ jobs:
                   
           # Vérification finale de l'application
           echo "🔍 Vérification finale de l'application..."
-          sleep 5
+          sleep 10
           
           # Test de connectivité directe sur le serveur
-          if curl -f -s --connect-timeout 10 http://${{ secrets.HOST_VPS_HOSTINGER }}:8080/health > /dev/null 2>&1; then
+          if curl -f -s --connect-timeout 15 http://${{ secrets.HOST_VPS_HOSTINGER }}:8080/health > /dev/null 2>&1; then
             echo "✅ Application accessible sur le port 8080"
             echo "🎉 Déploiement réussi !"
           else
             echo "⚠️  Application non accessible sur le port 8080"
             echo "🔧 Vérifiez manuellement: curl http://${{ secrets.HOST_VPS_HOSTINGER }}:8080/health"
             echo "📋 Consultez les logs PM2 sur le serveur pour diagnostiquer"
+            echo "💡 Commandes de diagnostic:"
+            echo "   ssh ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}"
+            echo "   cd /root/apps/tontine"
+            echo "   pm2 list"
+            echo "   pm2 logs tontine-api"
+            echo "   curl -v http://localhost:8080/health"
           fi
           

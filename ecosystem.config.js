@@ -37,9 +37,9 @@ module.exports = {
       health_check_fatal_exceptions: true,
       // Configuration de performance
       node_args: '--max-old-space-size=1024',
-      // Configuration de sécurité
-      uid: 'www-data',
-      gid: 'www-data',
+      // Configuration de sécurité - Retirer les permissions utilisateur pour éviter les conflits
+      // uid: 'www-data',
+      // gid: 'www-data'
     },
   ],
 };
