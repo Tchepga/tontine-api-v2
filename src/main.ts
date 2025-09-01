@@ -11,7 +11,7 @@ import { initSentry } from './sentry.config';
 async function bootstrap() {
   // Initialize Sentry
   initSentry();
-  
+
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({

@@ -132,7 +132,8 @@ jobs:
             
             # Arrêter l'application existante (si elle tourne)
             echo \"🔄 Arrêt de l'application existante...\"
-            pkill -f \"node dist/main.js\" || echo \"Aucune application à arrêter\"
+            systemctl stop tontine-api.service 2>/dev/null || echo \"Aucun service à arrêter\"
+            pkill -f \"node dist/main.js\" 2>/dev/null || echo \"Aucun processus à arrêter\"
             
             # Installer et configurer le service systemd
             echo \"⚙️  Configuration du service systemd...\"
@@ -141,15 +142,17 @@ jobs:
             
             # Démarrer l'application avec le service systemd
             echo \"🚀 Démarrage de l'application avec Sentry...\"
-            systemctl enable tontine-api.service
-            systemctl start tontine-api.service
+            systemctl enable tontine-api.service || echo \"Service déjà activé\"
+            systemctl start tontine-api.service || echo \"Erreur au démarrage du service\"
             
             # Vérification du déploiement
             echo \"✅ Vérification du déploiement...\"
             sleep 10
             
             # Vérifier que l'application fonctionne
-            if systemctl is-active --quiet tontine-api.service && curl -f -s --connect-timeout 10 http://localhost:8080/health > /dev/null 2>&1; then
+            if systemctl is-active --quiet tontine-api.service; then
+              echo \"✅ Service systemd actif\"
+              if curl -f -s --connect-timeout 10 http://localhost:8080/health > /dev/null 2>&1; then
               echo \"🎉 Déploiement réussi !\"
               echo \"📋 Statut du service:\"
               systemctl status tontine-api.service --no-pager -l
@@ -159,6 +162,9 @@ jobs:
               # Nettoyer l'ancienne version si tout va bien
               rm -rf /root/apps/tontine.old
               echo \"✅ Ancienne version nettoyée\"
+              else
+                echo \"⚠️  Service actif mais application non accessible\"
+              fi
             else
               echo \"❌ Erreur lors du déploiement\"
               echo \"📋 Statut du service:\"

@@ -6,21 +6,19 @@ export function initSentry() {
     dsn: process.env.SENTRY_DSN || 'your-sentry-dsn-here',
     environment: process.env.NODE_ENV || 'development',
     release: process.env.SENTRY_RELEASE || 'development',
-    
+
     // Performance monitoring
-    integrations: [
-      nodeProfilingIntegration(),
-    ],
-    
+    integrations: [nodeProfilingIntegration()],
+
     // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-    
+
     // Set profilesSampleRate to 1.0 to profile every transaction
     profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-    
+
     // Enable debug mode in development
     debug: process.env.NODE_ENV === 'development',
-    
+
     // Capture all errors
     beforeSend(event) {
       // Log to console in development

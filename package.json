@@ -26,6 +26,7 @@
     "build:prod": "npm run lint && npm run test:cov && nest build",
     "start:prod:sentry": "npm run build:prod && node dist/main.js",
     "start:sentry": "./start-sentry.sh",
+    "start:dev:sentry": "./start-dev.sh",
     "deploy:sentry": "./deploy-sentry.sh"
   },
   "dependencies": {
@@ -53,7 +54,7 @@
     "typeorm": "^0.3.20"
   },
   "devDependencies": {
-    "@nestjs/cli": "^10.0.0",
+    "@nestjs/cli": "^11.0.10",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
     "@sentry/cli": "^2.53.0",
