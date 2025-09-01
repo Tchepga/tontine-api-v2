@@ -132,8 +132,22 @@ jobs:
             
             # Arrêter l'application existante (si elle tourne)
             echo \"🔄 Arrêt de l'application existante...\"
-            systemctl stop tontine-api.service 2>/dev/null || echo \"Aucun service à arrêter\"
-            pkill -f \"node dist/main.js\" 2>/dev/null || echo \"Aucun processus à arrêter\"
+            
+            # Arrêter le service systemd s'il existe
+            if systemctl list-unit-files | grep -q tontine-api.service; then
+              systemctl stop tontine-api.service 2>/dev/null && echo \"Service systemd arrêté\" || echo \"Service déjà arrêté\"
+            else
+              echo \"Aucun service systemd à arrêter\"
+            fi
+            
+            # Arrêter les processus Node.js s'ils existent
+            if pgrep -f \"node dist/main.js\" > /dev/null 2>&1; then
+              pkill -f \"node dist/main.js\" && echo \"Processus Node.js arrêté\" || echo \"Erreur lors de l'arrêt des processus\"
+            else
+              echo \"Aucun processus Node.js à arrêter\"
+            fi
+          grill
+            echo \"✅ Arrêt des applications terminé\"
             
             # Installer et configurer le service systemd
             echo \"⚙️  Configuration du service systemd...\"
