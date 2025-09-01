@@ -27,9 +27,16 @@
     "start:prod:sentry": "npm run build:prod && node dist/main.js",
     "start:sentry": "./start-sentry.sh",
     "start:dev:sentry": "./start-dev.sh",
-    "deploy:sentry": "./deploy-sentry.sh",
+    "deploy:sentry": "./deploy-simple.sh",
     "deploy:robust": "./deploy-robust.sh",
-    "test:deployment": "./test-deployment.sh"
+    "deploy:simple": "./deploy-simple.sh",
+    "test:deployment": "./test-deployment.sh",
+    "process:status": "./manage-processes.sh status",
+    "process:stop": "./manage-processes.sh stop",
+    "process:restart": "./manage-processes.sh restart",
+    "process:logs": "./manage-processes.sh logs",
+    "process:pid": "./manage-processes.sh pid",
+    "cleanup": "./cleanup.sh"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

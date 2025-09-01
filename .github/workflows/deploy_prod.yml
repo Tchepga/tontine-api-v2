@@ -130,23 +130,13 @@ jobs:
             # Créer le répertoire de logs
             mkdir -p logs
             
-            # Arrêter l'application existante (si elle tourne)
+            # Arrêter l'application existante (simplifié)
             echo \"🔄 Arrêt de l'application existante...\"
             
-            # Arrêter le service systemd s'il existe
-            if systemctl list-unit-files | grep -q tontine-api.service; then
-              systemctl stop tontine-api.service 2>/dev/null && echo \"Service systemd arrêté\" || echo \"Service déjà arrêté\"
-            else
-              echo \"Aucun service systemd à arrêter\"
-            fi
+            # Arrêter le service systemd et les processus Node.js
+            systemctl stop tontine-api.service 2>/dev/null || true
+            pkill -f \"node dist/main.js\" 2>/dev/null || true
             
-            # Arrêter les processus Node.js s'ils existent
-            if pgrep -f \"node dist/main.js\" > /dev/null 2>&1; then
-              pkill -f \"node dist/main.js\" && echo \"Processus Node.js arrêté\" || echo \"Erreur lors de l'arrêt des processus\"
-            else
-              echo \"Aucun processus Node.js à arrêter\"
-            fi
-          grill
             echo \"✅ Arrêt des applications terminé\"
             
             # Installer et configurer le service systemd
@@ -163,33 +153,29 @@ jobs:
             echo \"✅ Vérification du déploiement...\"
             sleep 10
             
-            # Vérifier que l'application fonctionne
-            if systemctl is-active --quiet tontine-api.service; then
-              echo \"✅ Service systemd actif\"
-              if curl -f -s --connect-timeout 10 http://localhost:8080/health > /dev/null 2>&1; then
+                        # Vérifier que l'application fonctionne (simplifié)
+            echo \"✅ Vérification du déploiement...\"
+            
+            # Attendre que l'application démarre
+            sleep 5
+            
+            # Test simple de connectivité
+            if curl -f -s --connect-timeout 10 http://localhost:8080/health > /dev/null 2>&1; then
               echo \"🎉 Déploiement réussi !\"
               echo \"📋 Statut du service:\"
               systemctl status tontine-api.service --no-pager -l
-              echo \"📋 Logs récents:\"
-              journalctl -u tontine-api.service --no-pager -n 20
               
-              # Nettoyer l'ancienne version si tout va bien
+              # Nettoyer l'ancienne version
               rm -rf /root/apps/tontine.old
               echo \"✅ Ancienne version nettoyée\"
-              else
-                echo \"⚠️  Service actif mais application non accessible\"
-              fi
             else
               echo \"❌ Erreur lors du déploiement\"
-              echo \"📋 Statut du service:\"
-              systemctl status tontine-api.service --no-pager -l
               echo \"📋 Logs d'erreur:\"
               journalctl -u tontine-api.service --no-pager -n 50
               
-              # Restaurer l'ancienne version en cas d'erreur
+              # Restaurer l'ancienne version
               echo \"🔄 Restauration de l'ancienne version...\"
               systemctl stop tontine-api.service || true
-              systemctl disable tontine-api.service || true
               cd /root/apps
               rm -rf tontine
               mv tontine.old tontine
