@@ -32,7 +32,18 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Deploy to server with PM2
+      - name: Setup Sentry
+        run: |
+          echo "📊 Configuration de Sentry..."
+          if [ -n "${{ secrets.SENTRY_AUTH_TOKEN }}" ] && [ -n "${{ secrets.SENTRY_ORG }}" ] && [ -n "${{ secrets.SENTRY_PROJECT }}" ]; then
+            echo "✅ Variables Sentry configurées"
+            echo "SENTRY_ORG=${{ secrets.SENTRY_ORG }}"
+            echo "SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}"
+          else
+            echo "⚠️  Variables Sentry manquantes - Sentry ne fonctionnera pas en production"
+          fi
+
+      - name: Deploy to server with Sentry
         run: |
           # Configuration SSH
           mkdir -p ~/.ssh
@@ -52,9 +63,10 @@ jobs:
             --exclude='google-cloud-sdk' \
             --exclude='deploy.tar.gz' \
             --exclude='coverage' \
-            ecosystem.config.js \
-            start.sh \
-            start-tontine.sh \
+            start-sentry.sh \
+            deploy-sentry.sh \
+            .sentryclirc \
+            tontine-api.service \
             caddy/ \
             src/ \
             dist/ \
@@ -92,22 +104,24 @@ jobs:
             echo \"🔧 Configuration de l'environnement...\"
             cp /root/config/.env-tontine-api .env
             
+            # Configurer Sentry si les variables sont disponibles
+            if [ -n \"${{ secrets.SENTRY_DSN }}\" ]; then
+              echo \"📊 Configuration de Sentry...\"
+              echo \"SENTRY_DSN=${{ secrets.SENTRY_DSN }}\" >> .env
+              echo \"SENTRY_ORG=${{ secrets.SENTRY_ORG }}\" >> .env
+              echo \"SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}\" >> .env
+              echo \"✅ Sentry configuré\"
+            else
+              echo \"⚠️  Variables Sentry manquantes\"
+            fi
+            
             # Utiliser uniquement Volta (pas d'installation Node.js)
             NODE_PATH=\"/root/.volta/bin/node\"
             NPM_PATH=\"/root/.volta/bin/npm\"
-            PM2_PATH=\"/root/.volta/bin/pm2\"
             
             echo \"✅ Utilisation de Node.js Volta: \$NODE_PATH\"
             echo \"✅ Version Node.js: \$(\$NODE_PATH --version)\"
             echo \"✅ Utilisation de npm: \$NPM_PATH\"
-            echo \"✅ Utilisation de PM2: \$PM2_PATH\"
-            
-            # Vérifier et installer PM2 si nécessaire
-            if [ ! -f \"\$PM2_PATH\" ]; then
-              echo \"📦 Installation de PM2...\"
-              \$NPM_PATH install -g pm2
-              echo \"✅ PM2 installé\"
-            fi
             
             # Installer les dépendances de production
             echo \"📦 Installation des dépendances...\"
@@ -116,59 +130,50 @@ jobs:
             # Créer le répertoire de logs
             mkdir -p logs
             
-            # Arrêter l'application PM2 existante
+            # Arrêter l'application existante (si elle tourne)
             echo \"🔄 Arrêt de l'application existante...\"
-            \$PM2_PATH stop tontine-api || echo \"Aucune application à arrêter\"
-            \$PM2_PATH delete tontine-api || echo \"Aucune application à supprimer\"
+            pkill -f \"node dist/main.js\" || echo \"Aucune application à arrêter\"
             
-            # Démarrer l'application avec PM2
-            echo \"🚀 Démarrage de l'application avec PM2...\"
-            \$PM2_PATH start ecosystem.config.js
+            # Installer et configurer le service systemd
+            echo \"⚙️  Configuration du service systemd...\"
+            cp tontine-api.service /etc/systemd/system/
+            systemctl daemon-reload
             
-            # Sauvegarder la configuration PM2
-            echo \"💾 Sauvegarde de la configuration PM2...\"
-            \$PM2_PATH save
+            # Démarrer l'application avec le service systemd
+            echo \"🚀 Démarrage de l'application avec Sentry...\"
+            systemctl enable tontine-api.service
+            systemctl start tontine-api.service
             
-            # Configurer le démarrage automatique
-            echo \"⚙️  Configuration du démarrage automatique...\"
-            \$PM2_PATH startup || echo \"Démarrage automatique déjà configuré\"
-            
-            # Vérification du déploiement avec plus de temps d'attente
+            # Vérification du déploiement
             echo \"✅ Vérification du déploiement...\"
-            sleep 15
+            sleep 10
             
             # Vérifier que l'application fonctionne
-            if \$PM2_PATH list | grep -q 'tontine-api.*online'; then
+            if systemctl is-active --quiet tontine-api.service && curl -f -s --connect-timeout 10 http://localhost:8080/health > /dev/null 2>&1; then
               echo \"🎉 Déploiement réussi !\"
-              \$PM2_PATH list
+              echo \"📋 Statut du service:\"
+              systemctl status tontine-api.service --no-pager -l
               echo \"📋 Logs récents:\"
-              \$PM2_PATH logs tontine-api --lines 10 --nostream
-              
-              # Test de connectivité locale
-              echo \"🔍 Test de connectivité locale...\"
-              if curl -f -s --connect-timeout 10 http://localhost:8080/health > /dev/null 2>&1; then
-                echo \"✅ Application répond sur localhost:8080\"
-              else
-                echo \"⚠️  Application ne répond pas sur localhost:8080\"
-                echo \"📋 Logs d'erreur détaillés:\"
-                \$PM2_PATH logs tontine-api --lines 20 --nostream
-              fi
+              journalctl -u tontine-api.service --no-pager -n 20
               
               # Nettoyer l'ancienne version si tout va bien
               rm -rf /root/apps/tontine.old
               echo \"✅ Ancienne version nettoyée\"
             else
               echo \"❌ Erreur lors du déploiement\"
+              echo \"📋 Statut du service:\"
+              systemctl status tontine-api.service --no-pager -l
               echo \"📋 Logs d'erreur:\"
-              \$PM2_PATH logs tontine-api --lines 20 --nostream
+              journalctl -u tontine-api.service --no-pager -n 50
               
               # Restaurer l'ancienne version en cas d'erreur
               echo \"🔄 Restauration de l'ancienne version...\"
+              systemctl stop tontine-api.service || true
+              systemctl disable tontine-api.service || true
               cd /root/apps
               rm -rf tontine
               mv tontine.old tontine
               cd tontine
-              \$PM2_PATH start ecosystem.config.js || true
               exit 1
             fi
             
@@ -186,12 +191,12 @@ jobs:
           else
             echo "⚠️  Application non accessible sur le port 8080"
             echo "🔧 Vérifiez manuellement: curl http://${{ secrets.HOST_VPS_HOSTINGER }}:8080/health"
-            echo "📋 Consultez les logs PM2 sur le serveur pour diagnostiquer"
+            echo "📋 Consultez les logs de l'application sur le serveur pour diagnostiquer"
             echo "💡 Commandes de diagnostic:"
             echo "   ssh ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}"
             echo "   cd /root/apps/tontine"
-            echo "   pm2 list"
-            echo "   pm2 logs tontine-api"
+            echo "   systemctl status tontine-api.service"
+            echo "   journalctl -u tontine-api.service -f"
             echo "   curl -v http://localhost:8080/health"
           fi
           
