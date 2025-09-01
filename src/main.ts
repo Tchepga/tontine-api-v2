@@ -20,7 +20,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   await app.listen({
     port: 8080,
-    host: '0.0.0.0',
+    host: 'localhost',
   });
 }
 bootstrap();
