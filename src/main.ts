@@ -6,8 +6,12 @@ import {
   FastifyAdapter,
 } from '@nestjs/platform-fastify';
 import { ValidationPipe } from '@nestjs/common';
+import { initSentry } from './sentry.config';
 
 async function bootstrap() {
+  // Initialize Sentry
+  initSentry();
+  
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({
