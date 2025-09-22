@@ -9,10 +9,10 @@ echo "📁 Vérification des fichiers..."
 required_files=(
     "src/sentry.config.ts"
     "src/main.ts"
-    "tontine-api.service"
-    "start-sentry.sh"
-    "deploy-sentry.sh"
-    "deploy-robust.sh"
+    "scripts/deploy/tontine-api.service"
+    "scripts/deploy/start-sentry.sh"
+    "scripts/deploy/deploy-sentry.sh"
+    "scripts/deploy/deploy-robust.sh"
     ".sentryclirc"
 )
 
@@ -28,9 +28,9 @@ done
 # Vérifier que les scripts sont exécutables
 echo "🔧 Vérification des permissions..."
 scripts=(
-    "start-sentry.sh"
-    "deploy-sentry.sh"
-    "deploy-robust.sh"
+    "scripts/deploy/start-sentry.sh"
+    "scripts/deploy/deploy-sentry.sh"
+    "scripts/deploy/deploy-robust.sh"
 )
 
 for script in "${scripts[@]}"; do

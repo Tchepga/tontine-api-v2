@@ -5,7 +5,7 @@
 
 set -e  # Arrêter en cas d'erreur
 
-echo "🚀 Déploiement de l'API Tontine avec Sentry..."
+echo "🚀 Déploiement de l'API Tontine"
 
 # Vérifier les variables d'environnement requises
 if [ -z "$SENTRY_DSN" ]; then

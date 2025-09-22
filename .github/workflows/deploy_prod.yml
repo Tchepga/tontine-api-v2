@@ -63,10 +63,10 @@ jobs:
             --exclude='google-cloud-sdk' \
             --exclude='deploy.tar.gz' \
             --exclude='coverage' \
-            start-sentry.sh \
-            deploy-sentry.sh \
+            scripts/deploy/start-sentry.sh \
+            scripts/deploy/deploy-sentry.sh \
             .sentryclirc \
-            tontine-api.service \
+            scripts/deploy/tontine-api.service \
             caddy/ \
             src/ \
             dist/ \
@@ -141,7 +141,7 @@ jobs:
             
             # Installer et configurer le service systemd
             echo \"⚙️  Configuration du service systemd...\"
-            cp tontine-api.service /etc/systemd/system/
+            cp scripts/deploy/tontine-api.service /etc/systemd/system/
             systemctl daemon-reload
             
             # Démarrer l'application avec le service systemd
