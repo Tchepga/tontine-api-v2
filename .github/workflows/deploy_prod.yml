@@ -173,7 +173,7 @@ jobs:
             sleep 5
             
             # Test simple de connectivité
-            if curl -f -s --connect-timeout 10 http://localhost:8080/health > /dev/null 2>&1; then
+            if curl -f -s --connect-timeout 10 http://localhost:3000/api/health > /dev/null 2>&1; then
               echo \"🎉 Déploiement réussi !\"
               echo \"📋 Statut du service:\"
               systemctl status tontine-api.service --no-pager -l
@@ -207,7 +207,7 @@ jobs:
               echo \"✅ Configuration Caddy rechargée pour la version restaurée\"
             fi
 
-            echo \"🌐 Application accessible sur le port 8080\"
+            echo \"🌐 Application accessible sur le port 3000\"
           "
                   
           # Vérification finale de l'application
