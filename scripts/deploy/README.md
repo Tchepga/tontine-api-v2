@@ -70,6 +70,10 @@ Les scripts utilisent les variables d'environnement définies dans `.env` et les
 
 Le déploiement recharge automatiquement la configuration Caddy depuis `/root/config/caddy/Caddyfile`. Assurez-vous que ce fichier contient votre configuration de reverse proxy.
 
+### Configuration de l'application
+
+L'application est configurée pour écouter sur `0.0.0.0:8080` pour être accessible depuis l'extérieur du serveur. Le reverse proxy Caddy redirige le trafic depuis votre domaine vers l'application.
+
 ## 📝 Notes
 
 - Tous les scripts sont exécutables (`chmod +x`)
