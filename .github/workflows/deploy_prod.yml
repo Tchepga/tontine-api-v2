@@ -157,6 +157,12 @@ jobs:
             systemctl enable tontine-api.service || echo \"Service déjà activé\"
             systemctl start tontine-api.service || echo \"Erreur au démarrage du service\"
             
+            # Redémarrer Caddy pour le reverse proxy
+            echo \"🌐 Redémarrage de Caddy...\"
+            pkill -f \"caddy reverse-proxy\" 2>/dev/null || echo \"Aucun processus Caddy à arrêter\"
+            nohup caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 > /dev/null 2>&1 &
+            echo \"✅ Caddy redémarré avec reverse proxy\"
+            
             # Vérification du déploiement
             echo \"✅ Vérification du déploiement...\"
             sleep 10
@@ -195,6 +201,12 @@ jobs:
               rm -rf tontine
               mv tontine.old tontine
               cd tontine
+              
+              # Redémarrer Caddy pour la version restaurée
+              echo \"🌐 Redémarrage de Caddy pour la version restaurée...\"
+              pkill -f \"caddy reverse-proxy\" 2>/dev/null || echo \"Aucun processus Caddy à arrêter\"
+              nohup caddy reverse-proxy --from api.tontine.devcoorp.net --to localhost:8080 > /dev/null 2>&1 &
+              echo \"✅ Caddy redémarré pour la version restaurée\"
             fi
 
             echo \"🌐 Application accessible sur le port 8080\"
