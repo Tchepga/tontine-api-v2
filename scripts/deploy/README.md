@@ -59,6 +59,7 @@ npm run cleanup
 - Node.js 20+ (géré par Volta sur le serveur)
 - npm
 - systemd (pour les services)
+- Caddy (pour le reverse proxy)
 - Accès SSH au serveur de production
 
 ## 🔧 Configuration
@@ -74,4 +75,5 @@ Les scripts utilisent les variables d'environnement définies dans `.env` et les
 - **Optimisation**: Le dossier `src/` est automatiquement supprimé du serveur de production
 - **Déploiement optimisé**: Seul le code compilé (`dist/`) et les fichiers de configuration sont déployés
 - **Installation minimale**: Seules les dépendances de production sont installées sur le serveur
+- **Reverse proxy automatique**: Caddy est automatiquement redémarré avec le reverse proxy
 - Le dossier `src/` est supprimé du serveur pour économiser l'espace
