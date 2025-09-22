@@ -149,7 +149,7 @@ jobs:
             pkill -f \\\"node dist/main.js\\\" 2>/dev/null || echo \\\"ℹ️  Aucun processus Node.js à arrêter\\\"
             echo \\\"✅ Processus Node.js vérifiés\\\"
             
-            echo \"✅ Arrêt des applications terminé\"
+            echo \\\"✅ Arrêt des applications terminé\\\"
             
             # Installer et configurer le service systemd
             echo \"⚙️  Configuration du service systemd...\"
