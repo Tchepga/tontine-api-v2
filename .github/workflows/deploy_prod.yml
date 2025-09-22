@@ -136,8 +136,22 @@ jobs:
             echo \"🔄 Arrêt de l'application existante...\"
             
             # Arrêter le service systemd et les processus Node.js
-            systemctl stop tontine-api.service 2>/dev/null || echo \"Service non actif\"
-            pkill -f \"node dist/main.js\" 2>/dev/null || echo \"Aucun processus Node.js à arrêter\"
+            if systemctl is-active --quiet tontine-api.service; then
+              echo \"🛑 Arrêt du service systemd...\"
+              systemctl stop tontine-api.service
+              echo \"✅ Service systemd arrêté\"
+            else
+              echo \"ℹ️  Service systemd non actif\"
+            fi
+            
+            # Arrêter les processus Node.js orphelins
+            if pgrep -f \"node dist/main.js\" > /dev/null; then
+              echo \"🛑 Arrêt des processus Node.js...\"
+              pkill -f \"node dist/main.js\"
+              echo \"✅ Processus Node.js arrêtés\"
+            else
+              echo \"ℹ️  Aucun processus Node.js à arrêter\"
+            fi
             
             echo \"✅ Arrêt des applications terminé\"
             
@@ -177,7 +191,12 @@ jobs:
               
               # Restaurer l'ancienne version
               echo \"🔄 Restauration de l'ancienne version...\"
-              systemctl stop tontine-api.service || true
+              if systemctl is-active --quiet tontine-api.service; then
+                systemctl stop tontine-api.service
+                echo \"✅ Service arrêté pour restauration\"
+              else
+                echo \"ℹ️  Service non actif - pas besoin d'arrêt\"
+              fi
               cd /root/apps
               rm -rf tontine
               mv tontine.old tontine
