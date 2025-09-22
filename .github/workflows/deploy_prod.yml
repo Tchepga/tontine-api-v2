@@ -93,14 +93,14 @@ jobs:
             cd tontine
             
             # Extraire l'archive
-            echo \"📦 Extraction de l'archive...\"
+            echo \\\"📦 Extraction de l'archive...\\\"
             tar -xzf /tmp/deploy.tar.gz
             rm /tmp/deploy.tar.gz
             
             # Nettoyer les dossiers inutiles
-            echo \"🧹 Nettoyage des dossiers inutiles...\"
+            echo \\\"🧹 Nettoyage des dossiers inutiles...\\\"
             rm -rf src/ 2>/dev/null || true
-            echo \"✅ Dossier src/ supprimé\"
+            echo \\\"✅ Dossier src/ supprimé\\\"
             
             # Copier le fichier d'environnement
             echo \\\"🔧 Configuration de l'environnement...\\\"
@@ -108,26 +108,26 @@ jobs:
             echo \\\"✅ Fichier .env copié\\\"
             
             # Configurer Sentry si les variables sont disponibles
-            if [ -n \"${{ secrets.SENTRY_DSN }}\" ]; then
-              echo \"📊 Configuration de Sentry...\"
-              echo \"SENTRY_DSN=${{ secrets.SENTRY_DSN }}\" >> .env
-              echo \"SENTRY_ORG=${{ secrets.SENTRY_ORG }}\" >> .env
-              echo \"SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}\" >> .env
-              echo \"✅ Sentry configuré\"
+            if [ -n \\\"${{ secrets.SENTRY_DSN }}\\\" ]; then
+              echo \\\"📊 Configuration de Sentry...\\\"
+              echo \\\"SENTRY_DSN=${{ secrets.SENTRY_DSN }}\\\" >> .env
+              echo \\\"SENTRY_ORG=${{ secrets.SENTRY_ORG }}\\\" >> .env
+              echo \\\"SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}\\\" >> .env
+              echo \\\"✅ Sentry configuré\\\"
             else
-              echo \"⚠️  Variables Sentry manquantes\"
+              echo \\\"⚠️  Variables Sentry manquantes\\\"
             fi
             
             # Utiliser uniquement Volta (pas d'installation Node.js)
-            NODE_PATH=\"/root/.volta/bin/node\"
-            NPM_PATH=\"/root/.volta/bin/npm\"
-            
-            echo \"✅ Utilisation de Node.js Volta: \$NODE_PATH\"
-            echo \"✅ Version Node.js: \$(\$NODE_PATH --version)\"
-            echo \"✅ Utilisation de npm: \$NPM_PATH\"
-            
+            NODE_PATH=\\\"/root/.volta/bin/node\\\"
+            NPM_PATH=\\\"/root/.volta/bin/npm\\\"
+
+            echo \\\"✅ Utilisation de Node.js Volta: \\$NODE_PATH\\\"
+            echo \\\"✅ Version Node.js: \\$(\\$NODE_PATH --version)\\\"
+            echo \\\"✅ Utilisation de npm: \\$NPM_PATH\\\"
+
             # Installer les dépendances de production
-            echo \"📦 Installation des dépendances...\"
+            echo \\\"📦 Installation des dépendances...\\\"
             \$NPM_PATH ci --only=production
             
             # Créer le répertoire de logs
