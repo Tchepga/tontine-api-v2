@@ -12,21 +12,16 @@ Restart=always
 RestartSec=10
 StandardOutput=append:/root/apps/tontine/logs/app.log
 StandardError=append:/root/apps/tontine/logs/app.log
-Environment=NODE_ENV=production
-Environment=SENTRY_DSN=%i
-Environment=SENTRY_ORG=%i
-Environment=SENTRY_PROJECT=%i
+EnvironmentFile=/root/apps/tontine/.env
 
 # Gestion des signaux
 KillMode=mixed
 KillSignal=SIGTERM
 TimeoutStopSec=30
 
-# Sécurité
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ReadWritePaths=/root/apps/tontine/logs
+# Sécurité (allégée pour éviter les conflits)
+NoNewPrivileges=false
+PrivateTmp=false
 
 [Install]
 WantedBy=multi-user.target

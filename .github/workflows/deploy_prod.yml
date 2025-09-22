@@ -103,8 +103,9 @@ jobs:
             echo \"✅ Dossier src/ supprimé\"
             
             # Copier le fichier d'environnement
-            echo \"🔧 Configuration de l'environnement...\"
+            echo \\\"🔧 Configuration de l'environnement...\\\"
             cp /root/config/.env-tontine-api .env
+            echo \\\"✅ Fichier .env copié\\\"
             
             # Configurer Sentry si les variables sont disponibles
             if [ -n \"${{ secrets.SENTRY_DSN }}\" ]; then
@@ -182,8 +183,10 @@ jobs:
               echo \\\"✅ Ancienne version nettoyée\\\"
             else
               echo \\\"❌ Erreur lors du déploiement\\\"
-              echo \\\"📋 Logs d'erreur:\\\"
+              echo \\\"📋 Logs systemd:\\\"
               journalctl -u tontine-api.service --no-pager -n 50
+              echo \\\"📋 Logs application:\\\"
+              tail -n 50 /root/apps/tontine/logs/app.log 2>/dev/null || echo \\\"Aucun log d'application trouvé\\\"
 
               # Restaurer l'ancienne version
               echo \\\"🔄 Restauration de l'ancienne version...\\\"
