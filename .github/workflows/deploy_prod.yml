@@ -159,7 +159,7 @@ jobs:
             
             # Recharger la configuration Caddy
             echo \"🌐 Rechargement de la configuration Caddy...\"
-            caddy reload --config /root/config/caddy/Caddyfile 2>/dev/null || echo \"Configuration Caddy rechargée\"
+            cd /root/config/caddy && caddy reload 2>/dev/null || echo \"Configuration Caddy rechargée\"
             echo \"✅ Configuration Caddy rechargée\"
             
             # Vérification du déploiement
