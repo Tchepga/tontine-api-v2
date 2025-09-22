@@ -134,15 +134,15 @@ jobs:
             mkdir -p logs
             
             # Arrêter l'application existante (simplifié)
-            echo \"🔄 Arrêt de l'application existante...\"
-            
+            echo \\\"🔄 Arrêt de l'application existante...\\\"
+
             # Arrêter le service systemd et les processus Node.js
             if systemctl is-active --quiet tontine-api.service; then
-              echo \"🛑 Arrêt du service systemd...\"
+              echo \\\"🛑 Arrêt du service systemd...\\\"
               systemctl stop tontine-api.service
-              echo \"✅ Service systemd arrêté\"
+              echo \\\"✅ Service systemd arrêté\\\"
             else
-              echo \"ℹ️  Service systemd non actif\"
+              echo \\\"ℹ️  Service systemd non actif\\\"
             fi
             
             # Arrêter les processus Node.js orphelins
