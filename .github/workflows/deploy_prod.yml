@@ -32,6 +32,7 @@ jobs:
       - name: Build application
         run: npm run build
 
+
       - name: Setup Sentry
         run: |
           echo "📊 Configuration de Sentry..."
@@ -69,6 +70,8 @@ jobs:
             scripts/deploy/tontine-api.service \
             caddy/ \
             dist/ \
+            package.json \
+            package-lock.json \
             tsconfig.json \
             tsconfig.build.json \
             nest-cli.json \
@@ -95,10 +98,10 @@ jobs:
             tar -xzf /tmp/deploy.tar.gz
             rm /tmp/deploy.tar.gz
             
-            # Nettoyer les dossiers inutiles (seulement src/, node_modules/ est maintenant dans dist/)
+            # Nettoyer les dossiers inutiles
             echo \"🧹 Nettoyage des dossiers inutiles...\"
             rm -rf src/ 2>/dev/null || true
-            echo \"✅ Dossier src/ supprimé (node_modules/ inclus dans dist/)\"
+            echo \"✅ Dossier src/ supprimé\"
             
             # Copier le fichier d'environnement
             echo \"🔧 Configuration de l'environnement...\"
@@ -115,8 +118,17 @@ jobs:
               echo \"⚠️  Variables Sentry manquantes\"
             fi
             
-            # Aucune installation de dépendances - tout est déjà compilé dans dist/
-            echo \"✅ Application pré-compilée - aucune installation nécessaire\"
+            # Utiliser uniquement Volta (pas d'installation Node.js)
+            NODE_PATH=\"/root/.volta/bin/node\"
+            NPM_PATH=\"/root/.volta/bin/npm\"
+            
+            echo \"✅ Utilisation de Node.js Volta: \$NODE_PATH\"
+            echo \"✅ Version Node.js: \$(\$NODE_PATH --version)\"
+            echo \"✅ Utilisation de npm: \$NPM_PATH\"
+            
+            # Installer les dépendances de production
+            echo \"📦 Installation des dépendances...\"
+            \$NPM_PATH ci --only=production
             
             # Créer le répertoire de logs
             mkdir -p logs
@@ -125,8 +137,8 @@ jobs:
             echo \"🔄 Arrêt de l'application existante...\"
             
             # Arrêter le service systemd et les processus Node.js
-            systemctl stop tontine-api.service 2>/dev/null || true
-            pkill -f \"node dist/main.js\" 2>/dev/null || true
+            systemctl stop tontine-api.service 2>/dev/null || echo \"Service non actif\"
+            pkill -f \"node dist/main.js\" 2>/dev/null || echo \"Aucun processus Node.js à arrêter\"
             
             echo \"✅ Arrêt des applications terminé\"
             

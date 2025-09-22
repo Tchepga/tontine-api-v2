@@ -18,7 +18,7 @@ Ce répertoire contient tous les scripts de déploiement et de gestion de l'appl
 ### Scripts de gestion
 - `manage-processes.sh` - Gestion des processus (status, stop, restart, logs, pid)
 - `cleanup.sh` - Nettoyage des processus et services
-- `cleanup-server.sh` - Nettoyage des dossiers inutiles sur le serveur (src/, node_modules/)
+- `cleanup-server.sh` - Nettoyage des dossiers inutiles sur le serveur (src/)
 - `test-deployment.sh` - Test de la configuration avant déploiement
 
 ### Configuration système
@@ -47,6 +47,7 @@ npm run process:pid
 # Tests et maintenance
 npm run test:deployment
 npm run cleanup
+
 
 # Nettoyage du serveur (à exécuter sur le serveur)
 ssh user@server 'cd /root/apps/tontine && ./scripts/deploy/cleanup-server.sh'
@@ -78,6 +79,6 @@ Les scripts utilisent les variables d'environnement définies dans `.env` et les
 - Le service systemd est automatiquement installé lors du déploiement
 - Les logs sont disponibles via `journalctl -u tontine-api.service`
 - **Optimisation**: Le dossier `src/` est automatiquement supprimé du serveur de production
-- **Bundle autonome**: Toutes les dépendances (`node_modules/`) sont incluses dans `dist/` lors du build
-- **Aucune installation sur le serveur**: Tout est pré-compilé et prêt à l'emploi
-- Seuls les fichiers compilés (`dist/` avec dépendances incluses) et la configuration sont déployés
+- **Déploiement optimisé**: Seul le code compilé (`dist/`) et les fichiers de configuration sont déployés
+- **Installation minimale**: Seules les dépendances de production sont installées sur le serveur
+- Le dossier `src/` est supprimé du serveur pour économiser l'espace
