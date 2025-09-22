@@ -145,18 +145,23 @@ jobs:
             fi
             
             # Arrêter les processus Node.js orphelins
-            NODE_PIDS=\$(pgrep -f \"node dist/main.js\" 2>/dev/null || true)
-            if [ -n \"\$NODE_PIDS\" ]; then
-              echo \"🛑 Arrêt des processus Node.js (PIDs: \$NODE_PIDS)...\"
-              for pid in \$NODE_PIDS; do
-                if kill -0 \"\$pid\" 2>/dev/null; then
-                  kill \"\$pid\" 2>/dev/null || echo \"⚠️  Impossible d'arrêter le processus \$pid\"
-                fi
-              done
-              echo \"✅ Tentative d'arrêt des processus Node.js terminée\"
-            else
-              echo \"ℹ️  Aucun processus Node.js à arrêter\"
-            fi
+            echo \"🛑 Arrêt des processus Node.js...\"
+            # Créer un script temporaire pour gérer l'arrêt des processus
+            cat > /tmp/stop_node.sh << 'EOF'
+#!/bin/bash
+set +e
+pkill -f "node dist/main.js" 2>/dev/null
+exit_code=$?
+if [ $exit_code -eq 0 ]; then
+  echo "✅ Processus Node.js arrêtés"
+else
+  echo "ℹ️  Aucun processus Node.js à arrêter"
+fi
+exit 0
+EOF
+            chmod +x /tmp/stop_node.sh
+            /tmp/stop_node.sh
+            rm -f /tmp/stop_node.sh
             
             echo \"✅ Arrêt des applications terminé\"
             
