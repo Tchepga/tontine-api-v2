@@ -77,5 +77,7 @@ Les scripts utilisent les variables d'environnement définies dans `.env` et les
 - Les chemins sont relatifs à la racine du projet
 - Le service systemd est automatiquement installé lors du déploiement
 - Les logs sont disponibles via `journalctl -u tontine-api.service`
-- **Optimisation**: Les dossiers `src/` et `node_modules/` sont automatiquement supprimés du serveur de production pour économiser l'espace disque
-- Seuls les fichiers compilés (`dist/`) et la configuration sont conservés sur le serveur
+- **Optimisation**: Le dossier `src/` est automatiquement supprimé du serveur de production
+- **Bundle autonome**: Toutes les dépendances (`node_modules/`) sont incluses dans `dist/` lors du build
+- **Aucune installation sur le serveur**: Tout est pré-compilé et prêt à l'emploi
+- Seuls les fichiers compilés (`dist/` avec dépendances incluses) et la configuration sont déployés

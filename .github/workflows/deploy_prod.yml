@@ -95,10 +95,10 @@ jobs:
             tar -xzf /tmp/deploy.tar.gz
             rm /tmp/deploy.tar.gz
             
-            # Nettoyer les dossiers inutiles
+            # Nettoyer les dossiers inutiles (seulement src/, node_modules/ est maintenant dans dist/)
             echo \"🧹 Nettoyage des dossiers inutiles...\"
-            rm -rf src/ node_modules/ 2>/dev/null || true
-            echo \"✅ Dossiers src/ et node_modules/ supprimés\"
+            rm -rf src/ 2>/dev/null || true
+            echo \"✅ Dossier src/ supprimé (node_modules/ inclus dans dist/)\"
             
             # Copier le fichier d'environnement
             echo \"🔧 Configuration de l'environnement...\"
@@ -115,17 +115,8 @@ jobs:
               echo \"⚠️  Variables Sentry manquantes\"
             fi
             
-            # Utiliser uniquement Volta (pas d'installation Node.js)
-            NODE_PATH=\"/root/.volta/bin/node\"
-            NPM_PATH=\"/root/.volta/bin/npm\"
-            
-            echo \"✅ Utilisation de Node.js Volta: \$NODE_PATH\"
-            echo \"✅ Version Node.js: \$(\$NODE_PATH --version)\"
-            echo \"✅ Utilisation de npm: \$NPM_PATH\"
-            
-            # Installer les dépendances de production
-            echo \"📦 Installation des dépendances...\"
-            \$NPM_PATH ci --only=production
+            # Aucune installation de dépendances - tout est déjà compilé dans dist/
+            echo \"✅ Application pré-compilée - aucune installation nécessaire\"
             
             # Créer le répertoire de logs
             mkdir -p logs
@@ -183,7 +174,7 @@ jobs:
               
               # Nettoyer les dossiers inutiles dans la version restaurée
               echo \"🧹 Nettoyage des dossiers inutiles dans la version restaurée...\"
-              rm -rf src/ node_modules/ 2>/dev/null || true
+              rm -rf src/ 2>/dev/null || true
               
               exit 1
             fi
