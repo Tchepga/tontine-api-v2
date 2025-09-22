@@ -195,12 +195,6 @@ jobs:
               rm -rf tontine
               mv tontine.old tontine
               cd tontine
-              
-              # Nettoyer les dossiers inutiles dans la version restaurée
-              echo \"🧹 Nettoyage des dossiers inutiles dans la version restaurée...\"
-              rm -rf src/ 2>/dev/null || true
-
-              exit 1
             fi
 
             echo \"🌐 Application accessible sur le port 8080\"
