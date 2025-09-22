@@ -147,18 +147,16 @@ jobs:
             # Arrêter les processus Node.js orphelins
             echo \"🛑 Arrêt des processus Node.js...\"
             # Créer un script temporaire pour gérer l'arrêt des processus
-            cat > /tmp/stop_node.sh << 'EOF'
-#!/bin/bash
-set +e
-pkill -f "node dist/main.js" 2>/dev/null
-exit_code=$?
-if [ $exit_code -eq 0 ]; then
-  echo "✅ Processus Node.js arrêtés"
-else
-  echo "ℹ️  Aucun processus Node.js à arrêter"
-fi
-exit 0
-EOF
+            echo '#!/bin/bash' > /tmp/stop_node.sh
+            echo 'set +e' >> /tmp/stop_node.sh
+            echo 'pkill -f \"node dist/main.js\" 2>/dev/null' >> /tmp/stop_node.sh
+            echo 'exit_code=\$?' >> /tmp/stop_node.sh
+            echo 'if [ \$exit_code -eq 0 ]; then' >> /tmp/stop_node.sh
+            echo '  echo \"✅ Processus Node.js arrêtés\"' >> /tmp/stop_node.sh
+            echo 'else' >> /tmp/stop_node.sh
+            echo '  echo \"ℹ️  Aucun processus Node.js à arrêter\"' >> /tmp/stop_node.sh
+            echo 'fi' >> /tmp/stop_node.sh
+            echo 'exit 0' >> /tmp/stop_node.sh
             chmod +x /tmp/stop_node.sh
             /tmp/stop_node.sh
             rm -f /tmp/stop_node.sh
