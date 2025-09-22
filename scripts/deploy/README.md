@@ -72,7 +72,7 @@ Le déploiement recharge automatiquement la configuration Caddy depuis `/root/co
 
 ### Configuration de l'application
 
-L'application est configurée pour écouter sur `0.0.0.0:8080` pour être accessible depuis l'extérieur du serveur. Le reverse proxy Caddy redirige le trafic depuis votre domaine vers l'application.
+L'application est configurée pour écouter sur `0.0.0.0:3000` pour être accessible depuis l'extérieur du serveur. Le reverse proxy Caddy redirige le trafic depuis votre domaine vers l'application.
 
 ## 📝 Notes
 
