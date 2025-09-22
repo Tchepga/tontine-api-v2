@@ -145,10 +145,15 @@ jobs:
             fi
             
             # Arrêter les processus Node.js orphelins
-            if pgrep -f \"node dist/main.js\" > /dev/null; then
-              echo \"🛑 Arrêt des processus Node.js...\"
-              pkill -f \"node dist/main.js\"
-              echo \"✅ Processus Node.js arrêtés\"
+            NODE_PIDS=\$(pgrep -f \"node dist/main.js\" 2>/dev/null || true)
+            if [ -n \"\$NODE_PIDS\" ]; then
+              echo \"🛑 Arrêt des processus Node.js (PIDs: \$NODE_PIDS)...\"
+              for pid in \$NODE_PIDS; do
+                if kill -0 \"\$pid\" 2>/dev/null; then
+                  kill \"\$pid\" 2>/dev/null || echo \"⚠️  Impossible d'arrêter le processus \$pid\"
+                fi
+              done
+              echo \"✅ Tentative d'arrêt des processus Node.js terminée\"
             else
               echo \"ℹ️  Aucun processus Node.js à arrêter\"
             fi
