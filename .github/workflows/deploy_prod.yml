@@ -93,19 +93,19 @@ jobs:
             cd tontine
             
             # Extraire l'archive
-            echo \\\"📦 Extraction de l'archive...\\\"
+            echo 'Extraction de l archive...'
             tar -xzf /tmp/deploy.tar.gz
             rm /tmp/deploy.tar.gz
-            
+
             # Nettoyer les dossiers inutiles
-            echo \\\"🧹 Nettoyage des dossiers inutiles...\\\"
+            echo 'Nettoyage des dossiers inutiles...'
             rm -rf src/ 2>/dev/null || true
-            echo \\\"✅ Dossier src/ supprimé\\\"
-            
+            echo 'Dossier src/ supprime'
+
             # Copier le fichier d'environnement
-            echo \\\"🔧 Configuration de l'environnement...\\\"
+            echo 'Configuration de l environnement...'
             cp /root/config/.env-tontine-api .env
-            echo \\\"✅ Fichier .env copié\\\"
+            echo 'Fichier .env copie'
             
             # Configurer Sentry si les variables sont disponibles
             if [ -n \\\"${{ secrets.SENTRY_DSN }}\\\" ]; then
