@@ -215,18 +215,18 @@ jobs:
           sleep 10
           
           # Test de connectivité directe sur le serveur
-          if curl -f -s --connect-timeout 15 http://${{ secrets.HOST_VPS_HOSTINGER }}:8080/health > /dev/null 2>&1; then
-            echo "✅ Application accessible sur le port 8080"
+          if curl -f -s --connect-timeout 15 http://${{ secrets.HOST_VPS_HOSTINGER }}:3000/api/health > /dev/null 2>&1; then
+            echo "✅ Application accessible sur le port 3000"
             echo "🎉 Déploiement réussi !"
           else
-            echo "⚠️  Application non accessible sur le port 8080"
-            echo "🔧 Vérifiez manuellement: curl http://${{ secrets.HOST_VPS_HOSTINGER }}:8080/health"
+            echo "⚠️  Application non accessible sur le port 3000"
+            echo "🔧 Vérifiez manuellement: curl http://${{ secrets.HOST_VPS_HOSTINGER }}:3000/api/health"
             echo "📋 Consultez les logs de l'application sur le serveur pour diagnostiquer"
             echo "💡 Commandes de diagnostic:"
             echo "   ssh ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}"
             echo "   cd /root/apps/tontine"
             echo "   systemctl status tontine-api.service"
             echo "   journalctl -u tontine-api.service -f"
-            echo "   curl -v http://localhost:8080/health"
+            echo "   curl -v http://localhost:3000/api/health"
           fi
           
