@@ -108,14 +108,14 @@ jobs:
             echo 'Fichier .env copie'
             
             # Configurer Sentry si les variables sont disponibles
-            if [ -n \\\"${{ secrets.SENTRY_DSN }}\\\" ]; then
-              echo \\\"📊 Configuration de Sentry...\\\"
-              echo \\\"SENTRY_DSN=${{ secrets.SENTRY_DSN }}\\\" >> .env
-              echo \\\"SENTRY_ORG=${{ secrets.SENTRY_ORG }}\\\" >> .env
-              echo \\\"SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}\\\" >> .env
-              echo \\\"✅ Sentry configuré\\\"
+            if [ -n \"${{ secrets.SENTRY_DSN }}\" ]; then
+              echo 'Configuration de Sentry...'
+              echo \"SENTRY_DSN=${{ secrets.SENTRY_DSN }}\" >> .env
+              echo \"SENTRY_ORG=${{ secrets.SENTRY_ORG }}\" >> .env
+              echo \"SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}\" >> .env
+              echo 'Sentry configure'
             else
-              echo \\\"⚠️  Variables Sentry manquantes\\\"
+              echo 'Variables Sentry manquantes'
             fi
             
             # Utiliser uniquement Volta (pas d'installation Node.js)
