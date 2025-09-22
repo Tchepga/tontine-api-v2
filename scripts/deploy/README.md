@@ -66,6 +66,10 @@ npm run cleanup
 
 Les scripts utilisent les variables d'environnement définies dans `.env` et les secrets GitHub Actions pour la configuration Sentry.
 
+### Configuration Caddy
+
+Le déploiement recharge automatiquement la configuration Caddy depuis `/root/config/caddy/Caddyfile`. Assurez-vous que ce fichier contient votre configuration de reverse proxy.
+
 ## 📝 Notes
 
 - Tous les scripts sont exécutables (`chmod +x`)
@@ -75,5 +79,5 @@ Les scripts utilisent les variables d'environnement définies dans `.env` et les
 - **Optimisation**: Le dossier `src/` est automatiquement supprimé du serveur de production
 - **Déploiement optimisé**: Seul le code compilé (`dist/`) et les fichiers de configuration sont déployés
 - **Installation minimale**: Seules les dépendances de production sont installées sur le serveur
-- **Reverse proxy automatique**: Caddy est automatiquement redémarré avec le reverse proxy
+- **Configuration Caddy automatique**: La configuration Caddy est automatiquement rechargée depuis `/root/config/caddy/Caddyfile`
 - Le dossier `src/` est supprimé du serveur pour économiser l'espace
