@@ -68,15 +68,10 @@ jobs:
             .sentryclirc \
             scripts/deploy/tontine-api.service \
             caddy/ \
-            src/ \
             dist/ \
-            package.json \
-            package-lock.json \
             tsconfig.json \
             tsconfig.build.json \
             nest-cli.json \
-            .eslintrc.js \
-            .prettierrc
           
           # TRANSFERT UNIQUE de l'archive
           echo "📤 Transfert de l'archive..."
@@ -99,6 +94,11 @@ jobs:
             echo \"📦 Extraction de l'archive...\"
             tar -xzf /tmp/deploy.tar.gz
             rm /tmp/deploy.tar.gz
+            
+            # Nettoyer les dossiers inutiles
+            echo \"🧹 Nettoyage des dossiers inutiles...\"
+            rm -rf src/ node_modules/ 2>/dev/null || true
+            echo \"✅ Dossiers src/ et node_modules/ supprimés\"
             
             # Copier le fichier d'environnement
             echo \"🔧 Configuration de l'environnement...\"
@@ -180,6 +180,11 @@ jobs:
               rm -rf tontine
               mv tontine.old tontine
               cd tontine
+              
+              # Nettoyer les dossiers inutiles dans la version restaurée
+              echo \"🧹 Nettoyage des dossiers inutiles dans la version restaurée...\"
+              rm -rf src/ node_modules/ 2>/dev/null || true
+              
               exit 1
             fi
             

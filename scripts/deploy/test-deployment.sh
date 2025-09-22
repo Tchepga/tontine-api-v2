@@ -4,7 +4,7 @@
 
 echo "🧪 Test de la configuration de déploiement..."
 
-# Vérifier que tous les fichiers nécessaires existent
+# Vérifier que tous les fichiers nécessaires existent (localement pour la compilation)
 echo "📁 Vérification des fichiers..."
 required_files=(
     "src/sentry.config.ts"
