@@ -119,82 +119,82 @@ jobs:
             fi
             
             # Utiliser uniquement Volta (pas d'installation Node.js)
-            NODE_PATH=\\\"/root/.volta/bin/node\\\"
-            NPM_PATH=\\\"/root/.volta/bin/npm\\\"
+            NODE_PATH=\"/root/.volta/bin/node\"
+            NPM_PATH=\"/root/.volta/bin/npm\"
 
-            echo \\\"✅ Utilisation de Node.js Volta: \\$NODE_PATH\\\"
-            echo \\\"✅ Version Node.js: \\$(\\$NODE_PATH --version)\\\"
-            echo \\\"✅ Utilisation de npm: \\$NPM_PATH\\\"
+            echo \"✅ Utilisation de Node.js Volta: \$NODE_PATH\"
+            echo \"✅ Version Node.js: \$(\$NODE_PATH --version)\"
+            echo \"✅ Utilisation de npm: \$NPM_PATH\"
 
             # Installer les dépendances de production
-            echo \\\"📦 Installation des dépendances...\\\"
+            echo \"📦 Installation des dépendances...\"
             \$NPM_PATH ci --only=production
             
             # Créer le répertoire de logs
             mkdir -p logs
             
             # Arrêter l'application existante (simplifié)
-            echo \\\"🔄 Arrêt de l'application existante...\\\"
+            echo \"🔄 Arrêt de l'application existante...\"
 
             # Arrêter le service systemd et les processus Node.js
             if systemctl is-active --quiet tontine-api.service; then
-              echo \\\"🛑 Arrêt du service systemd...\\\"
+              echo \"🛑 Arrêt du service systemd...\"
               systemctl stop tontine-api.service
-              echo \\\"✅ Service systemd arrêté\\\"
+              echo \"✅ Service systemd arrêté\"
             else
-              echo \\\"ℹ️  Service systemd non actif\\\"
+              echo \"ℹ️  Service systemd non actif\"
             fi
             
             # Arrêter les processus Node.js orphelins
-            echo \\\"🛑 Arrêt des processus Node.js...\\\"
-            pkill -f \\\"node dist/main.js\\\" 2>/dev/null || echo \\\"ℹ️  Aucun processus Node.js à arrêter\\\"
-            echo \\\"✅ Processus Node.js vérifiés\\\"
+            echo \"🛑 Arrêt des processus Node.js...\"
+            pkill -f \"node dist/main.js\" 2>/dev/null || echo \"ℹ️  Aucun processus Node.js à arrêter\"
+            echo \"✅ Processus Node.js vérifiés\"
             
-            echo \\\"✅ Arrêt des applications terminé\\\"
+            echo \"✅ Arrêt des applications terminé\"
             
             # Installer et configurer le service systemd
-            echo \\\"⚙️  Configuration du service systemd...\\\"
+            echo \"⚙️  Configuration du service systemd...\"
             cp scripts/deploy/tontine-api.service /etc/systemd/system/
             systemctl daemon-reload
 
             # Démarrer l'application avec le service systemd
-            echo \\\"🚀 Démarrage de l'application avec Sentry...\\\"
-            systemctl enable tontine-api.service || echo \\\"Service déjà activé\\\"
-            systemctl start tontine-api.service || echo \\\"Erreur au démarrage du service\\\"
+            echo \"🚀 Démarrage de l'application avec Sentry...\"
+            systemctl enable tontine-api.service || echo \"Service déjà activé\"
+            systemctl start tontine-api.service || echo \"Erreur au démarrage du service\"
             
             # Vérification du déploiement
-            echo \\\"✅ Vérification du déploiement...\\\"
+            echo \"✅ Vérification du déploiement...\"
             sleep 10
 
             # Vérifier que l'application fonctionne (simplifié)
-            echo \\\"✅ Vérification du déploiement...\\\"
+            echo \"✅ Vérification du déploiement...\"
             
             # Attendre que l'application démarre
             sleep 5
             
             # Test simple de connectivité
             if curl -f -s --connect-timeout 10 http://localhost:8080/health > /dev/null 2>&1; then
-              echo \\\"🎉 Déploiement réussi !\\\"
-              echo \\\"📋 Statut du service:\\\"
+              echo \"🎉 Déploiement réussi !\"
+              echo \"📋 Statut du service:\"
               systemctl status tontine-api.service --no-pager -l
 
               # Nettoyer l'ancienne version
               rm -rf /root/apps/tontine.old
-              echo \\\"✅ Ancienne version nettoyée\\\"
+              echo \"✅ Ancienne version nettoyée\"
             else
-              echo \\\"❌ Erreur lors du déploiement\\\"
-              echo \\\"📋 Logs systemd:\\\"
+              echo \"❌ Erreur lors du déploiement\"
+              echo \"📋 Logs systemd:\"
               journalctl -u tontine-api.service --no-pager -n 50
-              echo \\\"📋 Logs application:\\\"
-              tail -n 50 /root/apps/tontine/logs/app.log 2>/dev/null || echo \\\"Aucun log d'application trouvé\\\"
+              echo \"📋 Logs application:\"
+              tail -n 50 /root/apps/tontine/logs/app.log 2>/dev/null || echo \"Aucun log d'application trouvé\"
 
               # Restaurer l'ancienne version
-              echo \\\"🔄 Restauration de l'ancienne version...\\\"
+              echo \"🔄 Restauration de l'ancienne version...\"
               if systemctl is-active --quiet tontine-api.service; then
                 systemctl stop tontine-api.service
-                echo \\\"✅ Service arrêté pour restauration\\\"
+                echo \"✅ Service arrêté pour restauration\"
               else
-                echo \\\"ℹ️  Service non actif - pas besoin d'arrêt\\\"
+                echo \"ℹ️  Service non actif - pas besoin d'arrêt\"
               fi
               cd /root/apps
               rm -rf tontine
@@ -202,13 +202,13 @@ jobs:
               cd tontine
               
               # Nettoyer les dossiers inutiles dans la version restaurée
-              echo \\\"🧹 Nettoyage des dossiers inutiles dans la version restaurée...\\\"
+              echo \"🧹 Nettoyage des dossiers inutiles dans la version restaurée...\"
               rm -rf src/ 2>/dev/null || true
 
               exit 1
             fi
 
-            echo \\\"🌐 Application accessible sur le port 8080\\\"
+            echo \"🌐 Application accessible sur le port 8080\"
           "
                   
           # Vérification finale de l'application
