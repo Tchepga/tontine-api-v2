@@ -5,20 +5,16 @@ Ce répertoire contient tous les scripts de déploiement et de gestion de l'appl
 ## 📁 Structure des fichiers
 
 ### Scripts de déploiement
-- `deploy-sentry.sh` - Déploiement avec Sentry (production)
 - `deploy-robust.sh` - Déploiement robuste avec rollback
 - `deploy-simple.sh` - Déploiement simple
 
 ### Scripts de démarrage
 - `start-sentry.sh` - Démarrage avec Sentry
-- `start-tontine.sh` - Démarrage standard
-- `start.sh` - Script de démarrage principal
 - `start-dev.sh` - Démarrage en mode développement
 
 ### Scripts de gestion
 - `manage-processes.sh` - Gestion des processus (status, stop, restart, logs, pid)
 - `cleanup.sh` - Nettoyage des processus et services
-- `cleanup-server.sh` - Nettoyage des dossiers inutiles sur le serveur (src/)
 - `test-deployment.sh` - Test de la configuration avant déploiement
 
 ### Configuration système
@@ -49,14 +45,11 @@ npm run test:deployment
 npm run cleanup
 
 
-# Nettoyage du serveur (à exécuter sur le serveur)
-ssh user@server 'cd /root/apps/tontine && ./scripts/deploy/cleanup-server.sh'
 ```
 
 ### Directement
 ```bash
 # Depuis la racine du projet
-./scripts/deploy/deploy-sentry.sh
 ./scripts/deploy/start-sentry.sh
 ./scripts/deploy/manage-processes.sh status
 ```

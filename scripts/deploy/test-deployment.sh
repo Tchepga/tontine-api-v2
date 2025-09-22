@@ -11,7 +11,6 @@ required_files=(
     "src/main.ts"
     "scripts/deploy/tontine-api.service"
     "scripts/deploy/start-sentry.sh"
-    "scripts/deploy/deploy-sentry.sh"
     "scripts/deploy/deploy-robust.sh"
     ".sentryclirc"
 )
@@ -29,7 +28,6 @@ done
 echo "🔧 Vérification des permissions..."
 scripts=(
     "scripts/deploy/start-sentry.sh"
-    "scripts/deploy/deploy-sentry.sh"
     "scripts/deploy/deploy-robust.sh"
 )
 

@@ -65,7 +65,6 @@ jobs:
             --exclude='deploy.tar.gz' \
             --exclude='coverage' \
             scripts/deploy/start-sentry.sh \
-            scripts/deploy/deploy-sentry.sh \
             .sentryclirc \
             scripts/deploy/tontine-api.service \
             caddy/ \
