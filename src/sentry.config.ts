@@ -3,7 +3,7 @@ import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 export function initSentry() {
   Sentry.init({
-    dsn: process.env.SENTRY_DSN || 'your-sentry-dsn-here',
+    dsn: 'https://84fe878816138fb844e0dbdee126c950@o4509946255572992.ingest.de.sentry.io/4510119565590608',
     environment: process.env.NODE_ENV || 'development',
     release: process.env.SENTRY_RELEASE || 'development',
 
