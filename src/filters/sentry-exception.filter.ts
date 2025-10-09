@@ -30,24 +30,6 @@ export class SentryExceptionFilter implements ExceptionFilter {
         ? exception.getResponse()
         : 'Internal server error';
 
-    // Préparer les données pour Sentry
-    const sentryEvent = {
-      exception,
-      request: {
-        url: request.url,
-        method: request.method,
-        headers: request.headers,
-        query: request.query,
-        body: this.sanitizeRequestBody(request.body),
-        user: (request as any).user || null,
-      },
-      tags: {
-        component: 'nestjs',
-        environment: process.env.NODE_ENV || 'development',
-      },
-      level: status >= 500 ? 'error' : 'warning',
-    };
-
     // Capturer l'exception dans Sentry
     Sentry.withScope((scope) => {
       // Ajouter le contexte de la requête
