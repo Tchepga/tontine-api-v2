@@ -8,6 +8,7 @@ import {
 import { ValidationPipe } from '@nestjs/common';
 import { initSentry } from './sentry.config';
 import { SentryExceptionFilter } from './filters/sentry-exception.filter';
+import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
 import * as Sentry from '@sentry/node';
 
 async function bootstrap() {
@@ -24,6 +25,9 @@ async function bootstrap() {
 
     // Enregistrer le filtre d'exceptions Sentry global
     app.useGlobalFilters(new SentryExceptionFilter());
+
+    // Enregistrer l'interceptor de logging global
+    app.useGlobalInterceptors(new LoggingInterceptor());
 
     // TODO: need to restrict validation
     app.useGlobalPipes(new ValidationPipe());

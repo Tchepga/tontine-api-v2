@@ -12,9 +12,11 @@ import { MemberModule } from './member/member.module';
 import { NotificationModule } from './notification/notification.module';
 import { environment } from './shared/config';
 import { TontineModule } from './tontine/tontine.module';
+import { SharedModule } from './shared/shared.module';
 
 @Module({
   imports: [
+    SharedModule,
     JwtModule.register({
       global: environment.jwtConfig.global,
       secret: environment.jwtConfig.secret,

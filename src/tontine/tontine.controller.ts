@@ -29,33 +29,67 @@ import { StatusDeposit } from './enum/status-deposit';
 import { TontineService } from './tontine.service';
 import { isMemberOfTontine } from './utilities/service.helper';
 import { CreateMemberDto } from '../member/dto/create-member.dto';
+import { LoggerService } from '../shared/services/logger.service';
 
 @UseGuards(RolesGuard)
 @Controller('tontine')
 export class TontineController {
   private relativePathUploadFiles = 'upload/rapports/';
+  private readonly logger = LoggerService.create('TontineController');
+
   constructor(
     private readonly tontineService: TontineService,
     private readonly userService: AuthentificationService,
   ) {}
 
   @Post()
-  create(@Body() createTontineDto: CreateTontineDto) {
-    return this.tontineService.create(createTontineDto);
+  async create(@Body() createTontineDto: CreateTontineDto, @Req() req: any) {
+    this.logger.log(
+      `Creating new tontine: ${createTontineDto.title || 'Untitled'}`,
+      'TontineController',
+    );
+
+    try {
+      const result = await this.tontineService.create(createTontineDto);
+      this.logger.logUserActivity(
+        req?.user?.username || 'anonymous',
+        'CREATE_TONTINE',
+        { tontineId: result.id, tontineName: createTontineDto.title },
+      );
+      return result;
+    } catch (error) {
+      this.logger.logException(error, 'TontineController');
+      throw error;
+    }
   }
 
   @Get(':id')
   @Roles(Role.TONTINARD)
   async findOne(@Param('id') id: string, @Req() req: any) {
-    const user = await this.userService.findByUsername(req?.user?.username);
-    const tontine = await this.tontineService.findOne(+id);
+    this.logger.log(`Fetching tontine with ID: ${id}`, 'TontineController');
 
-    const isMember = isMemberOfTontine(tontine, user?.username);
-    if (!isMember) {
-      throw new NotFoundException(`Tontine not found`);
+    try {
+      const user = await this.userService.findByUsername(req?.user?.username);
+      const tontine = await this.tontineService.findOne(+id);
+
+      const isMember = isMemberOfTontine(tontine, user?.username);
+      if (!isMember) {
+        this.logger.warn(
+          `User ${user?.username} attempted to access tontine ${id} without permission`,
+          'TontineController',
+        );
+        throw new NotFoundException(`Tontine not found`);
+      }
+
+      this.logger.log(
+        `Successfully fetched tontine ${id} for user ${user?.username}`,
+        'TontineController',
+      );
+      return tontine;
+    } catch (error) {
+      this.logger.logException(error, 'TontineController');
+      throw error;
     }
-
-    return tontine;
   }
 
   @Patch(':id/select-tontine')
