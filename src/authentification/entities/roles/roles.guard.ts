@@ -8,7 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { Role } from './roles.enum';
 import { ROLES_KEY } from './roles.decorator';
 import { JwtService } from '@nestjs/jwt';
-import { environment } from '../../../shared/environement';
+import { environment } from '../../../shared/config';
 import { TontineService } from '../../../tontine/tontine.service';
 
 @Injectable()

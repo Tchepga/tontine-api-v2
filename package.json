@@ -36,7 +36,8 @@
     "process:restart": "./scripts/deploy/manage-processes.sh restart",
     "process:logs": "./scripts/deploy/manage-processes.sh logs",
     "process:pid": "./scripts/deploy/manage-processes.sh pid",
-    "cleanup": "./scripts/deploy/cleanup.sh"
+    "cleanup": "./scripts/deploy/cleanup.sh",
+    "check:database": "node --experimental-modules scripts/check-database.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

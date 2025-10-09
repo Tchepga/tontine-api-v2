@@ -31,6 +31,8 @@ import { SharedModule } from './shared/shared.module';
       database: environment.databaseConfig.database,
       synchronize: environment.databaseConfig.synchronize,
       autoLoadEntities: true,
+      logging: environment.databaseConfig.logging,
+      logger: environment.databaseConfig.logging ? 'advanced-console' : undefined,
     }),
     MemberModule,
     AuthentificationModule,

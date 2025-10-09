@@ -13,7 +13,7 @@ import {
 } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { Member } from './entities/member.entity';
-import { environment } from '../shared/environement';
+import { environment } from '../shared/config';
 
 @Injectable()
 export class MemberService {

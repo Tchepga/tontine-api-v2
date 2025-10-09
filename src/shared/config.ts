@@ -1,9 +1,5 @@
-import { environment as devEnvironment } from './environement';
-
-// Configuration de production basée sur les variables d'environnement
-// TODO: .env ne marche pas lorsqu'on fait node dist/main.js
-const prodEnvironment = {
-  production: true,
+export const environment = {
+  production: process.env.NODE_ENV === 'production',
   jwtConfig: {
     secret: process.env.JWT_SECRET || 'default-secret-change-in-production',
     expiresIn: process.env.JWT_EXPIRES_IN || '24h',
@@ -16,7 +12,7 @@ const prodEnvironment = {
     username: process.env.DB_USERNAME || 'user',
     password: process.env.DB_PASSWORD || 'changeme',
     database: process.env.DB_DATABASE || 'tontine',
-    synchronize: process.env.DB_SYNCHRONIZE === 'true',
+    synchronize: process.env.DB_SYNCHRONIZE === 'true' || process.env.NODE_ENV !== 'production',
     autoLoadEntities: true,
   },
   passwordConfig: {
@@ -25,8 +21,3 @@ const prodEnvironment = {
     defaultPassword: process.env.DEFAULT_PASSWORD || 'changeme1@',
   },
 };
-
-export const environment =
-  process.env.NODE_ENV === 'production' ? prodEnvironment : devEnvironment;
-
-console.log('NODE_ENV', process.env.NODE_ENV);
