@@ -32,7 +32,9 @@ import { SharedModule } from './shared/shared.module';
       synchronize: environment.databaseConfig.synchronize,
       autoLoadEntities: true,
       logging: environment.databaseConfig.logging,
-      logger: environment.databaseConfig.logging ? 'advanced-console' : undefined,
+      logger: environment.databaseConfig.logging
+        ? 'advanced-console'
+        : undefined,
     }),
     MemberModule,
     AuthentificationModule,
