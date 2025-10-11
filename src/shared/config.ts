@@ -12,9 +12,9 @@ export const environment = {
     username: process.env.DB_USERNAME || 'root',
     password: process.env.DB_PASSWORD || 'root',
     database: process.env.DB_DATABASE || 'tontine',
-    synchronize: process.env.DB_SYNCHRONIZE === 'true' || process.env.NODE_ENV !== 'production',
+    synchronize: true,
     autoLoadEntities: true,
-    logging: process.env.DB_LOGGING === 'true' || process.env.NODE_ENV !== 'production',
+    logging: true,
   },
   passwordConfig: {
     minLength: parseInt(process.env.PASSWORD_MIN_LENGTH || '8', 10),
