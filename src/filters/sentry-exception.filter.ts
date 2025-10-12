@@ -6,7 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { FastifyRequest, FastifyReply } from 'fastify';
 import * as Sentry from '@sentry/node';
 
 @Catch()
@@ -15,8 +15,8 @@ export class SentryExceptionFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
-    const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
+    const response = ctx.getResponse<FastifyReply>();
+    const request = ctx.getRequest<FastifyRequest>();
 
     // Déterminer le statut HTTP
     const status =
@@ -74,7 +74,7 @@ export class SentryExceptionFilter implements ExceptionFilter {
       }),
     };
 
-    response.status(status).json(errorResponse);
+    response.status(status).send(errorResponse);
   }
 
   /**

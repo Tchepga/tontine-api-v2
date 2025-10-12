@@ -559,7 +559,6 @@ export class TontineService {
         user: { username },
         tontine: { id: tontineId },
       },
-      relations: ['user', 'tontine'],
     });
   }
 
@@ -622,6 +621,7 @@ export class TontineService {
     partOrder.member = member;
     partOrder.order = data.order;
     partOrder.period = data.period;
+    partOrder.config = tontine.config;
     return this.dataSource.getRepository(PartOrder).save(partOrder);
   }
 

@@ -95,13 +95,12 @@ export function createToConfigTontineDtoToConfigTontine(
 }
 
 export class PartOrderDto {
-  @IsNumber()
+  @IsNumber({}, { message: 'Le membre est requis' })
   memberId: number;
 
-  @IsNumber()
+  @IsNumber({}, { message: "L'ordre est requis" })
   order: number;
 
-  @IsOptional()
-  @IsDateString()
+  @IsDateString({}, { message: "La période est requise (ex: '2024-06-23')" })
   period: Date;
 }
