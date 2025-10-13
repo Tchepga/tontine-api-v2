@@ -5,8 +5,7 @@ import {
   IsNotEmpty,
   IsNotEmptyObject,
   IsNumber,
-  IsOptional,
-  IsString,
+  IsString
 } from 'class-validator';
 import { CreateMemberDto } from '../../member/dto/create-member.dto';
 import { ConfigTontine } from '../entities/config-tontine.entity';
