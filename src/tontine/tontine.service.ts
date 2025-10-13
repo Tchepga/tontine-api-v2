@@ -114,7 +114,15 @@ export class TontineService {
 
   findTontineByMember(member: Member): Promise<Tontine[]> {
     const tontines = this.dataSource.getRepository(Tontine).find({
-      relations: ['members', 'members.user', 'config', 'cashFlow'],
+      relations: [
+        'members',
+        'members.user',
+        'config',
+        'config.partOrders',
+        'config.rateMaps',
+        'config.partOrders.member',
+        'cashFlow',
+      ],
     });
     return tontines.then((tontines) =>
       tontines.filter((tontine) =>
