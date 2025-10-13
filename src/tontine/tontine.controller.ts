@@ -10,6 +10,13 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import * as fs from 'fs';
 import { AuthentificationService } from '../authentification/authentification.service';
 import { Roles } from '../authentification/entities/roles/roles.decorator';
@@ -31,6 +38,8 @@ import { isMemberOfTontine } from './utilities/service.helper';
 import { CreateMemberDto } from '../member/dto/create-member.dto';
 import { LoggerService } from '../shared/services/logger.service';
 
+@ApiTags('Tontine')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(RolesGuard)
 @Controller('tontine')
 export class TontineController {
@@ -43,6 +52,23 @@ export class TontineController {
   ) {}
 
   @Post()
+  @ApiOperation({
+    summary: 'Créer une nouvelle tontine',
+    description: 'Crée une nouvelle tontine avec ses membres et sa configuration',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Tontine créée avec succès',
+    type: Tontine,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Données invalides',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Non authentifié',
+  })
   async create(@Body() createTontineDto: CreateTontineDto, @Req() req: any) {
     this.logger.log(
       `Creating new tontine: ${createTontineDto.title || 'Untitled'}`,
@@ -65,6 +91,28 @@ export class TontineController {
 
   @Get(':id')
   @Roles(Role.TONTINARD)
+  @ApiOperation({
+    summary: 'Récupérer une tontine par ID',
+    description: "Récupère les détails d'une tontine spécifique. L'utilisateur doit être membre de la tontine.",
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID de la tontine',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Tontine trouvée',
+    type: Tontine,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Tontine non trouvée ou accès non autorisé',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Non authentifié',
+  })
   async findOne(@Param('id') id: string, @Req() req: any) {
     this.logger.log(`Fetching tontine with ID: ${id}`, 'TontineController');
 
@@ -113,6 +161,24 @@ export class TontineController {
 
   @Patch(':id')
   @Roles(Role.TONTINARD)
+  @ApiOperation({
+    summary: 'Mettre à jour une tontine',
+    description: "Met à jour les informations d'une tontine existante",
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID de la tontine',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Tontine mise à jour avec succès',
+    type: Tontine,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Tontine non trouvée',
+  })
   update(@Param('id') id: string, @Body() updateTontineDto: UpdateTontineDto) {
     return this.tontineService.update(+id, updateTontineDto);
   }
@@ -283,6 +349,23 @@ export class TontineController {
 
   @Post(':id/deposit')
   @Roles(Role.TONTINARD)
+  @ApiOperation({
+    summary: 'Créer un dépôt',
+    description: 'Crée un nouveau dépôt pour un membre de la tontine',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID de la tontine',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Dépôt créé avec succès',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Données invalides',
+  })
   createDeposit(
     @Param('id') id: string,
     @Body() createDepositDto: CreateDepositDto,
