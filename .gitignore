@@ -4,3 +4,4 @@ dist
 environement.prod.ts
 # Sentry Config File
 .env.sentry-build-plugin
+coverage

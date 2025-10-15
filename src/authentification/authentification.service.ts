@@ -1,9 +1,16 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { ErrorCode } from '../shared/utilities/error-code';
 import { DataSource, EntityManager } from 'typeorm';
 import { LoginDto } from './dto/login-dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Role } from './entities/roles/roles.enum';
 import { User } from './entities/user.entity';
 
@@ -96,5 +103,85 @@ export class AuthentificationService {
 
   public async getUserByUsername(username: string): Promise<User> {
     return this.dataSource.getRepository(User).findOne({ where: { username } });
+  }
+
+  public async forgotPassword(
+    forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ message: string; resetToken: string }> {
+    const { usernameOrEmail } = forgotPasswordDto;
+
+    // Rechercher l'utilisateur par nom d'utilisateur ou email
+    const user = await this.dataSource.getRepository(User).findOne({
+      where: { username: usernameOrEmail },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé');
+    }
+
+    // Générer un token de réinitialisation (valide 1 heure)
+    const resetToken = this.jwtService.sign(
+      {
+        username: user.username,
+        type: 'password_reset',
+      },
+      {
+        expiresIn: '1h',
+      },
+    );
+
+    // En production, vous devriez envoyer un email avec le token
+    // Pour l'instant, on retourne le token directement
+    return {
+      message:
+        'Token de réinitialisation généré. En production, un email serait envoyé.',
+      resetToken,
+    };
+  }
+
+  public async resetPassword(
+    resetPasswordDto: ResetPasswordDto,
+  ): Promise<{ message: string }> {
+    const { token, newPassword } = resetPasswordDto;
+
+    try {
+      // Vérifier le token
+      const decoded = this.jwtService.verify(token);
+
+      if (decoded.type !== 'password_reset') {
+        throw new BadRequestException('Token invalide');
+      }
+
+      const username = decoded.username;
+
+      // Vérifier que l'utilisateur existe
+      const user = await this.dataSource.getRepository(User).findOne({
+        where: { username },
+      });
+
+      if (!user) {
+        throw new NotFoundException('Utilisateur non trouvé');
+      }
+
+      // Hasher le nouveau mot de passe
+      const hashedPassword = await bcrypt.hash(newPassword, this.saltRounds);
+
+      // Mettre à jour le mot de passe
+      await this.dataSource
+        .getRepository(User)
+        .update({ username }, { password: hashedPassword });
+
+      return {
+        message: 'Mot de passe réinitialisé avec succès',
+      };
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        throw new BadRequestException('Token expiré');
+      }
+      if (error.name === 'JsonWebTokenError') {
+        throw new BadRequestException('Token invalide');
+      }
+      throw error;
+    }
   }
 }

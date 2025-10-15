@@ -14,7 +14,7 @@ export const environment = {
     database: process.env.DB_DATABASE || 'tontine',
     synchronize: true,
     autoLoadEntities: true,
-    logging: true,
+    logging: false,
   },
   passwordConfig: {
     minLength: parseInt(process.env.PASSWORD_MIN_LENGTH || '8', 10),
