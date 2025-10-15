@@ -1,4 +1,9 @@
-import { Injectable, LoggerService as NestLoggerService, Inject, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  LoggerService as NestLoggerService,
+  Inject,
+  Optional,
+} from '@nestjs/common';
 import * as Sentry from '@sentry/node';
 
 export enum LogLevel {
@@ -22,7 +27,7 @@ export class LoggerService implements NestLoggerService {
    */
   error(message: any, trace?: string, context?: string): void {
     const logContext = context || this.context || 'Application';
-    
+
     // Log local
     console.error(`[${logContext}] ERROR:`, message);
     if (trace) {
@@ -34,7 +39,8 @@ export class LoggerService implements NestLoggerService {
       scope.setLevel('error');
       scope.setTag('logger', logContext);
       scope.setContext('error', {
-        message: typeof message === 'string' ? message : JSON.stringify(message),
+        message:
+          typeof message === 'string' ? message : JSON.stringify(message),
         trace,
       });
       Sentry.captureMessage(message, 'error');
@@ -46,7 +52,7 @@ export class LoggerService implements NestLoggerService {
    */
   warn(message: any, context?: string): void {
     const logContext = context || this.context || 'Application';
-    
+
     // Log local
     console.warn(`[${logContext}] WARN:`, message);
 
@@ -71,7 +77,10 @@ export class LoggerService implements NestLoggerService {
    */
   debug(message: any, context?: string): void {
     const logContext = context || this.context || 'Application';
-    if (process.env.NODE_ENV === 'development' || process.env.DEBUG === 'true') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.DEBUG === 'true'
+    ) {
       console.debug(`[${logContext}] DEBUG:`, message);
     }
   }
@@ -81,7 +90,10 @@ export class LoggerService implements NestLoggerService {
    */
   verbose(message: any, context?: string): void {
     const logContext = context || this.context || 'Application';
-    if (process.env.NODE_ENV === 'development' || process.env.VERBOSE === 'true') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.VERBOSE === 'true'
+    ) {
       console.log(`[${logContext}] VERBOSE:`, message);
     }
   }
@@ -92,7 +104,7 @@ export class LoggerService implements NestLoggerService {
   logUserActivity(userId: string, action: string, details?: any): void {
     const message = `User ${userId} performed ${action}`;
     this.log(message, 'UserActivity');
-    
+
     // Capture dans Sentry avec contexte utilisateur
     Sentry.withScope((scope) => {
       scope.setLevel('info');
@@ -113,11 +125,12 @@ export class LoggerService implements NestLoggerService {
   logPerformance(operation: string, duration: number, context?: string): void {
     const logContext = context || this.context || 'Performance';
     const message = `Operation '${operation}' took ${duration}ms`;
-    
+
     this.log(message, logContext);
-    
+
     // Capture dans Sentry si la durée est élevée
-    if (duration > 1000) { // Plus de 1 seconde
+    if (duration > 1000) {
+      // Plus de 1 seconde
       Sentry.withScope((scope) => {
         scope.setLevel('warning');
         scope.setTag('performance', 'slow_operation');
@@ -136,9 +149,9 @@ export class LoggerService implements NestLoggerService {
    */
   logException(exception: Error, context?: string): void {
     const logContext = context || this.context || 'Exception';
-    
+
     this.error(exception.message, exception.stack, logContext);
-    
+
     // Capture l'exception dans Sentry
     Sentry.withScope((scope) => {
       scope.setLevel('error');
@@ -155,9 +168,14 @@ export class LoggerService implements NestLoggerService {
   /**
    * Log de requête HTTP
    */
-  logHttpRequest(method: string, url: string, statusCode: number, duration?: number): void {
+  logHttpRequest(
+    method: string,
+    url: string,
+    statusCode: number,
+    duration?: number,
+  ): void {
     const message = `${method} ${url} - ${statusCode}${duration ? ` (${duration}ms)` : ''}`;
-    
+
     if (statusCode >= 400) {
       this.warn(message, 'HTTP');
     } else {

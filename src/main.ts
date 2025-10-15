@@ -38,7 +38,8 @@ async function bootstrap() {
     app.setGlobalPrefix('api');
 
     // Configuration pour servir les fichiers statiques (nécessaire pour Swagger avec Fastify)
-    await app.register(require('@fastify/static'), {
+    const fastifyStatic = await import('@fastify/static');
+    await app.register(fastifyStatic.default, {
       root: join(__dirname, '..', 'node_modules', 'swagger-ui-dist'),
       prefix: '/swagger-ui/',
     });

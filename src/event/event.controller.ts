@@ -54,8 +54,9 @@ export class EventController {
 
   @Get('/tontine/:tontineId')
   @ApiOperation({
-    summary: 'Récupérer tous les événements d\'une tontine',
-    description: 'Récupère la liste de tous les événements d\'une tontine spécifique',
+    summary: "Récupérer tous les événements d'une tontine",
+    description:
+      "Récupère la liste de tous les événements d'une tontine spécifique",
   })
   @ApiParam({
     name: 'tontineId',
@@ -77,11 +78,11 @@ export class EventController {
   @Get(':id')
   @ApiOperation({
     summary: 'Récupérer un événement par ID',
-    description: 'Récupère les détails d\'un événement spécifique',
+    description: "Récupère les détails d'un événement spécifique",
   })
   @ApiParam({
     name: 'id',
-    description: 'ID de l\'événement',
+    description: "ID de l'événement",
     example: 1,
   })
   @ApiResponse({
@@ -99,11 +100,11 @@ export class EventController {
   @Patch(':id')
   @ApiOperation({
     summary: 'Mettre à jour un événement',
-    description: 'Met à jour les informations d\'un événement existant',
+    description: "Met à jour les informations d'un événement existant",
   })
   @ApiParam({
     name: 'id',
-    description: 'ID de l\'événement',
+    description: "ID de l'événement",
     example: 1,
   })
   @ApiResponse({
@@ -133,7 +134,7 @@ export class EventController {
   })
   @ApiParam({
     name: 'id',
-    description: 'ID de l\'événement',
+    description: "ID de l'événement",
     example: 1,
   })
   @ApiResponse({
@@ -159,7 +160,7 @@ export class EventController {
   })
   @ApiParam({
     name: 'id',
-    description: 'ID de l\'événement',
+    description: "ID de l'événement",
     example: 1,
   })
   @ApiParam({
@@ -184,12 +185,12 @@ export class EventController {
 
   @Patch(':id/remove-participant/:participantId')
   @ApiOperation({
-    summary: 'Retirer un participant d\'un événement',
-    description: 'Retire un participant d\'un événement existant',
+    summary: "Retirer un participant d'un événement",
+    description: "Retire un participant d'un événement existant",
   })
   @ApiParam({
     name: 'id',
-    description: 'ID de l\'événement',
+    description: "ID de l'événement",
     example: 1,
   })
   @ApiParam({

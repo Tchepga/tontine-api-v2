@@ -14,7 +14,6 @@ import {
   ApiTags,
   ApiOperation,
   ApiResponse,
-  ApiParam,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { CreateMemberDto } from './dto/create-member.dto';
