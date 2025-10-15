@@ -98,22 +98,44 @@ export class AuthentificationController {
   @ApiOperation({
     summary: "Récupérer un utilisateur par nom d'utilisateur",
     description:
-      "Récupère les informations d'un utilisateur par son nom d'utilisateur",
+      "Récupère les informations d'un utilisateur par son nom d'utilisateur (sans le mot de passe)",
   })
   @ApiParam({
     name: 'username',
-    description: "Nom d'utilisateur",
+    description: "Nom d'utilisateur à rechercher",
     example: 'john_doe',
   })
   @ApiResponse({
     status: 200,
-    description: 'Utilisateur trouvé',
+    description: 'Utilisateur trouvé avec succès',
+    schema: {
+      type: 'object',
+      properties: {
+        username: {
+          type: 'string',
+          example: 'john_doe',
+        },
+        roles: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: [
+              'TONTINARD',
+              'PRESIDENT',
+              'ACCOUNT_MANAGER',
+              'OFFICE_MANAGER',
+            ],
+          },
+          example: ['TONTINARD'],
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 404,
     description: 'Utilisateur non trouvé',
   })
-  async getUsername(@Param('username') username: string) {
+  async getUserByUsername(@Param('username') username: string) {
     return this.authService.getUserByUsername(username);
   }
 

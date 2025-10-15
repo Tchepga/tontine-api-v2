@@ -5,6 +5,7 @@ import { CashFlow } from './entities/cashflow.entity';
 import { ConfigTontine } from './entities/config-tontine.entity';
 import { Tontine } from './entities/tontine.entity';
 import { TontineController } from './tontine.controller';
+import { InvitationController } from './invitation.controller';
 import { TontineService } from './tontine.service';
 import { MemberModule } from '../member/member.module';
 import { AuthentificationService } from '../authentification/authentification.service';
@@ -16,6 +17,7 @@ import { MemberRole } from './entities/member-role.entity';
 import { Notification } from '../notification/entities/notification.entity';
 import { NotificationService } from '../notification/notification.service';
 import { PartOrder } from './entities/part-order.entity';
+import { InvitationLink } from './entities/invitation-link.entity';
 
 @Module({
   imports: [
@@ -31,10 +33,11 @@ import { PartOrder } from './entities/part-order.entity';
       MemberRole,
       Notification,
       PartOrder,
+      InvitationLink,
     ]),
     MemberModule,
   ],
-  controllers: [TontineController],
+  controllers: [TontineController, InvitationController],
   providers: [TontineService, AuthentificationService, NotificationService],
   exports: [TontineService],
 })

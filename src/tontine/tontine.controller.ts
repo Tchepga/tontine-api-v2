@@ -11,18 +11,21 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
   ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 import * as fs from 'fs';
 import { AuthentificationService } from '../authentification/authentification.service';
 import { Roles } from '../authentification/entities/roles/roles.decorator';
 import { Role } from '../authentification/entities/roles/roles.enum';
 import { RolesGuard } from '../authentification/entities/roles/roles.guard';
+import { CreateMemberDto } from '../member/dto/create-member.dto';
+import { LoggerService } from '../shared/services/logger.service';
 import { CreateDepositDto } from './dto/create-deposit.dto';
+import { CreateInvitationLinkDto } from './dto/create-invitation-link.dto';
 import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
 import { CreateSanctionDto } from './dto/create-sanction.dto';
 import {
@@ -30,14 +33,12 @@ import {
   CreateTontineDto,
   PartOrderDto,
 } from './dto/create-tontine.dto';
-import { UpdateTontineDto } from './dto/update-tontine.dto';
 import { UpdateDepositStatusDto } from './dto/update-deposit-status.dto';
+import { UpdateTontineDto } from './dto/update-tontine.dto';
 import { Tontine } from './entities/tontine.entity';
 import { StatusDeposit } from './enum/status-deposit';
 import { TontineService } from './tontine.service';
 import { isMemberOfTontine } from './utilities/service.helper';
-import { CreateMemberDto } from '../member/dto/create-member.dto';
-import { LoggerService } from '../shared/services/logger.service';
 
 @ApiTags('Tontine')
 @ApiBearerAuth('JWT-auth')
@@ -489,6 +490,120 @@ export class TontineController {
       +id,
       +depositId,
       updateStatusDto,
+      req.user,
+    );
+  }
+
+  @Post(':id/invitation')
+  @Roles(Role.PRESIDENT)
+  @ApiOperation({
+    summary: "Créer un lien d'invitation",
+    description:
+      "Crée un lien d'invitation simple pour inviter un nouveau membre à rejoindre la tontine. Seul le nom d'utilisateur est requis. Réservé aux présidents.",
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID de la tontine',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 201,
+    description: "Lien d'invitation créé avec succès",
+    schema: {
+      type: 'object',
+      properties: {
+        invitationLink: { type: 'object' },
+        invitationUrl: {
+          type: 'string',
+          example: 'http://localhost:3000/invitation/abc123def456ghi789',
+        },
+        message: {
+          type: 'string',
+          example: "Lien d'invitation créé avec succès",
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      "Accès refusé - Seuls les présidents peuvent créer des liens d'invitation",
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      "Nom d'utilisateur déjà membre ou lien d'invitation actif existant",
+  })
+  createInvitationLink(
+    @Param('id') id: string,
+    @Body() createInvitationDto: CreateInvitationLinkDto,
+    @Req() req: any,
+  ) {
+    return this.tontineService.createInvitationLink(
+      +id,
+      createInvitationDto,
+      req.user,
+    );
+  }
+
+  @Get(':id/invitation')
+  @Roles(Role.PRESIDENT)
+  @ApiOperation({
+    summary: "Récupérer les liens d'invitation",
+    description:
+      "Récupère tous les liens d'invitation d'une tontine. Réservé aux présidents.",
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID de la tontine',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Liste des liens d'invitation récupérée avec succès",
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      "Accès refusé - Seuls les présidents peuvent voir les liens d'invitation",
+  })
+  getInvitationLinks(@Param('id') id: string, @Req() req: any) {
+    return this.tontineService.getInvitationLinks(+id, req.user);
+  }
+
+  @Delete(':id/invitation/:invitationId')
+  @Roles(Role.PRESIDENT)
+  @ApiOperation({
+    summary: "Révoquer un lien d'invitation",
+    description: "Révoque un lien d'invitation actif. Réservé aux présidents.",
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID de la tontine',
+    example: 1,
+  })
+  @ApiParam({
+    name: 'invitationId',
+    description: "ID du lien d'invitation",
+    example: 1,
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Lien d'invitation révoqué avec succès",
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      "Accès refusé - Seuls les présidents peuvent révoquer les liens d'invitation",
+  })
+  revokeInvitationLink(
+    @Param('id') id: string,
+    @Param('invitationId') invitationId: string,
+    @Req() req: any,
+  ) {
+    return this.tontineService.revokeInvitationLink(
+      +id,
+      +invitationId,
       req.user,
     );
   }

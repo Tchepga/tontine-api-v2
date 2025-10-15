@@ -1,6 +1,7 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { Role } from '../authentification/entities/roles/roles.enum';
 import { User } from '../authentification/entities/user.entity';
+import * as bcrypt from 'bcrypt';
 import { Member } from '../member/entities/member.entity';
 import { MemberService } from '../member/member.service';
 import { ErrorCode } from '../shared/utilities/error-code';
@@ -16,6 +17,8 @@ import {
 } from './dto/create-tontine.dto';
 import { UpdateTontineDto } from './dto/update-tontine.dto';
 import { UpdateDepositStatusDto } from './dto/update-deposit-status.dto';
+import { CreateInvitationLinkDto } from './dto/create-invitation-link.dto';
+import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { CashFlow } from './entities/cashflow.entity';
 import { ConfigTontine } from './entities/config-tontine.entity';
 import { Deposit } from './entities/deposit.entity';
@@ -26,6 +29,10 @@ import { Sanction } from './entities/sanction.entity';
 import { Tontine } from './entities/tontine.entity';
 import { StatusDeposit } from './enum/status-deposit';
 import { PartOrder } from './entities/part-order.entity';
+import {
+  InvitationLink,
+  InvitationStatus,
+} from './entities/invitation-link.entity';
 import { Action } from '../notification/utility/message-notification';
 import { NotificationService } from '../notification/notification.service';
 import { TypeNotification } from '../notification/enum/type-notification';
@@ -558,6 +565,253 @@ export class TontineService {
       deposit: updatedDeposit,
       message: `Statut du dépôt mis à jour de ${oldStatus} à ${updateStatusDto.status}`,
     };
+  }
+
+  async createInvitationLink(
+    tontineId: number,
+    createInvitationDto: CreateInvitationLinkDto,
+    user: User,
+  ) {
+    // Vérifier que l'utilisateur est président
+    const hasPermission = user.roles.some((role) => role === Role.PRESIDENT);
+    if (!hasPermission) {
+      throw new HttpException(
+        "Seuls les présidents peuvent créer des liens d'invitation",
+        403,
+      );
+    }
+
+    // Vérifier que la tontine existe
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+
+    // Vérifier que le username n'existe pas déjà
+    const existingUser = await this.dataSource
+      .getRepository(User)
+      .findOne({ where: { username: createInvitationDto.username } });
+
+    if (existingUser) {
+      // Vérifier si l'utilisateur est déjà membre de cette tontine
+      const existingMember = await this.dataSource
+        .getRepository(Member)
+        .findOne({
+          where: { user: { username: existingUser.username } },
+          relations: ['tontines'],
+        });
+
+      if (existingMember) {
+        const isAlreadyMember = existingMember.tontines.some(
+          (tontineMember) => tontineMember.id === tontineId,
+        );
+        if (isAlreadyMember) {
+          throw new HttpException(
+            'Ce membre fait déjà partie de cette tontine',
+            400,
+          );
+        }
+      }
+    }
+
+    // Vérifier qu'il n'y a pas déjà un lien d'invitation actif pour ce username
+    const existingInvitation = await this.dataSource
+      .getRepository(InvitationLink)
+      .findOne({
+        where: {
+          username: createInvitationDto.username,
+          tontine: { id: tontineId },
+          status: InvitationStatus.ACTIVE,
+        },
+      });
+
+    if (existingInvitation) {
+      throw new HttpException(
+        "Un lien d'invitation actif existe déjà pour ce nom d'utilisateur",
+        400,
+      );
+    }
+
+    // Générer un token unique
+    const token = this.generateInvitationToken();
+
+    // Créer le lien d'invitation
+    const invitationLink = new InvitationLink();
+    invitationLink.token = token;
+    invitationLink.username = createInvitationDto.username;
+    invitationLink.firstName = null;
+    invitationLink.lastName = null;
+    invitationLink.phone = null;
+    invitationLink.tontine = tontine;
+    invitationLink.createdBy = await this.memberService.findByUsername(
+      user.username,
+    );
+    invitationLink.status = InvitationStatus.ACTIVE;
+
+    // Définir la date d'expiration (1 jour par défaut)
+    const expiresAt = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000);
+    invitationLink.expiresAt = expiresAt;
+
+    const savedInvitation = await this.dataSource
+      .getRepository(InvitationLink)
+      .save(invitationLink);
+
+    return {
+      invitationLink: savedInvitation,
+      invitationUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invitation/${token}`,
+      message: "Lien d'invitation créé avec succès",
+    };
+  }
+
+  async acceptInvitation(acceptInvitationDto: AcceptInvitationDto) {
+    const { token, username, firstName, lastName, phone } = acceptInvitationDto;
+
+    // Trouver le lien d'invitation
+    const invitationLink = await this.dataSource
+      .getRepository(InvitationLink)
+      .findOne({
+        where: { token },
+        relations: ['tontine', 'createdBy'],
+      });
+
+    if (!invitationLink) {
+      throw new NotFoundException("Lien d'invitation non trouvé");
+    }
+
+    // Vérifier le statut
+    if (invitationLink.status !== InvitationStatus.ACTIVE) {
+      throw new HttpException("Ce lien d'invitation n'est plus valide", 400);
+    }
+
+    // Vérifier l'expiration
+    if (invitationLink.expiresAt && new Date() > invitationLink.expiresAt) {
+      invitationLink.status = InvitationStatus.EXPIRED;
+      await this.dataSource.getRepository(InvitationLink).save(invitationLink);
+      throw new HttpException("Ce lien d'invitation a expiré", 400);
+    }
+
+    // Vérifier que le nom d'utilisateur n'existe pas déjà
+    const existingUser = await this.dataSource
+      .getRepository(User)
+      .findOne({ where: { username } });
+
+    if (existingUser) {
+      throw new HttpException("Ce nom d'utilisateur est déjà utilisé", 400);
+    }
+
+    // Créer le membre
+    const member = new Member();
+    member.firstname = firstName || '';
+    member.lastname = lastName || '';
+    member.email = null; // Email n'est plus requis
+    member.phone = phone || '';
+    member.country = 'Cameroon'; // Valeur par défaut
+
+    const savedMember = await this.dataSource
+      .getRepository(Member)
+      .save(member);
+
+    // Créer l'utilisateur
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User();
+    user.username = username;
+    user.password = hashedPassword;
+    user.roles = [Role.TONTINARD];
+
+    const savedUser = await this.dataSource.getRepository(User).save(user);
+
+    // Lier l'utilisateur au membre
+    savedMember.user = savedUser;
+    await this.dataSource.getRepository(Member).save(savedMember);
+
+    // Ajouter le membre à la tontine
+    invitationLink.tontine.members.push(savedMember);
+    await this.dataSource.getRepository(Tontine).save(invitationLink.tontine);
+
+    // Marquer le lien comme utilisé
+    invitationLink.status = InvitationStatus.USED;
+    invitationLink.usedAt = new Date();
+    invitationLink.usedBy = savedMember;
+    await this.dataSource.getRepository(InvitationLink).save(invitationLink);
+
+    return {
+      member: savedMember,
+      message:
+        'Invitation acceptée avec succès. Vous êtes maintenant membre de la tontine.',
+    };
+  }
+
+  async getInvitationLinks(tontineId: number, user: User) {
+    // Vérifier que l'utilisateur est président
+    const hasPermission = user.roles.some((role) => role === Role.PRESIDENT);
+    if (!hasPermission) {
+      throw new HttpException(
+        "Seuls les présidents peuvent voir les liens d'invitation",
+        403,
+      );
+    }
+
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+
+    return this.dataSource.getRepository(InvitationLink).find({
+      where: { tontine: { id: tontineId } },
+      relations: ['createdBy', 'usedBy'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async revokeInvitationLink(
+    tontineId: number,
+    invitationId: number,
+    user: User,
+  ) {
+    // Vérifier que l'utilisateur est président
+    const hasPermission = user.roles.some((role) => role === Role.PRESIDENT);
+    if (!hasPermission) {
+      throw new HttpException(
+        "Seuls les présidents peuvent révoquer les liens d'invitation",
+        403,
+      );
+    }
+
+    const invitationLink = await this.dataSource
+      .getRepository(InvitationLink)
+      .findOne({
+        where: { id: invitationId, tontine: { id: tontineId } },
+      });
+
+    if (!invitationLink) {
+      throw new NotFoundException("Lien d'invitation non trouvé");
+    }
+
+    if (invitationLink.status !== InvitationStatus.ACTIVE) {
+      throw new HttpException(
+        "Ce lien d'invitation ne peut pas être révoqué",
+        400,
+      );
+    }
+
+    invitationLink.status = InvitationStatus.REVOKED;
+    invitationLink.revokedAt = new Date();
+
+    await this.dataSource.getRepository(InvitationLink).save(invitationLink);
+
+    return {
+      message: "Lien d'invitation révoqué avec succès",
+    };
+  }
+
+  private generateInvitationToken(): string {
+    const chars =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 32; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
   }
 
   async setSelectedTontine(id: number, username: string) {

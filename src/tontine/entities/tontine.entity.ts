@@ -18,6 +18,7 @@ import { RapportMeeting } from './rapport-meeting.entity';
 import { Sanction } from './sanction.entity';
 import { MemberRole } from './member-role.entity';
 import { Notification } from '../../notification/entities/notification.entity';
+import { InvitationLink } from './invitation-link.entity';
 
 @Entity()
 export class Tontine extends BasicEntity {
@@ -62,4 +63,7 @@ export class Tontine extends BasicEntity {
 
   @OneToMany(() => Notification, (notification) => notification.tontine)
   notifications: Notification[];
+
+  @OneToMany(() => InvitationLink, (invitationLink) => invitationLink.tontine)
+  invitationLinks: InvitationLink[];
 }

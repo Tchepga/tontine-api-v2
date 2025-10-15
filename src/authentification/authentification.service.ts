@@ -1,15 +1,15 @@
 import {
-  Injectable,
-  UnauthorizedException,
-  NotFoundException,
   BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { ErrorCode } from '../shared/utilities/error-code';
 import { DataSource, EntityManager } from 'typeorm';
-import { LoginDto } from './dto/login-dto';
+import { ErrorCode } from '../shared/utilities/error-code';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { LoginDto } from './dto/login-dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Role } from './entities/roles/roles.enum';
 import { User } from './entities/user.entity';
@@ -102,7 +102,16 @@ export class AuthentificationService {
   }
 
   public async getUserByUsername(username: string): Promise<User> {
-    return this.dataSource.getRepository(User).findOne({ where: { username } });
+    const user = await this.dataSource.getRepository(User).findOne({
+      where: { username },
+      select: ['username', 'roles'], // Exclure le mot de passe
+    });
+
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé');
+    }
+
+    return user;
   }
 
   public async forgotPassword(
