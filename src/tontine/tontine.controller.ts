@@ -31,6 +31,7 @@ import {
   PartOrderDto,
 } from './dto/create-tontine.dto';
 import { UpdateTontineDto } from './dto/update-tontine.dto';
+import { UpdateDepositStatusDto } from './dto/update-deposit-status.dto';
 import { Tontine } from './entities/tontine.entity';
 import { StatusDeposit } from './enum/status-deposit';
 import { TontineService } from './tontine.service';
@@ -54,7 +55,8 @@ export class TontineController {
   @Post()
   @ApiOperation({
     summary: 'Créer une nouvelle tontine',
-    description: 'Crée une nouvelle tontine avec ses membres et sa configuration',
+    description:
+      'Crée une nouvelle tontine avec ses membres et sa configuration',
   })
   @ApiResponse({
     status: 201,
@@ -93,7 +95,8 @@ export class TontineController {
   @Roles(Role.TONTINARD)
   @ApiOperation({
     summary: 'Récupérer une tontine par ID',
-    description: "Récupère les détails d'une tontine spécifique. L'utilisateur doit être membre de la tontine.",
+    description:
+      "Récupère les détails d'une tontine spécifique. L'utilisateur doit être membre de la tontine.",
   })
   @ApiParam({
     name: 'id',
@@ -343,6 +346,24 @@ export class TontineController {
   // Deposist part
   @Get(':id/deposit')
   @Roles(Role.TONTINARD)
+  @ApiOperation({
+    summary: "Récupérer tous les dépôts d'une tontine",
+    description:
+      "Récupère la liste de tous les dépôts d'une tontine avec leurs statuts",
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID de la tontine',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des dépôts récupérée avec succès',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Tontine non trouvée',
+  })
   getDeposit(@Param('id') id: string) {
     return this.tontineService.getDeposits(+id);
   }
@@ -412,5 +433,63 @@ export class TontineController {
     @Req() req: any,
   ) {
     return this.tontineService.removeDeposit(+id, +depositId, req.user);
+  }
+
+  @Patch(':id/deposit/:depositId/status')
+  @Roles(Role.PRESIDENT, Role.ACCOUNT_MANAGER)
+  @ApiOperation({
+    summary: "Mettre à jour le statut d'un dépôt",
+    description:
+      "Change le statut d'un dépôt (PENDING, APPROVED, REJECTED). Réservé aux présidents et gestionnaires de compte.",
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID de la tontine',
+    example: 1,
+  })
+  @ApiParam({
+    name: 'depositId',
+    description: 'ID du dépôt',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Statut du dépôt mis à jour avec succès',
+    schema: {
+      type: 'object',
+      properties: {
+        deposit: { type: 'object' },
+        message: {
+          type: 'string',
+          example: 'Statut du dépôt mis à jour de PENDING à APPROVED',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Accès refusé - Seuls les présidents et gestionnaires de compte peuvent modifier le statut',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Tontine ou dépôt non trouvé',
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Données invalides ou dépôt n'appartient pas à cette tontine",
+  })
+  updateDepositStatus(
+    @Param('id') id: string,
+    @Param('depositId') depositId: string,
+    @Body() updateStatusDto: UpdateDepositStatusDto,
+    @Req() req: any,
+  ) {
+    return this.tontineService.updateDepositStatus(
+      +id,
+      +depositId,
+      updateStatusDto,
+      req.user,
+    );
   }
 }

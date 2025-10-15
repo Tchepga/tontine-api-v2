@@ -15,6 +15,7 @@ import {
   PartOrderDto,
 } from './dto/create-tontine.dto';
 import { UpdateTontineDto } from './dto/update-tontine.dto';
+import { UpdateDepositStatusDto } from './dto/update-deposit-status.dto';
 import { CashFlow } from './entities/cashflow.entity';
 import { ConfigTontine } from './entities/config-tontine.entity';
 import { Deposit } from './entities/deposit.entity';
@@ -486,6 +487,77 @@ export class TontineService {
     );
 
     return depositRemoved;
+  }
+
+  async updateDepositStatus(
+    tontineId: number,
+    depositId: number,
+    updateStatusDto: UpdateDepositStatusDto,
+    user: User,
+  ) {
+    // Vérifier que l'utilisateur a les droits (PRESIDENT ou ACCOUNT_MANAGER)
+    const hasPermission = user.roles.some(
+      (role) => role === Role.PRESIDENT || role === Role.ACCOUNT_MANAGER,
+    );
+    if (!hasPermission) {
+      throw new HttpException(
+        'Seuls les présidents et gestionnaires de compte peuvent modifier le statut des dépôts',
+        403,
+      );
+    }
+
+    // Vérifier que la tontine existe
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+
+    // Vérifier que le dépôt existe
+    const deposit = await this.dataSource.getRepository(Deposit).findOne({
+      where: { id: depositId },
+      relations: ['author', 'cashFlow'],
+    });
+    if (!deposit) {
+      throw new NotFoundException('Deposit not found');
+    }
+
+    // Vérifier que le dépôt appartient à cette tontine
+    if (deposit.cashFlow.id !== tontine.cashFlow.id) {
+      throw new HttpException("Ce dépôt n'appartient pas à cette tontine", 400);
+    }
+
+    // Sauvegarder l'ancien statut pour les logs
+    const oldStatus = deposit.status;
+
+    // Mettre à jour le statut
+    deposit.status = updateStatusDto.status;
+
+    // Ajouter la raison si fournie
+    if (updateStatusDto.reason) {
+      deposit.reasons = updateStatusDto.reason;
+    }
+
+    // Sauvegarder les modifications
+    const updatedDeposit = await this.dataSource
+      .getRepository(Deposit)
+      .save(deposit);
+
+    // Créer une notification pour informer du changement de statut
+    this.notificationService.create(
+      {
+        action: Action.UPDATE,
+        depositId: updatedDeposit.id,
+        memberId: updatedDeposit.author.id,
+        tontineId: tontine.id,
+        type: TypeNotification.DEPOSIT,
+      },
+      user,
+    );
+
+    return {
+      deposit: updatedDeposit,
+      message: `Statut du dépôt mis à jour de ${oldStatus} à ${updateStatusDto.status}`,
+    };
   }
 
   async setSelectedTontine(id: number, username: string) {
