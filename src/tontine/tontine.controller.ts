@@ -486,13 +486,11 @@ export class TontineController {
     @Param('id') id: string,
     @Param('depositId') depositId: string,
     @Body() updateStatusDto: UpdateDepositStatusDto,
-    @Req() req: any,
   ) {
     return this.tontineService.updateDepositStatus(
       +id,
       +depositId,
       updateStatusDto,
-      req.user,
     );
   }
 

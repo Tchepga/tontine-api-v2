@@ -501,19 +501,7 @@ export class TontineService {
     tontineId: number,
     depositId: number,
     updateStatusDto: UpdateDepositStatusDto,
-    user: User,
   ) {
-    // Vérifier que l'utilisateur a les droits (PRESIDENT ou ACCOUNT_MANAGER)
-    const hasPermission = user.roles.some(
-      (role) => role === Role.PRESIDENT || role === Role.ACCOUNT_MANAGER,
-    );
-    if (!hasPermission) {
-      throw new HttpException(
-        'Seuls les présidents et gestionnaires de compte peuvent modifier le statut des dépôts',
-        403,
-      );
-    }
-
     // Vérifier que la tontine existe
     const tontine = await this.findOne(tontineId);
     if (!tontine) {
@@ -559,7 +547,7 @@ export class TontineService {
         tontineId: tontine.id,
         type: TypeNotification.DEPOSIT,
       },
-      user,
+      updatedDeposit.author.user,
     );
 
     return {
