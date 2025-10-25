@@ -401,6 +401,8 @@ export class TontineController {
       )
     ) {
       status = StatusDeposit.APPROVED;
+    } else {
+      status = StatusDeposit.PENDING;
     }
     return this.tontineService.createDeposit(
       +id,

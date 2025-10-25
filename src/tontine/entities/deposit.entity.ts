@@ -26,6 +26,9 @@ export class Deposit {
   @Column({ nullable: true })
   reasons: string;
 
+  @Column({ nullable: true })
+  comment: string;
+
   @ManyToOne(() => CashFlow, (cashFlow) => cashFlow.deposits)
   cashFlow: CashFlow;
 }

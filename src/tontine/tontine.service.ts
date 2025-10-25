@@ -1,12 +1,18 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
+import { DataSource } from 'typeorm';
 import { Role } from '../authentification/entities/roles/roles.enum';
 import { User } from '../authentification/entities/user.entity';
-import * as bcrypt from 'bcrypt';
+import { CreateMemberDto } from '../member/dto/create-member.dto';
 import { Member } from '../member/entities/member.entity';
 import { MemberService } from '../member/member.service';
+import { TypeNotification } from '../notification/enum/type-notification';
+import { NotificationService } from '../notification/notification.service';
+import { Action } from '../notification/utility/message-notification';
 import { ErrorCode } from '../shared/utilities/error-code';
-import { DataSource } from 'typeorm';
+import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { CreateDepositDto } from './dto/create-deposit.dto';
+import { CreateInvitationLinkDto } from './dto/create-invitation-link.dto';
 import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
 import { CreateSanctionDto } from './dto/create-sanction.dto';
 import {
@@ -15,28 +21,19 @@ import {
   CreateTontineDto,
   PartOrderDto,
 } from './dto/create-tontine.dto';
-import { UpdateTontineDto } from './dto/update-tontine.dto';
 import { UpdateDepositStatusDto } from './dto/update-deposit-status.dto';
-import { CreateInvitationLinkDto } from './dto/create-invitation-link.dto';
-import { AcceptInvitationDto } from './dto/accept-invitation.dto';
+import { UpdateTontineDto } from './dto/update-tontine.dto';
 import { CashFlow } from './entities/cashflow.entity';
 import { ConfigTontine } from './entities/config-tontine.entity';
 import { Deposit } from './entities/deposit.entity';
+import { InvitationLink, InvitationStatus } from './entities/invitation-link.entity';
 import { MemberRole } from './entities/member-role.entity';
+import { PartOrder } from './entities/part-order.entity';
 import { RapportMeeting } from './entities/rapport-meeting.entity';
 import { RateMap } from './entities/rate-map.entity';
 import { Sanction } from './entities/sanction.entity';
 import { Tontine } from './entities/tontine.entity';
 import { StatusDeposit } from './enum/status-deposit';
-import { PartOrder } from './entities/part-order.entity';
-import {
-  InvitationLink,
-  InvitationStatus,
-} from './entities/invitation-link.entity';
-import { Action } from '../notification/utility/message-notification';
-import { NotificationService } from '../notification/notification.service';
-import { TypeNotification } from '../notification/enum/type-notification';
-import { CreateMemberDto } from '../member/dto/create-member.dto';
 
 @Injectable()
 export class TontineService {
@@ -355,6 +352,7 @@ export class TontineService {
     deposit.author = author;
     deposit.creationDate = new Date();
     deposit.reasons = createDepositDto.reasons;
+    deposit.comment = createDepositDto.comment;
     deposit.status = status;
     deposit.cashFlow = tontine.cashFlow;
     deposit.currency = createDepositDto.currency;
@@ -664,7 +662,8 @@ export class TontineService {
   }
 
   async acceptInvitation(acceptInvitationDto: AcceptInvitationDto) {
-    const { token, username, firstName, lastName, phone } = acceptInvitationDto;
+    const { token, username, password, firstName, lastName, phone } =
+      acceptInvitationDto;
 
     // Trouver le lien d'invitation
     const invitationLink = await this.dataSource
@@ -803,6 +802,7 @@ export class TontineService {
       message: "Lien d'invitation révoqué avec succès",
     };
   }
+
 
   private generateInvitationToken(): string {
     const chars =

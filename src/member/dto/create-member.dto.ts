@@ -2,6 +2,7 @@ import { IsString, Length } from 'class-validator';
 import { Member } from '../entities/member.entity';
 import { User } from '../../authentification/entities/user.entity';
 import { Role } from '../../authentification/entities/roles/roles.enum';
+import { environment } from 'src/shared/config';
 
 export class CreateMemberDto {
   username: string;
@@ -36,7 +37,11 @@ export function createToMemberDtoToMember(
   const member = new Member();
   const user = new User();
   user.username = username;
-  user.password = password;
+  if (!password) {
+    user.password = environment.passwordConfig.defaultPassword;
+  } else {
+    user.password = password;
+  }
 
   member.user = user;
   member.firstname = firstname;

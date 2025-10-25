@@ -23,8 +23,12 @@ export class AcceptInvitationDto {
     description: 'Mot de passe pour le compte',
     example: 'motdepasse123',
   })
-  // eslint-disable-next-line prettier/prettier
-  
+  @IsString()
+  @MinLength(8, {
+    message: 'Le mot de passe doit contenir au moins 8 caractères',
+  })
+  password: string;
+
   @ApiProperty({
     description: 'Prénom (optionnel, peut être pré-rempli)',
     example: 'Jean',

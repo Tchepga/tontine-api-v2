@@ -1,4 +1,4 @@
-import { IsIn, IsPositive, IsString } from 'class-validator';
+import { IsIn, IsPositive, IsString, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Currency } from '../enum/shared';
 import { StatusDeposit } from '../enum/status-deposit';
@@ -54,4 +54,13 @@ export class CreateDepositDto {
   })
   @IsString()
   reasons: string | undefined;
+
+  @ApiProperty({
+    description: 'Commentaire sur le dépôt',
+    example: 'Dépôt effectué en retard avec pénalité',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  comment?: string;
 }
