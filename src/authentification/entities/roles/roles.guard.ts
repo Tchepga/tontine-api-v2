@@ -1,15 +1,15 @@
 import {
-  Injectable,
   CanActivate,
   ExecutionContext,
+  Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role } from './roles.enum';
-import { ROLES_KEY } from './roles.decorator';
 import { JwtService } from '@nestjs/jwt';
 import { environment } from '../../../shared/config';
 import { TontineService } from '../../../tontine/tontine.service';
+import { ROLES_KEY } from './roles.decorator';
+import { Role } from './roles.enum';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -50,7 +50,13 @@ export class RolesGuard implements CanActivate {
         +tontineId,
       );
 
-      if (!memberRole) {
+      if (
+        !memberRole &&
+        payload.role.length === 1 &&
+        payload.role[0] === Role.TONTINARD
+      ) {
+        return this.isRoleMatchOrHigher(requiredRoles, [Role.TONTINARD]);
+      } else if (!memberRole) {
         throw new UnauthorizedException('User is not a member of this tontine');
       }
 
