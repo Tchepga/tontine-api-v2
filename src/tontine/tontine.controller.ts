@@ -413,7 +413,7 @@ export class TontineController {
   }
 
   @Patch(':id/deposit/:depositId')
-  @Roles(Role.TONTINARD)
+  @Roles(Role.PRESIDENT, Role.ACCOUNT_MANAGER)
   updateDeposit(
     @Param('id') id: string,
     @Param('depositId') depositId: string,
@@ -485,13 +485,11 @@ export class TontineController {
   updateDepositStatus(
     @Param('id') id: string,
     @Param('depositId') depositId: string,
-    @Body() updateStatusDto: UpdateDepositStatusDto,
     @Req() req: any,
   ) {
     return this.tontineService.updateDepositStatus(
       +id,
       +depositId,
-      updateStatusDto,
       req.user,
     );
   }
