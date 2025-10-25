@@ -26,7 +26,10 @@ import { UpdateTontineDto } from './dto/update-tontine.dto';
 import { CashFlow } from './entities/cashflow.entity';
 import { ConfigTontine } from './entities/config-tontine.entity';
 import { Deposit } from './entities/deposit.entity';
-import { InvitationLink, InvitationStatus } from './entities/invitation-link.entity';
+import {
+  InvitationLink,
+  InvitationStatus,
+} from './entities/invitation-link.entity';
 import { MemberRole } from './entities/member-role.entity';
 import { PartOrder } from './entities/part-order.entity';
 import { RapportMeeting } from './entities/rapport-meeting.entity';
@@ -802,7 +805,6 @@ export class TontineService {
       message: "Lien d'invitation révoqué avec succès",
     };
   }
-
 
   private generateInvitationToken(): string {
     const chars =
