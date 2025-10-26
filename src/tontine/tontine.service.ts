@@ -316,6 +316,19 @@ export class TontineService {
     return this.dataSource.getRepository(Sanction).remove(sanction);
   }
 
+  async getSanctions(tontineId: number) {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+
+    return this.dataSource.getRepository(Sanction).find({
+      where: { tontine: { id: tontineId } },
+      relations: ['gulty', 'gulty.user'],
+      order: { id: 'DESC' },
+    });
+  }
+
   private getTontineQueryBuilder() {
     return this.dataSource
       .getRepository(Tontine)

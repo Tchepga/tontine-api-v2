@@ -344,6 +344,58 @@ export class TontineController {
     return this.tontineService.removeSanction(+id, +sanctionId);
   }
 
+  @Get(':id/sanction')
+  @Roles(Role.TONTINARD)
+  @ApiOperation({
+    summary: "Récupérer les sanctions d'une tontine",
+    description:
+      'Récupère toutes les sanctions associées à une tontine spécifique',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID de la tontine',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des sanctions récupérée avec succès',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'number', example: 1 },
+          type: { type: 'string', example: 'WARNING' },
+          description: { type: 'string', example: 'Retard de paiement' },
+          startDate: { type: 'string', format: 'date-time' },
+          endDate: { type: 'string', format: 'date-time', nullable: true },
+          gulty: {
+            type: 'object',
+            properties: {
+              id: { type: 'number' },
+              firstname: { type: 'string' },
+              lastname: { type: 'string' },
+              user: {
+                type: 'object',
+                properties: {
+                  username: { type: 'string' },
+                  roles: { type: 'array', items: { type: 'string' } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Tontine non trouvée',
+  })
+  getSanctions(@Param('id') id: string) {
+    return this.tontineService.getSanctions(+id);
+  }
+
   // Deposist part
   @Get(':id/deposit')
   @Roles(Role.TONTINARD)
