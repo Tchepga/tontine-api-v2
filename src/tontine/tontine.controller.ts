@@ -335,7 +335,7 @@ export class TontineController {
     return this.tontineService.updateSanction(+id, +sanctionId, sanction);
   }
 
-  @Delete(':id/sanction')
+  @Delete(':id/sanction/:sanctionId')
   @Roles(Role.OFFICE_MANAGER)
   deleteSanction(
     @Param('id') id: string,
