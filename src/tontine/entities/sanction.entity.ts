@@ -26,7 +26,7 @@ export class Sanction {
   @Column({ nullable: true })
   endDate: Date;
 
-  @ManyToMany(() => Member, (member) => member.sanctions)
+  @ManyToOne(() => Member, (member) => member.sanctions, { nullable: false })
   @JoinColumn()
   gulty: Member;
 

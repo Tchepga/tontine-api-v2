@@ -345,7 +345,7 @@ export class TontineController {
   }
 
   @Get(':id/sanction')
-  @Roles(Role.TONTINARD)
+  @Roles(Role.PRESIDENT, Role.OFFICE_MANAGER, Role.ACCOUNT_MANAGER)
   @ApiOperation({
     summary: "Récupérer les sanctions d'une tontine",
     description:
