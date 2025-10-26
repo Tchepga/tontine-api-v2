@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsDateString, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsDate, IsDateString, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateSanctionDto {
   @IsString()
@@ -13,11 +13,11 @@ export class CreateSanctionDto {
 
   @IsOptional()
   @Type(() => Date)
-  @IsDateString()
+  @IsDate()
   startDate?: Date;
 
   @IsOptional()
   @Type(() => Date)
-  @IsDateString()
+  @IsDate()
   endDate?: Date;
 }
