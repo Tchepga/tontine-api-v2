@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { AuthentificationService } from '../authentification/authentification.service';
 import { NotificationController } from './notification.controller';
 import { NotificationService } from './notification.service';
+import { NotificationGateway } from './notification.gateway';
+import { WsJwtGuard } from './guards/ws-jwt.guard';
 import { TontineService } from '../tontine/tontine.service';
 import { MemberService } from '../member/member.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -33,7 +35,9 @@ import { Event } from '../event/entities/event.entity';
     MemberService,
     AuthentificationService,
     NotificationService,
+    NotificationGateway,
+    WsJwtGuard,
   ],
-  exports: [NotificationService],
+  exports: [NotificationService, NotificationGateway],
 })
 export class NotificationModule {}
