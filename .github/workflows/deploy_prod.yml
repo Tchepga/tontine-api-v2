@@ -229,4 +229,68 @@ jobs:
             echo "   journalctl -u tontine-api.service -f"
             echo "   curl -v http://localhost:3000/api/health"
           fi
+
+      - name: Vérifier les connexions WebSocket
+        run: |
+          echo "🔌 Vérification des connexions WebSocket..."
+          
+          # Configuration SSH
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY_VPS_HOSTINGER }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
+          
+          # Test WebSocket depuis le serveur (localhost)
+          echo "📡 Test de connexion WebSocket depuis le serveur..."
+          WEBSOCKET_TEST=$(ssh -o ConnectTimeout=30 -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} '
+            # Vérifier que le serveur répond aux requêtes WebSocket upgrade
+            RESPONSE=$(curl -i -N -s --connect-timeout 10 \
+              -H "Connection: Upgrade" \
+              -H "Upgrade: websocket" \
+              -H "Sec-WebSocket-Version: 13" \
+              -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+              http://localhost:3000/socket.io/?EIO=4\&transport=websocket 2>&1 | head -n 5)
+            
+            if echo "$RESPONSE" | grep -qi "HTTP/1.1 101\|HTTP/1.1 200\|Upgrade: websocket"; then
+              echo "SUCCESS"
+            else
+              echo "FAILED"
+              echo "Réponse reçue:"
+              echo "$RESPONSE"
+            fi
+          ')
+          
+          if echo "$WEBSOCKET_TEST" | grep -q "SUCCESS"; then
+            echo "✅ Les connexions WebSocket sont acceptées par le serveur"
+            echo "🔌 Le serveur Socket.IO répond correctement aux requêtes WebSocket"
+          else
+            echo "❌ Erreur: Le serveur ne répond pas correctement aux connexions WebSocket"
+            echo "📋 Détails de la réponse:"
+            echo "$WEBSOCKET_TEST"
+            echo ""
+            echo "🔧 Vérifiez manuellement:"
+            echo "   ssh ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}"
+            echo "   curl -i -N -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' http://localhost:3000/socket.io/?EIO=4&transport=websocket"
+            echo "   systemctl status tontine-api.service"
+            echo "   journalctl -u tontine-api.service -n 50"
+            exit 1
+          fi
+          
+          # Test WebSocket depuis l'extérieur (si accessible)
+          echo "📡 Test de connexion WebSocket depuis l'extérieur..."
+          EXTERNAL_WEBSOCKET_TEST=$(curl -i -N -s --connect-timeout 10 \
+            -H "Connection: Upgrade" \
+            -H "Upgrade: websocket" \
+            -H "Sec-WebSocket-Version: 13" \
+            -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+            "http://${{ secrets.HOST_VPS_HOSTINGER }}:3000/socket.io/?EIO=4&transport=websocket" 2>&1 | head -n 5 || echo "FAILED")
+          
+          if echo "$EXTERNAL_WEBSOCKET_TEST" | grep -qi "HTTP/1.1 101\|HTTP/1.1 200\|Upgrade: websocket"; then
+            echo "✅ Les connexions WebSocket sont accessibles depuis l'extérieur"
+          else
+            echo "⚠️  Les connexions WebSocket ne sont pas accessibles depuis l'extérieur (peut être normal si le port 3000 n'est pas exposé)"
+            echo "ℹ️  Vérifiez la configuration Caddy pour le proxy WebSocket si nécessaire"
+          fi
+          
+          echo "✅ Vérification WebSocket terminée"
           

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationService } from './notification.service';
+import { NotificationGateway } from './notification.gateway';
 import { DataSource } from 'typeorm';
 
 describe('NotificationService', () => {
@@ -9,6 +10,13 @@ describe('NotificationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationService,
+        {
+          provide: NotificationGateway,
+          useValue: {
+            emitToMember: jest.fn(),
+            emitToTontine: jest.fn(),
+          },
+        },
         {
           provide: DataSource,
           useValue: {

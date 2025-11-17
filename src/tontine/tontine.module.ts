@@ -15,7 +15,7 @@ import { Sanction } from './entities/sanction.entity';
 import { RateMap } from './entities/rate-map.entity';
 import { MemberRole } from './entities/member-role.entity';
 import { Notification } from '../notification/entities/notification.entity';
-import { NotificationService } from '../notification/notification.service';
+import { NotificationModule } from '../notification/notification.module';
 import { PartOrder } from './entities/part-order.entity';
 import { InvitationLink } from './entities/invitation-link.entity';
 
@@ -36,9 +36,10 @@ import { InvitationLink } from './entities/invitation-link.entity';
       InvitationLink,
     ]),
     MemberModule,
+    NotificationModule,
   ],
   controllers: [TontineController, InvitationController],
-  providers: [TontineService, AuthentificationService, NotificationService],
+  providers: [TontineService, AuthentificationService],
   exports: [TontineService],
 })
 export class TontineModule {}

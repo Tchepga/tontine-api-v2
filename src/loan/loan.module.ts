@@ -10,12 +10,13 @@ import { Tontine } from '../tontine/entities/tontine.entity';
 import { TontineService } from '../tontine/tontine.service';
 import { MemberService } from '../member/member.service';
 import { AuthentificationService } from '../authentification/authentification.service';
-import { NotificationService } from '../notification/notification.service';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Member, User, Loan, Tontine]),
     MemberModule,
+    NotificationModule,
   ],
   controllers: [LoanController],
   providers: [
@@ -23,7 +24,6 @@ import { NotificationService } from '../notification/notification.service';
     TontineService,
     MemberService,
     AuthentificationService,
-    NotificationService,
   ],
 })
 export class LoanModule {}
