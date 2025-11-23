@@ -76,7 +76,7 @@ export class LoanService {
     ) {
       return this.dataSource.getRepository(Loan).find({
         where: { tontine: { id: tontineId } },
-        relations: ['members'],
+        relations: ['author', 'author.user'],
         order: { createdAt: 'DESC' },
       });
     } else {
