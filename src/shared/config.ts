@@ -2,7 +2,7 @@ export const environment = {
   production: process.env.NODE_ENV === 'production',
   jwtConfig: {
     secret: process.env.JWT_SECRET || 'default-secret-change-in-production',
-    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+    expiresIn: process.env.JWT_EXPIRES_IN || '365d',
     global: true,
   },
   databaseConfig: {
