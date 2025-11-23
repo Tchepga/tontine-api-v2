@@ -37,6 +37,8 @@ export class LoanService {
 
     const config = tontine.config;
 
+    this.validateLoan(createLoanDto, config);
+
     const loan = new Loan();
     loan.amount = amount;
     loan.currency = currency;
@@ -62,9 +64,10 @@ export class LoanService {
   }
 
   async findAll(tontineId: number, user: User): Promise<Loan[]> {
-    const tontine = await this.dataSource
-      .getRepository(Tontine)
-      .findOne({ where: { id: tontineId } });
+    const tontine = await this.dataSource.getRepository(Tontine).findOne({
+      where: { id: tontineId },
+      relations: ['members', 'members.user'],
+    });
     if (!tontine) {
       throw new BadRequestException('Tontine not found');
     }
@@ -161,5 +164,17 @@ export class LoanService {
     }
     loan.voters.push(member.id);
     this.dataSource.getRepository(Loan).save(loan);
+  }
+
+  private validateLoan(createLoanDto: CreateLoanDto, config: TontineConfig) {
+    if (createLoanDto.amount > config.maxLoanAmount) {
+      throw new BadRequestException('Amount is too high');
+    }
+    if (createLoanDto.amount < config.minLoanAmount) {
+      throw new BadRequestException('Amount is too low');
+    }
+    if (createLoanDto.redemptionDate < new Date()) {
+      throw new BadRequestException('Redemption date is in the past');
+    }
   }
 }
