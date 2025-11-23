@@ -150,7 +150,7 @@ export class NotificationGateway
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('updateNotification')
   update(@MessageBody() updateNotificationDto: UpdateNotificationDto) {
-    return this.notificationService.update(updateNotificationDto.id);
+    return this.notificationService.updateStatusRead(updateNotificationDto.id);
   }
 
   @UseGuards(WsJwtGuard)
