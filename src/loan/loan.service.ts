@@ -61,17 +61,22 @@ export class LoanService {
     return loanSaved;
   }
 
-  async findAll(tontineId: number): Promise<Loan[]> {
+  async findAll(tontineId: number, user: User): Promise<Loan[]> {
     const tontine = await this.dataSource
       .getRepository(Tontine)
       .findOne({ where: { id: tontineId } });
     if (!tontine) {
       throw new BadRequestException('Tontine not found');
     }
-    return this.dataSource.getRepository(Loan).find({
-      where: { tontine: { id: tontineId } },
-      relations: ['author', 'author.user'],
-    });
+    if (
+      tontine.members.some((member) => member.user.username === user.username)
+    ) {
+      return this.dataSource.getRepository(Loan).find({
+        where: { tontine: { id: tontineId } },
+      });
+    } else {
+      throw new BadRequestException('You are not a member of this tontine');
+    }
   }
 
   async findOne(id: number): Promise<Loan> {

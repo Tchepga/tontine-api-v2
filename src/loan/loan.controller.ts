@@ -29,8 +29,9 @@ export class LoanController {
   }
 
   @Get()
-  findAll(@Param('tontineId') tontineId: number) {
-    return this.loanService.findAll(tontineId);
+  findAll(@Param('tontineId') tontineId: number, @Req() req: any) {
+    const user = req.user;
+    return this.loanService.findAll(tontineId, user);
   }
 
   @Get(':id')
