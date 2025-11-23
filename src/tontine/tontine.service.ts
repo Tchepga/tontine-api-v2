@@ -151,6 +151,12 @@ export class TontineService {
     if (!tontine) {
       throw new HttpException('Tontine not found', 404);
     }
+    if (tontine.config.countMaxMember <= tontine.members.length) {
+      throw new HttpException(
+        'Tontine is full, you cannot add more members',
+        400,
+      );
+    }
 
     const member = await this.memberService.findOne(memberId);
     if (!member) {
