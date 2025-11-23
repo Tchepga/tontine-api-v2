@@ -166,8 +166,8 @@ export class LoanService {
     this.dataSource.getRepository(Loan).save(loan);
   }
 
-  private validateLoan(createLoanDto: CreateLoanDto, config: TontineConfig) {
-    if (createLoanDto.amount > config.maxLoanAmount) {
+  private validateLoan(createLoanDto: CreateLoanDto, config: any) {
+    if (createLoanDto.amount > config?.maxLoanAmount) {
       throw new BadRequestException('Amount is too high');
     }
     if (createLoanDto.amount < config.minLoanAmount) {
