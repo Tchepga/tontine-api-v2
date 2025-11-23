@@ -76,6 +76,8 @@ export class LoanService {
     ) {
       return this.dataSource.getRepository(Loan).find({
         where: { tontine: { id: tontineId } },
+        relations: ['members'],
+        order: { createdAt: 'DESC' },
       });
     } else {
       throw new BadRequestException('You are not a member of this tontine');
@@ -170,7 +172,7 @@ export class LoanService {
     if (createLoanDto.amount > config?.maxLoanAmount) {
       throw new BadRequestException('Amount is too high');
     }
-    if (createLoanDto.amount < config.minLoanAmount) {
+    if (createLoanDto.amount < config?.minLoanAmount) {
       throw new BadRequestException('Amount is too low');
     }
     if (createLoanDto.redemptionDate < new Date()) {

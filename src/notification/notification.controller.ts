@@ -4,6 +4,7 @@ import {
   Get,
   Logger,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -32,5 +33,10 @@ export class NotificationController {
     @Req() req: any,
   ) {
     return this.notificationService.create(createNotificationDto, req.user);
+  }
+
+  @Patch(':id/status/read')
+  updateStatus(@Param('id') id: string) {
+    return this.notificationService.updateStatusRead(+id);
   }
 }

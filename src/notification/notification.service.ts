@@ -153,8 +153,18 @@ export class NotificationService {
     return `This action returns a #${id} notification`;
   }
 
-  update(id: number) {
-    return `This action updates a #${id} notification`;
+  async updateStatusRead(id: number) {
+    const notification = await this.dataSource
+      .getRepository(Notification)
+      .findOne({
+        where: { id },
+      });
+    if (!notification) {
+      throw new BadRequestException('Notification not found');
+    }
+    notification.isRead = true;
+    await this.dataSource.getRepository(Notification).save(notification);
+    return notification;
   }
 
   remove(id: number) {
