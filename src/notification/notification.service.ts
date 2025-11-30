@@ -4,7 +4,6 @@ import {
   Inject,
   forwardRef,
   Logger,
-  InternalServerErrorException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -151,33 +150,21 @@ export class NotificationService {
   }
 
   findOne(id: number) {
-    return this.dataSource.getRepository(Notification).findOne({
-      where: { id },
-    });
+    return `This action returns a #${id} notification`;
   }
 
   async updateStatusRead(id: number) {
-    try {
-      const notification = await this.dataSource
-        .getRepository(Notification)
-        .findOne({
-          where: { id },
-        });
-      if (!notification) {
-        throw new BadRequestException('Notification not found');
-      }
-      notification.isRead = true;
-      await this.dataSource.getRepository(Notification).save(notification);
-      return notification;
-    } catch (error) {
-      this.logger.warn(
-        `Erreur lors de la mise à jour du statut de lecture de la notification: ${error.message}`,
-      );
-      throw new InternalServerErrorException(
-        'Erreur lors de la mise à jour du statut de lecture de la notification' +
-          error.message,
-      );
+    const notification = await this.dataSource
+      .getRepository(Notification)
+      .findOne({
+        where: { id },
+      });
+    if (!notification) {
+      throw new BadRequestException('Notification not found');
     }
+    notification.isRead = true;
+    await this.dataSource.getRepository(Notification).save(notification);
+    return notification;
   }
 
   remove(id: number) {
