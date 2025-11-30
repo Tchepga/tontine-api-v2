@@ -150,6 +150,12 @@ export class NotificationService {
     }));
   }
 
+  findOne(id: number) {
+    return this.dataSource.getRepository(Notification).findOne({
+      where: { id },
+    });
+  }
+
   async updateStatusRead(id: number) {
     try {
       const notification = await this.dataSource
