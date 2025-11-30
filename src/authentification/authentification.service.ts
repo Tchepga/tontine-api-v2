@@ -8,11 +8,13 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { DataSource, EntityManager } from 'typeorm';
 import { ErrorCode } from '../shared/utilities/error-code';
+import { EmailService } from '../shared/services/email.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login-dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Role } from './entities/roles/roles.enum';
 import { User } from './entities/user.entity';
+import { Member } from 'src/member/entities/member.entity';
 
 @Injectable()
 export class AuthentificationService {
@@ -21,6 +23,7 @@ export class AuthentificationService {
     private readonly dataSource: DataSource,
     private readonly jwtService: JwtService,
     private readonly entityManager: EntityManager,
+    private readonly emailService: EmailService,
   ) {}
 
   public async verify(token: string): Promise<boolean> {
@@ -116,22 +119,33 @@ export class AuthentificationService {
 
   public async forgotPassword(
     forgotPasswordDto: ForgotPasswordDto,
-  ): Promise<{ message: string; resetToken: string }> {
+  ): Promise<{ message: string }> {
     const { usernameOrEmail } = forgotPasswordDto;
 
     // Rechercher l'utilisateur par nom d'utilisateur ou email
-    const user = await this.dataSource.getRepository(User).findOne({
-      where: { username: usernameOrEmail },
+    const member = await this.dataSource.getRepository(Member).findOne({
+      where: [
+        { user: { username: usernameOrEmail } },
+        { email: usernameOrEmail },
+      ],
+      relations: ['user'],
     });
 
-    if (!user) {
+    if (!member) {
       throw new NotFoundException('Utilisateur non trouvé');
+    }
+
+    // Vérifier que le membre a un email
+    if (!member.email) {
+      throw new BadRequestException(
+        'Aucun email associé à ce compte. Veuillez contacter un administrateur.',
+      );
     }
 
     // Générer un token de réinitialisation (valide 1 heure)
     const resetToken = this.jwtService.sign(
       {
-        username: user.username,
+        username: member.user.username,
         type: 'password_reset',
       },
       {
@@ -139,12 +153,22 @@ export class AuthentificationService {
       },
     );
 
-    // En production, vous devriez envoyer un email avec le token
-    // Pour l'instant, on retourne le token directement
+    // Envoyer l'email de réinitialisation
+    try {
+      await this.emailService.sendPasswordResetEmail(
+        member.email,
+        resetToken,
+        member.user.username,
+      );
+    } catch (error) {
+      throw new BadRequestException(
+        "Erreur lors de l'envoi de l'email. Veuillez réessayer plus tard.",
+      );
+    }
+
     return {
       message:
-        'Token de réinitialisation généré. En production, un email serait envoyé.',
-      resetToken,
+        'Un email de réinitialisation a été envoyé à votre adresse email.',
     };
   }
 

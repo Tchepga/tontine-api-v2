@@ -5,7 +5,7 @@ import {
   forwardRef,
   Logger,
 } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, LessThan } from 'typeorm';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { Notification } from './entities/notification.entity';
 import { messageNotification } from './utility/message-notification';
@@ -111,7 +111,54 @@ export class NotificationService {
     return savedNotification;
   }
 
-  findAll(tontineId: number, memberId?: number) {
+  /**
+   * Supprime les notifications de plus d'un mois pour une tontine
+   * @param tontineId ID de la tontine
+   * @param memberId ID du membre (optionnel, pour filtrer par membre)
+   */
+  private async deleteOldNotifications(
+    tontineId: number,
+    memberId?: number,
+  ): Promise<void> {
+    // Calculer la date d'il y a un mois
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    // Construire la condition de suppression
+    const deleteCondition: any = {
+      tontine: { id: tontineId },
+      createdAt: LessThan(oneMonthAgo),
+    };
+
+    // Si un memberId est spécifié, supprimer uniquement ses notifications
+    if (memberId) {
+      deleteCondition.target = { id: memberId };
+    }
+
+    try {
+      const deleteResult = await this.dataSource
+        .getRepository(Notification)
+        .delete(deleteCondition);
+
+      if (deleteResult.affected && deleteResult.affected > 0) {
+        const memberInfo = memberId ? ` pour le membre ${memberId}` : '';
+        this.logger.log(
+          `Suppression de ${deleteResult.affected} notification(s) de plus d'un mois pour la tontine ${tontineId}${memberInfo}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Erreur lors de la suppression des anciennes notifications: ${error.message}`,
+        error.stack,
+      );
+      // Ne pas faire échouer la requête si la suppression échoue
+    }
+  }
+
+  async findAll(tontineId: number, memberId?: number) {
+    // Supprimer les notifications de plus d'un mois avant de récupérer
+    await this.deleteOldNotifications(tontineId, memberId);
+
     const where: any = {
       tontine: { id: tontineId },
     };
@@ -134,6 +181,9 @@ export class NotificationService {
     if (!tontine) {
       throw new BadRequestException('Tontine not found');
     }
+
+    // Supprimer les notifications de plus d'un mois pour cette tontine
+    await this.deleteOldNotifications(tontineId);
 
     const notifications = await this.dataSource
       .getRepository(Notification)

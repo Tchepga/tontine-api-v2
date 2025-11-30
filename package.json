@@ -61,6 +61,7 @@
     "mysql2": "^3.11.3",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.0",
+    "resend": "^6.5.2",
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1",
     "tontine-api-v2": "file:",

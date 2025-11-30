@@ -1,6 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { LoggerService } from './services/logger.service';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
+import { EmailService } from './services/email.service';
 
 @Global()
 @Module({
@@ -10,7 +11,8 @@ import { LoggingInterceptor } from './interceptors/logging.interceptor';
       useFactory: () => new LoggerService(),
     },
     LoggingInterceptor,
+    EmailService,
   ],
-  exports: [LoggerService, LoggingInterceptor],
+  exports: [LoggerService, LoggingInterceptor, EmailService],
 })
 export class SharedModule {}

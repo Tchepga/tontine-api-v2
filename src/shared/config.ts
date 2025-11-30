@@ -21,4 +21,10 @@ export const environment = {
     maxLength: parseInt(process.env.PASSWORD_MAX_LENGTH || '100', 10),
     defaultPassword: process.env.DEFAULT_PASSWORD || 'changeme1@',
   },
+  emailConfig: {
+    resendApiKey: process.env.RESEND_API_KEY,
+    fromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@devcoorp.net',
+    mobileDeepLink: process.env.MOBILE_DEEP_LINK_SCHEME,
+    webResetUrl: process.env.WEB_RESET_URL,
+  },
 };

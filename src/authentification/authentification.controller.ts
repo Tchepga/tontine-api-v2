@@ -143,22 +143,18 @@ export class AuthentificationController {
   @ApiOperation({
     summary: 'Demander une réinitialisation de mot de passe',
     description:
-      'Génère un token de réinitialisation pour un utilisateur. En production, un email serait envoyé.',
+      'Envoie un email avec un lien de réinitialisation de mot de passe à l\'utilisateur.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Token de réinitialisation généré',
+    description: 'Email de réinitialisation envoyé',
     schema: {
       type: 'object',
       properties: {
         message: {
           type: 'string',
           example:
-            'Token de réinitialisation généré. En production, un email serait envoyé.',
-        },
-        resetToken: {
-          type: 'string',
-          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            'Un email de réinitialisation a été envoyé à votre adresse email.',
         },
       },
     },
