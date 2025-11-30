@@ -150,10 +150,6 @@ export class NotificationService {
     }));
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} notification`;
-  }
-
   async updateStatusRead(id: number) {
     try {
       const notification = await this.dataSource
