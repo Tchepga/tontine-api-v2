@@ -7,17 +7,11 @@ import {
   Patch,
   Post,
   Req,
-  UseGuards,
 } from '@nestjs/common';
-import { NotificationService } from './notification.service';
-import { Role } from '../authentification/entities/roles/roles.enum';
-import { Roles } from '../authentification/entities/roles/roles.decorator';
-import { RolesGuard } from '../authentification/entities/roles/roles.guard';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { NotificationService } from './notification.service';
 
 @Controller('notification')
-@UseGuards(RolesGuard)
-@Roles(Role.TONTINARD)
 export class NotificationController {
   private readonly logger = new Logger(NotificationController.name);
   constructor(private readonly notificationService: NotificationService) {}
