@@ -9,6 +9,7 @@ export const messageNotificationCreate = {
   sanction: 'Une sanction a été créée',
   deposit: 'Un dépôt a été créé',
   loan: 'Un prêt a été créé',
+  reminder: 'Rappel : versement manquant',
 };
 
 export const messageNotificationUpdate = {
@@ -18,6 +19,7 @@ export const messageNotificationUpdate = {
   sanction: 'Une sanction a été modifiée',
   deposit: 'Un dépôt a été modifié',
   loan: 'Un prêt a été modifié',
+  reminder: 'Rappel : versement manquant',
 };
 
 export const messageNotificationDelete = {
@@ -27,6 +29,7 @@ export const messageNotificationDelete = {
   sanction: 'Une sanction a été supprimée',
   deposit: 'Un dépôt a été supprimé',
   loan: 'Un prêt a été supprimé',
+  reminder: 'Rappel : versement manquant',
 };
 
 export enum Action {

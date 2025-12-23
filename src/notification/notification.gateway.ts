@@ -180,6 +180,25 @@ export class NotificationGateway
   }
 
   /**
+   * Émet un événement spécifique à un membre (utile pour des handlers dédiés côté app)
+   */
+  async emitEventToMember(memberId: number, eventName: string, payload: any) {
+    const clientsForMember = Array.from(this.connectedClients.entries())
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      .filter(([_, data]) => data.memberId === memberId)
+      .map(([clientId]) => this.server.sockets.sockets.get(clientId))
+      .filter((socket) => socket !== undefined);
+
+    clientsForMember.forEach((client) => {
+      client.emit(eventName, payload);
+    });
+
+    this.logger.log(
+      `Event ${eventName} envoyé au membre ${memberId} (${clientsForMember.length} client(s))`,
+    );
+  }
+
+  /**
    * Émet une notification à tous les membres d'une tontine
    */
   async emitToTontine(tontineId: number, notification: any) {

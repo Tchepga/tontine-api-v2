@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -13,10 +14,12 @@ import { NotificationModule } from './notification/notification.module';
 import { environment } from './shared/config';
 import { TontineModule } from './tontine/tontine.module';
 import { SharedModule } from './shared/shared.module';
+import { DeviceTokensModule } from './device-tokens/device-tokens.module';
 
 @Module({
   imports: [
     SharedModule,
+    ScheduleModule.forRoot(),
     JwtModule.register({
       global: environment.jwtConfig.global,
       secret: environment.jwtConfig.secret,
@@ -42,6 +45,7 @@ import { SharedModule } from './shared/shared.module';
     LoanModule,
     EventModule,
     NotificationModule,
+    DeviceTokensModule,
   ],
   controllers: [AppController],
   providers: [

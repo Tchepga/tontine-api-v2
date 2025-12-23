@@ -20,6 +20,11 @@ export class Notification {
   @Column()
   isRead: boolean;
 
+  // Clé de déduplication (ex: missing-deposit:12:2025-12:45)
+  // Permet d'éviter d'envoyer plusieurs fois le même rappel.
+  @Column({ nullable: true, unique: true })
+  dedupKey?: string;
+
   @ManyToOne(() => Member, (member) => member.notifications)
   target: Member;
 

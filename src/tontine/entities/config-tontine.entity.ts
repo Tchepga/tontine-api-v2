@@ -32,6 +32,9 @@ export class ConfigTontine {
   @Column({ type: 'enum', enum: SystemType, default: SystemType.AUCTION })
   systemType: SystemType;
 
+  @Column({ type: 'boolean', default: false })
+  reminderMissingDepositsEnabled: boolean;
+
   @OneToMany(() => RateMap, (rateMap) => rateMap.configTontine, {
     cascade: true,
   })

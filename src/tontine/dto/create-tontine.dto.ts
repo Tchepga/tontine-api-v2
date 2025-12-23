@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsIn,
@@ -110,6 +111,15 @@ export class CreateConfigTontineDto {
   })
   @IsEnum(SystemType)
   systemType: SystemType;
+
+  @ApiProperty({
+    description:
+      'Active le rappel fin de mois des versements manquants (notification aux membres en retard)',
+    example: true,
+    required: false,
+  })
+  @IsBoolean()
+  reminderMissingDepositsEnabled: boolean | undefined;
 }
 
 export class CreateTontineDto {
@@ -166,6 +176,7 @@ export function createToConfigTontineDtoToConfigTontine(
     minLoanAmount,
     countPersonPerMovement,
     movementType,
+    reminderMissingDepositsEnabled,
   } = createConfigTontineDto;
   const configTontine = new ConfigTontine();
   configTontine.defaultLoanRate = defaultLoanRate;
@@ -174,6 +185,8 @@ export function createToConfigTontineDtoToConfigTontine(
   configTontine.minLoanAmount = minLoanAmount;
   configTontine.countPersonPerMovement = countPersonPerMovement;
   configTontine.movementType = movementType;
+  configTontine.reminderMissingDepositsEnabled =
+    reminderMissingDepositsEnabled ?? false;
   return configTontine;
 }
 

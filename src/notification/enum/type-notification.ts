@@ -6,4 +6,5 @@ export enum TypeNotification {
   SANCTION = 'sanction',
   DEPOSIT = 'deposit',
   LOAN = 'loan',
+  REMINDER = 'reminder',
 }

@@ -60,16 +60,18 @@ export class EmailService {
     resetToken: string,
     username: string,
   ): Promise<void> {
-    // Deep link pour application mobile (si configuré)
-    const mobileDeepLink = process.env.MOBILE_DEEP_LINK_SCHEME;
-    const deepLinkUrl = mobileDeepLink
-      ? `${mobileDeepLink}://reset-password?token=${resetToken}`
-      : null;
+    // URL de réinitialisation configurée dans les variables d'environnement
+    const resetBaseUrl = process.env.PASSWORD_RESET_URL;
 
-    // Lien universel/web (optionnel, pour fallback)
-    const webUrl = process.env.WEB_RESET_URL
-      ? `${process.env.WEB_RESET_URL}?token=${resetToken}`
-      : null;
+    if (!resetBaseUrl) {
+      this.logger.error(
+        "PASSWORD_RESET_URL n'est pas configuré dans les variables d'environnement",
+      );
+      throw new Error("URL de réinitialisation non configurée");
+    }
+
+    // Construire le lien de réinitialisation avec le token
+    const resetUrl = `${resetBaseUrl}?token=${resetToken}`;
 
     const html = `
       <!DOCTYPE html>
@@ -84,42 +86,15 @@ export class EmailService {
             <h2 style="color: #2c3e50; margin-top: 0;">Réinitialisation de mot de passe</h2>
             <p>Bonjour ${username},</p>
             <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
+            <p>Cliquez sur le bouton ci-dessous pour réinitialiser votre mot de passe :</p>
             
-            ${
-              deepLinkUrl
-                ? `
             <p style="text-align: center; margin: 30px 0;">
-              <a href="${deepLinkUrl}" style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                Ouvrir dans l'application
+              <a href="${resetUrl}" style="background-color: #3498db; color: white; padding: 14px 28px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                Réinitialiser mon mot de passe
               </a>
             </p>
-            `
-                : ''
-            }
             
-            ${
-              webUrl
-                ? `
-            <p style="text-align: center; margin: 30px 0;">
-              <a href="${webUrl}" style="background-color: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                Réinitialiser via navigateur
-              </a>
-            </p>
-            `
-                : ''
-            }
-            
-            <div style="background-color: #fff; border: 2px dashed #3498db; padding: 20px; margin: 20px 0; border-radius: 5px;">
-              <p style="margin: 0 0 10px 0; font-weight: bold; color: #2c3e50;">Code de réinitialisation :</p>
-              <p style="margin: 0; font-family: 'Courier New', monospace; font-size: 18px; font-weight: bold; color: #e74c3c; word-break: break-all; text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 3px;">
-                ${resetToken}
-              </p>
-              <p style="margin: 10px 0 0 0; font-size: 12px; color: #7f8c8d; text-align: center;">
-                Copiez ce code et collez-le dans l'application mobile
-              </p>
-            </div>
-            
-            <p><strong>Ce code est valide pendant 1 heure.</strong></p>
+            <p><strong>Ce lien est valide pendant 1 heure.</strong></p>
             <p>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
             <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
             <p style="color: #7f8c8d; font-size: 12px; margin: 0;">

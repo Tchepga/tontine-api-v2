@@ -37,7 +37,11 @@
     "process:logs": "./scripts/deploy/manage-processes.sh logs",
     "process:pid": "./scripts/deploy/manage-processes.sh pid",
     "cleanup": "./scripts/deploy/cleanup.sh",
-    "check:database": "node --experimental-modules scripts/check-database.js"
+    "check:database": "node --experimental-modules scripts/check-database.js",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f mysql",
+    "docker:restart": "docker-compose restart mysql"
   },
   "dependencies": {
     "@fastify/static": "^7.0.4",
@@ -49,6 +53,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/platform-fastify": "^10.4.6",
     "@nestjs/platform-socket.io": "^10.4.15",
+    "@nestjs/schedule": "^3.0.0",
     "@nestjs/swagger": "^7.4.2",
     "@nestjs/typeorm": "^10.0.2",
     "@nestjs/websockets": "^10.4.15",
@@ -57,6 +62,7 @@
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "firebase-admin": "^13.0.0",
     "fastify-file-interceptor": "^1.0.9",
     "mysql2": "^3.11.3",
     "passport-jwt": "^4.0.1",

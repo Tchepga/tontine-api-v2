@@ -880,6 +880,10 @@ export class TontineService {
     if (updateConfigDto.systemType) {
       config.systemType = updateConfigDto.systemType;
     }
+    if (updateConfigDto.reminderMissingDepositsEnabled !== undefined) {
+      config.reminderMissingDepositsEnabled =
+        updateConfigDto.reminderMissingDepositsEnabled;
+    }
 
     const rateMaps = updateConfigDto.rateMaps?.map((rateMap) => {
       const rateMapEntity = new RateMap();

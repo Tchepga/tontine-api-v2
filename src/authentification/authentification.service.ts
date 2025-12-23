@@ -172,7 +172,7 @@ export class AuthentificationService {
     };
   }
 
-  public async resetPassword(
+  public async  resetPassword(
     resetPasswordDto: ResetPasswordDto,
   ): Promise<{ message: string }> {
     const { token, newPassword } = resetPasswordDto;
