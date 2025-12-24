@@ -7,7 +7,6 @@ import { StatusDeposit } from '../../tontine/enum/status-deposit';
 import { Notification } from '../entities/notification.entity';
 import { TypeNotification } from '../enum/type-notification';
 import { NotificationGateway } from '../notification.gateway';
-import { Member } from '../../member/entities/member.entity';
 
 @Injectable()
 export class MissingDepositsReminderCron {
