@@ -14,7 +14,6 @@ import { NotificationModule } from './notification/notification.module';
 import { environment } from './shared/config';
 import { TontineModule } from './tontine/tontine.module';
 import { SharedModule } from './shared/shared.module';
-import { DeviceTokensModule } from './device-tokens/device-tokens.module';
 
 @Module({
   imports: [
@@ -45,7 +44,6 @@ import { DeviceTokensModule } from './device-tokens/device-tokens.module';
     LoanModule,
     EventModule,
     NotificationModule,
-    DeviceTokensModule,
   ],
   controllers: [AppController],
   providers: [

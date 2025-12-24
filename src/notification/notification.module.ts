@@ -16,7 +16,6 @@ import { Loan } from '../loan/entities/loan.entity';
 import { Sanction } from '../tontine/entities/sanction.entity';
 import { Event } from '../event/entities/event.entity';
 import { MissingDepositsReminderCron } from './reminders/missing-deposits-reminder.cron';
-import { PushNotificationService } from './push-notification.service';
 
 @Module({
   imports: [
@@ -40,7 +39,6 @@ import { PushNotificationService } from './push-notification.service';
     NotificationGateway,
     WsJwtGuard,
     MissingDepositsReminderCron,
-    PushNotificationService,
   ],
   exports: [NotificationService, NotificationGateway],
 })

@@ -8,8 +8,6 @@ import { Notification } from '../entities/notification.entity';
 import { TypeNotification } from '../enum/type-notification';
 import { NotificationGateway } from '../notification.gateway';
 import { Member } from '../../member/entities/member.entity';
-import { DeviceToken } from '../../device-tokens/entities/device-token.entity';
-import { PushNotificationService } from '../push-notification.service';
 
 @Injectable()
 export class MissingDepositsReminderCron {
@@ -18,7 +16,6 @@ export class MissingDepositsReminderCron {
   constructor(
     private readonly dataSource: DataSource,
     private readonly notificationGateway: NotificationGateway,
-    private readonly pushNotificationService: PushNotificationService,
   ) {}
 
   @Cron('0 18 * * *')
@@ -111,35 +108,6 @@ export class MissingDepositsReminderCron {
           notification.dedupKey = dedupKey;
 
           const saved = await this.dataSource.getRepository(Notification).save(notification);
-
-          // Push notification (FCM/APNs via FCM) si des tokens sont enregistrés
-          try {
-            const memberWithUser = await this.dataSource
-              .getRepository(Member)
-              .findOne({ where: { id: missing.id }, relations: ['user'] });
-            const username = memberWithUser?.user?.username;
-            if (username) {
-              const tokenRows = await this.dataSource
-                .getRepository(DeviceToken)
-                .find({ where: { user: { username } as any } });
-              const tokens = tokenRows.map((t) => t.token).filter(Boolean);
-
-              await this.pushNotificationService.sendToTokens({
-                tokens,
-                title: 'Rappel de versement',
-                body: `Votre versement pour "${tontine.title}" est manquant.`,
-                data: {
-                  type: 'reminder',
-                  tontineId: String(tontine.id),
-                  notificationId: String(saved.id),
-                },
-              });
-            }
-          } catch (e: any) {
-            this.logger.warn(
-              `Push non envoyé (member ${missing.id}): ${e?.message ?? e}`,
-            );
-          }
 
           // 1) Event dédié (pour notification locale côté app)
           await this.notificationGateway.emitEventToMember(
