@@ -56,4 +56,36 @@ export class LoanController {
     const user = req.user;
     return this.loanService.vote(+id, user);
   }
+
+  @Patch(':id/approve')
+  @Roles(Role.PRESIDENT)
+  approve(@Param('id') id: string, @Req() req: any) {
+    return this.loanService.approveLoan(+id, req.user);
+  }
+
+  @Patch(':id/reject')
+  @Roles(Role.PRESIDENT)
+  reject(
+    @Param('id') id: string,
+    @Body() body: { reason: string },
+    @Req() req: any,
+  ) {
+    return this.loanService.rejectLoan(+id, body.reason, req.user);
+  }
+
+  @Get(':id/repayments')
+  @Roles(Role.TONTINARD)
+  getRepayments(@Param('id') id: string) {
+    return this.loanService.getRepayments(+id);
+  }
+
+  @Post(':id/repayments')
+  @Roles(Role.PRESIDENT, Role.ACCOUNT_MANAGER)
+  recordRepayment(
+    @Param('id') id: string,
+    @Body() dto: any,
+    @Req() req: any,
+  ) {
+    return this.loanService.recordRepayment(+id, dto, req.user);
+  }
 }
