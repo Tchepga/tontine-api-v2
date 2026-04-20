@@ -1,4 +1,5 @@
 import { Loan } from '../../loan/entities/loan.entity';
+import { PotDistribution } from './pot-distribution.entity';
 import { Member } from '../../member/entities/member.entity';
 import { BasicEntity } from '../../shared/utilities/basic.entity';
 import {
@@ -66,4 +67,7 @@ export class Tontine extends BasicEntity {
 
   @OneToMany(() => InvitationLink, (invitationLink) => invitationLink.tontine)
   invitationLinks: InvitationLink[];
+
+  @OneToMany(() => PotDistribution, (distribution) => distribution.tontine)
+  potDistributions: PotDistribution[];
 }
