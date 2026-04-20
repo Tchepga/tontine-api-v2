@@ -64,4 +64,11 @@ export class Member extends BasicEntity {
 
   @OneToMany(() => Notification, (notification) => notification.target)
   notifications: Notification[];
+
+  /**
+   * ID de la tontine actuellement sélectionnée par ce membre.
+   * Remplace l'ancien champ isSelected global sur l'entité Tontine.
+   */
+  @Column({ nullable: true, default: null })
+  selectedTontineId: number;
 }
