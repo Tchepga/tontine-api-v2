@@ -35,6 +35,17 @@ export class ConfigTontine {
   @Column({ type: 'boolean', default: false })
   reminderMissingDepositsEnabled: boolean;
 
+  /**
+   * Seuil (en %) de votes favorables requis pour approuver automatiquement
+   * un prêt. Ex : 51 = majorité simple. 0 = approbation directe par le président.
+   */
+  @Column({ default: 51 })
+  loanApprovalThreshold: number;
+
+  /** Montant maximum autorisé pour un prêt */
+  @Column({ nullable: true, default: null })
+  maxLoanAmount: number;
+
   @OneToMany(() => RateMap, (rateMap) => rateMap.configTontine, {
     cascade: true,
   })

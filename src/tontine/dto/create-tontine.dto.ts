@@ -120,6 +120,23 @@ export class CreateConfigTontineDto {
   })
   @IsBoolean()
   reminderMissingDepositsEnabled: boolean | undefined;
+
+  @ApiProperty({
+    description:
+      '% de votes requis pour approbation automatique d\'un prêt (0 = président seul, 51 = majorité)',
+    example: 51,
+    required: false,
+  })
+  @IsNumber()
+  loanApprovalThreshold?: number;
+
+  @ApiProperty({
+    description: 'Montant maximum autorisé pour un prêt',
+    example: 500000,
+    required: false,
+  })
+  @IsNumber()
+  maxLoanAmount?: number;
 }
 
 export class CreateTontineDto {
@@ -187,6 +204,12 @@ export function createToConfigTontineDtoToConfigTontine(
   configTontine.movementType = movementType;
   configTontine.reminderMissingDepositsEnabled =
     reminderMissingDepositsEnabled ?? false;
+  if (createConfigTontineDto.loanApprovalThreshold !== undefined) {
+    configTontine.loanApprovalThreshold = createConfigTontineDto.loanApprovalThreshold;
+  }
+  if (createConfigTontineDto.maxLoanAmount !== undefined) {
+    configTontine.maxLoanAmount = createConfigTontineDto.maxLoanAmount;
+  }
   return configTontine;
 }
 
