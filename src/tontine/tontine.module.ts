@@ -18,6 +18,8 @@ import { Notification } from '../notification/entities/notification.entity';
 import { NotificationModule } from '../notification/notification.module';
 import { PartOrder } from './entities/part-order.entity';
 import { InvitationLink } from './entities/invitation-link.entity';
+import { PotDistribution } from './entities/pot-distribution.entity';
+import { Deposit } from './entities/deposit.entity';
 
 @Module({
   imports: [
@@ -34,6 +36,8 @@ import { InvitationLink } from './entities/invitation-link.entity';
       Notification,
       PartOrder,
       InvitationLink,
+      PotDistribution,
+      Deposit,
     ]),
     MemberModule,
     NotificationModule,
