@@ -7,9 +7,12 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import { FastifyReply } from 'fastify';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -23,6 +26,7 @@ import { Roles } from '../authentification/entities/roles/roles.decorator';
 import { Role } from '../authentification/entities/roles/roles.enum';
 import { RolesGuard } from '../authentification/entities/roles/roles.guard';
 import { CreateMemberDto } from '../member/dto/create-member.dto';
+import { CreatePotDistributionDto } from './dto/create-pot-distribution.dto';
 import { LoggerService } from '../shared/services/logger.service';
 import { CreateDepositDto } from './dto/create-deposit.dto';
 import { CreateInvitationLinkDto } from './dto/create-invitation-link.dto';
@@ -440,22 +444,25 @@ export class TontineController {
     status: 400,
     description: 'Données invalides',
   })
-  createDeposit(
+  async createDeposit(
     @Param('id') id: string,
     @Body() createDepositDto: CreateDepositDto,
     @Req() req: any,
   ) {
     const user = req.user;
-    let status: StatusDeposit = StatusDeposit.PENDING;
-    if (
-      user.role.find(
-        (role) => role === Role.PRESIDENT || role === Role.ACCOUNT_MANAGER,
-      )
-    ) {
-      status = StatusDeposit.APPROVED;
-    } else {
-      status = StatusDeposit.PENDING;
-    }
+    // Utilise le rôle MemberRole per-tontine (déjà résolu dans le guard)
+    // pour décider si le dépôt est directement approuvé.
+    const memberRole = await this.tontineService.getMemberRole(
+      user.username,
+      +id,
+    );
+    const role = memberRole?.role;
+    const canAutoApprove =
+      role === Role.PRESIDENT || role === Role.ACCOUNT_MANAGER;
+    const status: StatusDeposit = canAutoApprove
+      ? StatusDeposit.APPROVED
+      : StatusDeposit.PENDING;
+
     return this.tontineService.createDeposit(
       +id,
       createDepositDto,
@@ -658,5 +665,75 @@ export class TontineController {
       +invitationId,
       req.user,
     );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Distribution du pot
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  @Post(':id/distribution')
+  @Roles(Role.PRESIDENT)
+  @ApiOperation({ summary: 'Enregistrer une distribution du pot' })
+  createDistribution(
+    @Param('id') id: string,
+    @Body() dto: CreatePotDistributionDto,
+    @Req() req: any,
+  ) {
+    return this.tontineService.createDistribution(+id, dto, req.user.username);
+  }
+
+  @Get(':id/distribution')
+  @Roles(Role.TONTINARD)
+  @ApiOperation({ summary: 'Historique des distributions du pot' })
+  getDistributions(@Param('id') id: string) {
+    return this.tontineService.getDistributions(+id);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Suivi des cotisations par membre
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  @Get(':id/members/contributions')
+  @Roles(Role.TONTINARD)
+  @ApiOperation({ summary: 'Résumé des cotisations par membre' })
+  getMembersContributions(@Param('id') id: string) {
+    return this.tontineService.getMembersContributions(+id);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Rôles par tontine
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  @Patch(':id/member/:memberId/roles')
+  @Roles(Role.PRESIDENT)
+  @ApiOperation({ summary: 'Mettre à jour les rôles d\'un membre dans cette tontine' })
+  updateMemberRoles(
+    @Param('id') id: string,
+    @Param('memberId') memberId: string,
+    @Body() body: { roles: Role[] },
+  ) {
+    return this.tontineService.updateMemberRolesForTontine(
+      +id,
+      +memberId,
+      body.roles,
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Export financier CSV
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  @Get(':id/export/financial')
+  @Roles(Role.PRESIDENT, Role.ACCOUNT_MANAGER)
+  @ApiOperation({ summary: 'Exporter le rapport financier en CSV' })
+  async exportFinancial(
+    @Param('id') id: string,
+    @Res() res: FastifyReply,
+  ) {
+    const csv = await this.tontineService.exportFinancialCsv(+id);
+    const filename = `tontine_${id}_rapport_${new Date().toISOString().slice(0, 10)}.csv`;
+    res.header('Content-Type', 'text/csv; charset=utf-8');
+    res.header('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send('\uFEFF' + csv); // BOM UTF-8 pour Excel
   }
 }
