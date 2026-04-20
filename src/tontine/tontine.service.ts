@@ -1,4 +1,6 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { DataSource } from 'typeorm';
 import { Role } from '../authentification/entities/roles/roles.enum';
@@ -31,6 +33,8 @@ import {
   InvitationStatus,
 } from './entities/invitation-link.entity';
 import { MemberRole } from './entities/member-role.entity';
+import { PotDistribution } from './entities/pot-distribution.entity';
+import { CreatePotDistributionDto } from './dto/create-pot-distribution.dto';
 import { PartOrder } from './entities/part-order.entity';
 import { RapportMeeting } from './entities/rapport-meeting.entity';
 import { RateMap } from './entities/rate-map.entity';
@@ -120,23 +124,28 @@ export class TontineService {
     }
   }
 
+  /**
+   * Requête optimisée : filtre directement par membre en SQL (évite
+   * de charger toutes les tontines en mémoire).
+   */
   findTontineByMember(member: Member): Promise<Tontine[]> {
-    const tontines = this.dataSource.getRepository(Tontine).find({
-      relations: [
-        'members',
-        'members.user',
-        'config',
-        'config.partOrders',
-        'config.rateMaps',
-        'config.partOrders.member',
-        'cashFlow',
-      ],
-    });
-    return tontines.then((tontines) =>
-      tontines.filter((tontine) =>
-        tontine.members.find((m) => m.id === member.id),
-      ),
-    );
+    return this.dataSource
+      .getRepository(Tontine)
+      .createQueryBuilder('tontine')
+      .innerJoin(
+        'tontine.members',
+        'filterMember',
+        'filterMember.id = :memberId',
+        { memberId: member.id },
+      )
+      .leftJoinAndSelect('tontine.members', 'members')
+      .leftJoinAndSelect('members.user', 'memberUser')
+      .leftJoinAndSelect('tontine.config', 'config')
+      .leftJoinAndSelect('config.partOrders', 'partOrders')
+      .leftJoinAndSelect('config.rateMaps', 'rateMaps')
+      .leftJoinAndSelect('partOrders.member', 'partOrderMember')
+      .leftJoinAndSelect('tontine.cashFlow', 'cashFlow')
+      .getMany();
   }
 
   findOne(id: number): Promise<Tontine> {
@@ -392,11 +401,14 @@ export class TontineService {
       cashflow.deposits = [];
     }
 
-    await this.updateCashflow(createDepositDto.cashFlowId, deposit.amount);
-
     const depositSaved = await this.dataSource
       .getRepository(Deposit)
       .save(deposit);
+
+    // Recalcul du cashflow uniquement si le dépôt est directement approuvé
+    if (status === StatusDeposit.APPROVED) {
+      await this.recalculateCashflowAmount(tontine.cashFlow.id);
+    }
 
     this.notificationService.create(
       {
@@ -412,30 +424,18 @@ export class TontineService {
     return depositSaved;
   }
 
-  private async updateCashflow(cashFlowId: number, amount: number) {
-    const cashflow = await this.dataSource.getRepository(CashFlow).findOne({
-      where: { id: cashFlowId },
-      relations: ['deposits'],
-    });
-    if (!cashflow) {
-      throw new NotFoundException('Cashflow not found');
-    }
-
-    // Initialize deposits array if it doesn't exist
-    if (!cashflow.deposits) {
-      cashflow.deposits = [];
-    }
-
-    // add all deposit attached to this tontine
+  /**
+   * Recalcule le solde du cashflow en sommant tous les dépôts APPROVED.
+   * Méthode unique de mise à jour — évite les incohérences.
+   */
+  async recalculateCashflowAmount(cashFlowId: number): Promise<void> {
     const deposits = await this.dataSource.getRepository(Deposit).find({
-      where: { cashFlow: { id: cashFlowId } },
-      relations: ['cashFlow'],
+      where: { cashFlow: { id: cashFlowId }, status: StatusDeposit.APPROVED },
     });
-    const totalDeposit = deposits
-      .filter((deposit) => deposit.status === StatusDeposit.APPROVED)
-      .reduce((acc, deposit) => acc + deposit.amount, 0);
-    cashflow.amount = totalDeposit + amount;
-    await this.dataSource.getRepository(CashFlow).save(cashflow);
+    const total = deposits.reduce((acc, d) => acc + Number(d.amount), 0);
+    await this.dataSource
+      .getRepository(CashFlow)
+      .update(cashFlowId, { amount: total });
   }
 
   async updateDeposit(
@@ -556,6 +556,9 @@ export class TontineService {
     const updatedDeposit = await this.dataSource
       .getRepository(Deposit)
       .save(deposit);
+
+    // Recalcul du cashflow après tout changement de statut (PENDING→APPROVED, APPROVED→REJECTED, etc.)
+    await this.recalculateCashflowAmount(tontine.cashFlow.id);
 
     // Créer une notification pour informer du changement de statut
     this.notificationService.create(
@@ -813,16 +816,15 @@ export class TontineService {
     };
   }
 
+  /** Génère un token cryptographiquement sûr (48 caractères hex). */
   private generateInvitationToken(): string {
-    const chars =
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < 32; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
+    return randomBytes(24).toString('hex');
   }
 
+  /**
+   * Sélectionne la tontine active pour un membre donné.
+   * Stocke l'ID côté Member (par utilisateur) plutôt que sur l'entité Tontine.
+   */
   async setSelectedTontine(id: number, username: string) {
     const member = await this.memberService.findByUsername(username);
     if (!member) {
@@ -834,8 +836,16 @@ export class TontineService {
       throw new NotFoundException('Tontine not found');
     }
 
-    tontine.isSelected = true;
-    return this.dataSource.getRepository(Tontine).save(tontine);
+    if (!tontine.members.find((m) => m.id === member.id)) {
+      throw new HttpException("Ce membre n'appartient pas à cette tontine", 403);
+    }
+
+    // Stocker la sélection côté member (spécifique à l'utilisateur)
+    await this.dataSource
+      .getRepository(Member)
+      .update(member.id, { selectedTontineId: id });
+
+    return { selectedTontineId: id, tontine };
   }
 
   async getDeposits(id: number) {
@@ -1034,5 +1044,277 @@ export class TontineService {
       (await this.memberService.create(data));
 
     return this.addMember(tontineId, member.id);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Pot distribution
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  async createDistribution(
+    tontineId: number,
+    dto: CreatePotDistributionDto,
+    username: string,
+  ): Promise<PotDistribution> {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) throw new NotFoundException('Tontine not found');
+
+    const recipient = await this.memberService.findOne(dto.recipientId);
+    if (!recipient) throw new NotFoundException('Bénéficiaire non trouvé');
+
+    if (!tontine.members.find((m) => m.id === recipient.id)) {
+      throw new HttpException(
+        "Le bénéficiaire n'est pas membre de cette tontine",
+        400,
+      );
+    }
+
+    const distributedBy =
+      await this.memberService.findByUsername(username);
+
+    const distribution = new PotDistribution();
+    distribution.tontine = tontine;
+    distribution.recipient = recipient;
+    distribution.distributedBy = distributedBy;
+    distribution.amount = dto.amount;
+    distribution.currency = dto.currency ?? tontine.cashFlow.currency;
+    distribution.period = new Date(dto.period);
+    distribution.notes = dto.notes;
+
+    return this.dataSource.getRepository(PotDistribution).save(distribution);
+  }
+
+  async getDistributions(tontineId: number): Promise<PotDistribution[]> {
+    return this.dataSource.getRepository(PotDistribution).find({
+      where: { tontine: { id: tontineId } },
+      relations: ['recipient', 'recipient.user', 'distributedBy'],
+      order: { distributedAt: 'DESC' },
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Suivi des cotisations par membre
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  async getMembersContributions(tontineId: number) {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) throw new NotFoundException('Tontine not found');
+
+    const deposits = await this.dataSource.getRepository(Deposit).find({
+      where: { cashFlow: { id: tontine.cashFlow.id } },
+      relations: ['author', 'author.user'],
+    });
+
+    const contributionMap = new Map<
+      number,
+      {
+        memberId: number;
+        firstname: string;
+        lastname: string;
+        username: string;
+        totalApproved: number;
+        totalPending: number;
+        totalRejected: number;
+        depositCount: number;
+        lastDeposit: Date | null;
+      }
+    >();
+
+    // Initialiser avec tous les membres de la tontine
+    for (const member of tontine.members) {
+      contributionMap.set(member.id, {
+        memberId: member.id,
+        firstname: member.firstname,
+        lastname: member.lastname,
+        username: member.user?.username ?? '',
+        totalApproved: 0,
+        totalPending: 0,
+        totalRejected: 0,
+        depositCount: 0,
+        lastDeposit: null,
+      });
+    }
+
+    for (const deposit of deposits) {
+      const entry = contributionMap.get(deposit.author.id);
+      if (!entry) continue;
+
+      entry.depositCount++;
+      const amount = Number(deposit.amount);
+
+      if (deposit.status === StatusDeposit.APPROVED) {
+        entry.totalApproved += amount;
+      } else if (deposit.status === StatusDeposit.PENDING) {
+        entry.totalPending += amount;
+      } else {
+        entry.totalRejected += amount;
+      }
+
+      if (!entry.lastDeposit || deposit.creationDate > entry.lastDeposit) {
+        entry.lastDeposit = deposit.creationDate;
+      }
+    }
+
+    return Array.from(contributionMap.values());
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Gestion des rôles par tontine
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  async updateMemberRolesForTontine(
+    tontineId: number,
+    memberId: number,
+    roles: Role[],
+  ): Promise<void> {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) throw new NotFoundException('Tontine not found');
+
+    const member = await this.dataSource.getRepository(Member).findOne({
+      where: { id: memberId },
+      relations: ['user'],
+    });
+    if (!member) throw new NotFoundException('Member not found');
+
+    if (!tontine.members.find((m) => m.id === member.id)) {
+      throw new HttpException(
+        "Ce membre n'appartient pas à cette tontine",
+        400,
+      );
+    }
+
+    // Supprimer les anciens rôles pour ce membre dans cette tontine
+    await this.dataSource.getRepository(MemberRole).delete({
+      user: { username: member.user.username },
+      tontine: { id: tontineId },
+    });
+
+    // Créer les nouveaux rôles
+    for (const role of roles) {
+      const memberRole = new MemberRole();
+      memberRole.user = member.user;
+      memberRole.tontine = tontine;
+      memberRole.role = role;
+      await this.dataSource.getRepository(MemberRole).save(memberRole);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Export financier (CSV)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  async exportFinancialCsv(tontineId: number): Promise<string> {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) throw new NotFoundException('Tontine not found');
+
+    const [deposits, distributions, contributions] = await Promise.all([
+      this.dataSource.getRepository(Deposit).find({
+        where: { cashFlow: { id: tontine.cashFlow.id } },
+        relations: ['author', 'author.user'],
+        order: { creationDate: 'ASC' },
+      }),
+      this.getDistributions(tontineId),
+      this.getMembersContributions(tontineId),
+    ]);
+
+    const lines: string[] = [];
+
+    // En-tête
+    lines.push(`RAPPORT FINANCIER — ${tontine.title}`);
+    lines.push(`Généré le,${new Date().toLocaleDateString('fr-FR')}`);
+    lines.push(`Solde actuel,${tontine.cashFlow.amount},${tontine.cashFlow.currency}`);
+    lines.push(`Dividendes,${tontine.cashFlow.dividendes},${tontine.cashFlow.currency}`);
+    lines.push('');
+
+    // Section cotisations résumé
+    lines.push('=== COTISATIONS PAR MEMBRE ===');
+    lines.push('Membre,Approuvé,En attente,Rejeté,Nb versements,Dernier versement');
+    for (const c of contributions) {
+      lines.push(
+        `${c.firstname} ${c.lastname},${c.totalApproved},${c.totalPending},${c.totalRejected},${c.depositCount},${c.lastDeposit ? new Date(c.lastDeposit).toLocaleDateString('fr-FR') : '—'}`,
+      );
+    }
+    lines.push('');
+
+    // Section distributions
+    lines.push('=== DISTRIBUTIONS DU POT ===');
+    lines.push('Date,Bénéficiaire,Montant,Devise,Période,Notes');
+    for (const d of distributions) {
+      lines.push(
+        `${new Date(d.distributedAt).toLocaleDateString('fr-FR')},${d.recipient.firstname} ${d.recipient.lastname},${d.amount},${d.currency},${new Date(d.period).toLocaleDateString('fr-FR')},${d.notes ?? ''}`,
+      );
+    }
+    lines.push('');
+
+    // Section dépôts détaillés
+    lines.push('=== DÉPÔTS DÉTAILLÉS ===');
+    lines.push('Date,Membre,Montant,Devise,Statut,Motif');
+    for (const dep of deposits) {
+      lines.push(
+        `${new Date(dep.creationDate).toLocaleDateString('fr-FR')},${dep.author.firstname} ${dep.author.lastname},${dep.amount},${dep.currency},${dep.status},${dep.reasons ?? ''}`,
+      );
+    }
+
+    return lines.join('\n');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Rappels automatiques (cron)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Vérifie en fin de mois quels membres n'ont pas encore cotisé ce mois-ci.
+   * Envoie une notification à chaque membre en retard si le rappel est activé.
+   */
+  @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_NOON)
+  async sendMissingDepositReminders(): Promise<void> {
+    const tontines = await this.dataSource.getRepository(Tontine).find({
+      relations: ['config', 'members', 'members.user', 'cashFlow'],
+    });
+
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    for (const tontine of tontines) {
+      if (!tontine.config?.reminderMissingDepositsEnabled) continue;
+
+      // Membres qui ont déjà cotisé ce mois-ci
+      const depositsThisMonth = await this.dataSource
+        .getRepository(Deposit)
+        .createQueryBuilder('deposit')
+        .innerJoin('deposit.cashFlow', 'cashFlow', 'cashFlow.id = :cfId', {
+          cfId: tontine.cashFlow.id,
+        })
+        .where('deposit.creationDate BETWEEN :start AND :end', {
+          start: firstDayOfMonth,
+          end: lastDayOfMonth,
+        })
+        .andWhere('deposit.status != :rejected', {
+          rejected: StatusDeposit.REJECTED,
+        })
+        .select('deposit.authorId')
+        .getMany();
+
+      const memberIdsWithDeposit = new Set(
+        depositsThisMonth.map((d: any) => d.authorId),
+      );
+
+      for (const member of tontine.members) {
+        if (!memberIdsWithDeposit.has(member.id)) {
+          // Envoi de la notification
+          if (member.user) {
+            this.notificationService.create(
+              {
+                action: 'REMINDER' as any,
+                tontineId: tontine.id,
+                memberId: member.id,
+                type: TypeNotification.DEPOSIT,
+              },
+              member.user,
+            );
+          }
+        }
+      }
+    }
   }
 }
