@@ -1,0 +1,171 @@
+name: Seed Production — Tontine de test
+
+# ─── Déclenchement UNIQUEMENT manuel depuis l'interface GitHub ─────────────────
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Taper SEED pour confirmer l'exécution en production"
+        required: true
+        default: ''
+      drop_existing:
+        description: "Supprimer la tontine de test existante avant de recréer ? (yes/no)"
+        required: true
+        default: 'no'
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+
+jobs:
+  seed:
+    name: Exécuter le seed en production
+    runs-on: ubuntu-latest
+
+    # Vérification de sécurité : l'utilisateur doit taper "SEED"
+    if: ${{ github.event.inputs.confirm == 'SEED' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # ─── Configuration SSH ────────────────────────────────────────────────────
+      - name: Configurer SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY_VPS_HOSTINGER }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
+          echo "✅ SSH configuré"
+
+      # ─── Transfert du fichier SQL ─────────────────────────────────────────────
+      - name: Transférer le fichier SQL vers le serveur
+        run: |
+          scp -i ~/.ssh/deploy_key \
+            seed-tontine-test.sql \
+            ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/tmp/seed-tontine-test.sql
+          echo "✅ Fichier SQL transféré"
+
+      # ─── Exécution du seed ────────────────────────────────────────────────────
+      - name: Exécuter le seed sur le serveur
+        run: |
+          ssh -o ConnectTimeout=60 -i ~/.ssh/deploy_key \
+            ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} << 'ENDSSH'
+
+          set -e
+          echo "═══════════════════════════════════════════════════"
+          echo "  🌱  SEED — Tontine des Amis 2025"
+          echo "═══════════════════════════════════════════════════"
+
+          # ── Lire les credentials depuis le fichier .env de production ────────
+          ENV_FILE="/root/config/.env-tontine-api"
+          if [ ! -f "$ENV_FILE" ]; then
+            echo "❌ Fichier .env introuvable : $ENV_FILE"
+            exit 1
+          fi
+
+          DB_HOST=$(grep '^DB_HOST' "$ENV_FILE" | cut -d= -f2 | tr -d ' \r')
+          DB_PORT=$(grep '^DB_PORT' "$ENV_FILE" | cut -d= -f2 | tr -d ' \r')
+          DB_USER=$(grep '^DB_USERNAME' "$ENV_FILE" | cut -d= -f2 | tr -d ' \r')
+          DB_PASS=$(grep '^DB_PASSWORD' "$ENV_FILE" | cut -d= -f2 | tr -d ' \r')
+          DB_NAME=$(grep '^DB_DATABASE' "$ENV_FILE" | cut -d= -f2 | tr -d ' \r')
+
+          DB_HOST="${DB_HOST:-127.0.0.1}"
+          DB_PORT="${DB_PORT:-3306}"
+          DB_USER="${DB_USER:-tontine}"
+          DB_NAME="${DB_NAME:-tontine}"
+
+          echo "📋 Base de données : $DB_USER@$DB_HOST:$DB_PORT/$DB_NAME"
+
+          # ── Vérifier si mysql est disponible (direct ou via Docker) ──────────
+          if command -v mysql &> /dev/null; then
+            MYSQL_CMD="mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASS $DB_NAME"
+            echo "✅ Client MySQL natif détecté"
+          elif docker ps --format '{{.Names}}' 2>/dev/null | grep -q 'tontine-mysql\|mysql'; then
+            CONTAINER=$(docker ps --format '{{.Names}}' | grep -E 'tontine-mysql|mysql' | head -1)
+            docker cp /tmp/seed-tontine-test.sql $CONTAINER:/tmp/seed-tontine-test.sql
+            MYSQL_CMD="docker exec -i $CONTAINER mysql -u $DB_USER -p$DB_PASS $DB_NAME"
+            echo "✅ Client MySQL via Docker ($CONTAINER)"
+          else
+            echo "❌ Aucun client MySQL trouvé (ni natif, ni Docker)"
+            exit 1
+          fi
+
+          # ── Option : supprimer l'ancienne tontine de test ────────────────────
+          DROP_EXISTING="${{ github.event.inputs.drop_existing }}"
+          if [ "$DROP_EXISTING" = "yes" ]; then
+            echo ""
+            echo "🗑️  Suppression de la tontine de test existante..."
+            $MYSQL_CMD <<'DROPSQL'
+          SET FOREIGN_KEY_CHECKS = 0;
+          -- Supprimer les entrées liées à la tontine "Tontine des Amis 2025"
+          DELETE po FROM part_order po
+            JOIN config_tontine ct ON ct.id = po.configId
+            JOIN tontine t ON t.configId = ct.id
+            WHERE t.title = 'Tontine des Amis 2025';
+
+          DELETE mr FROM member_role mr
+            JOIN tontine t ON t.id = mr.tontineId
+            WHERE t.title = 'Tontine des Amis 2025';
+
+          DELETE FROM tontine_members_member
+            WHERE tontineId IN (SELECT id FROM tontine WHERE title = 'Tontine des Amis 2025');
+
+          DELETE cf FROM cash_flow cf
+            JOIN tontine t ON t.cashFlowId = cf.id
+            WHERE t.title = 'Tontine des Amis 2025';
+
+          DELETE ct FROM config_tontine ct
+            JOIN tontine t ON t.configId = ct.id
+            WHERE t.title = 'Tontine des Amis 2025';
+
+          DELETE FROM tontine WHERE title = 'Tontine des Amis 2025';
+          SET FOREIGN_KEY_CHECKS = 1;
+          DROPSQL
+            echo "✅ Ancienne tontine supprimée"
+          fi
+
+          # ── Exécution du seed ─────────────────────────────────────────────────
+          echo ""
+          echo "🌱 Exécution du seed..."
+          $MYSQL_CMD < /tmp/seed-tontine-test.sql
+
+          echo ""
+          echo "═══════════════════════════════════════════════════"
+          echo "  ✅  SEED TERMINÉ AVEC SUCCÈS"
+          echo "═══════════════════════════════════════════════════"
+          echo ""
+          echo "  🔑  Connexion à l'application :"
+          echo "     ronaldo  / Tontine2025!  [PRÉSIDENT]"
+          echo "     patrick  / Tontine2025!  [TRÉSORIER]"
+          echo "     steve    / Tontine2025!"
+          echo "     romeo    / Tontine2025!"
+          echo "     paola    / Tontine2025!"
+          echo "     ryan     / Tontine2025!"
+          echo "     albert   / Tontine2025!"
+          echo ""
+          echo "  📅  Ordre de passage 2025 :"
+          echo "     Jan:Ronaldo  Fév:Patrick  Mar:Steve  Avr:Ronaldo"
+          echo "     Mai:Steve    Juin:Patrick Jul:Romeo  Aoû:Paola"
+          echo "     Sep:Ryan     Oct:Albert   Nov:Albert Déc:Ryan"
+
+          # Nettoyage
+          rm -f /tmp/seed-tontine-test.sql
+
+          ENDSSH
+
+      - name: Résumé
+        run: |
+          echo "## 🌱 Seed production exécuté avec succès" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Username | Mot de passe | Rôle |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| ronaldo  | Tontine2025! | Président |" >> $GITHUB_STEP_SUMMARY
+          echo "| patrick  | Tontine2025! | Trésorier |" >> $GITHUB_STEP_SUMMARY
+          echo "| steve    | Tontine2025! | Tontinard |" >> $GITHUB_STEP_SUMMARY
+          echo "| romeo    | Tontine2025! | Tontinard |" >> $GITHUB_STEP_SUMMARY
+          echo "| paola    | Tontine2025! | Tontinard |" >> $GITHUB_STEP_SUMMARY
+          echo "| ryan     | Tontine2025! | Tontinard |" >> $GITHUB_STEP_SUMMARY
+          echo "| albert   | Tontine2025! | Tontinard |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tontine :** Tontine des Amis 2025" >> $GITHUB_STEP_SUMMARY
