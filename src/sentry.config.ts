@@ -2,61 +2,32 @@ import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 export function initSentry() {
+  if (process.env.SENTRY_ENABLED === 'false' || process.env.NODE_ENV !== 'production') {
+    return;
+  }
+
   Sentry.init({
     dsn:
       process.env.SENTRY_DSN ||
       'https://84fe878816138fb844e0dbdee126c950@o4509946255572992.ingest.de.sentry.io/4510119565590608',
-    environment: process.env.NODE_ENV || 'development',
+    environment: process.env.NODE_ENV,
     release: process.env.SENTRY_RELEASE || 'development',
 
-    // Intégrations essentielles pour NestJS/Fastify
     integrations: [
       nodeProfilingIntegration(),
-      // Capture les requêtes HTTP
       Sentry.httpIntegration(),
-      // Capture les logs console
-      Sentry.captureConsoleIntegration({
-        levels: ['error', 'warn', 'info'],
-      }),
-      // Capture les requêtes non gérées
+      Sentry.captureConsoleIntegration({ levels: ['error', 'warn'] }),
       Sentry.onUncaughtExceptionIntegration({
         exitEvenIfOtherHandlersAreRegistered: false,
       }),
-      // Capture les rejets de promesses non gérées
-      Sentry.onUnhandledRejectionIntegration({
-        mode: 'warn',
-      }),
+      Sentry.onUnhandledRejectionIntegration({ mode: 'warn' }),
     ],
 
-    // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring
-    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-
-    // Set profilesSampleRate to 1.0 to profile every transaction
-    profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-
-    // Activer le debug pour diagnostiquer les problèmes
-    debug:
-      process.env.NODE_ENV === 'development' ||
-      process.env.SENTRY_DEBUG === 'true',
-
-    // Capture all errors
-    beforeSend(event) {
-      // Log to console pour diagnostiquer
-      console.log('Sentry Event:', JSON.stringify(event, null, 2));
-      return event;
-    },
-
-    // Configuration pour capturer plus de contexte
-    beforeSendTransaction(event) {
-      // Log des transactions pour le debugging
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Sentry Transaction:', event.transaction);
-      }
-      return event;
-    },
+    tracesSampleRate: 0.1,
+    profilesSampleRate: 0.1,
+    debug: process.env.SENTRY_DEBUG === 'true',
   });
 
-  // Gestionnaires d'erreurs globaux pour capturer les erreurs non gérées
   process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);
     Sentry.captureException(error);

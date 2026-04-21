@@ -7,7 +7,6 @@ import {
   Param,
   Patch,
   Post,
-  Query,
   Req,
   Res,
   UseGuards,
@@ -708,7 +707,7 @@ export class TontineController {
     return this.tontineService.recordFondContribution(
       +id,
       dto.memberId ?? null,
-      dto.amount ?? null,   // null → utilise config.monthlyFondAmount
+      dto.amount ?? null, // null → utilise config.monthlyFondAmount
       dto.creationDate ? new Date(dto.creationDate) : new Date(),
     );
   }
@@ -739,7 +738,9 @@ export class TontineController {
 
   @Patch(':id/member/:memberId/roles')
   @Roles(Role.PRESIDENT)
-  @ApiOperation({ summary: 'Mettre à jour les rôles d\'un membre dans cette tontine' })
+  @ApiOperation({
+    summary: "Mettre à jour les rôles d'un membre dans cette tontine",
+  })
   updateMemberRoles(
     @Param('id') id: string,
     @Param('memberId') memberId: string,
@@ -759,10 +760,7 @@ export class TontineController {
   @Get(':id/export/financial')
   @Roles(Role.PRESIDENT, Role.ACCOUNT_MANAGER)
   @ApiOperation({ summary: 'Exporter le rapport financier en CSV' })
-  async exportFinancial(
-    @Param('id') id: string,
-    @Res() res: FastifyReply,
-  ) {
+  async exportFinancial(@Param('id') id: string, @Res() res: FastifyReply) {
     const csv = await this.tontineService.exportFinancialCsv(+id);
     const filename = `tontine_${id}_rapport_${new Date().toISOString().slice(0, 10)}.csv`;
     res.header('Content-Type', 'text/csv; charset=utf-8');

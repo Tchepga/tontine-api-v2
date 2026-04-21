@@ -136,18 +136,18 @@ jobs:
           echo "═══════════════════════════════════════════════════"
           echo ""
           echo "  🔑  Connexion à l'application :"
-          echo "     albert   / Tontine2025!  [PRÉSIDENT]"
-          echo "     ronaldo  / Tontine2025!"
-          echo "     patrick  / Tontine2025!"
-          echo "     steve    / Tontine2025!"
-          echo "     romeo    / Tontine2025!"
-          echo "     paola    / Tontine2025!"
-          echo "     ryan     / Tontine2025!"
+          echo "     albert   / Tontine2026!  [PRÉSIDENT]"
+          echo "     patrick  / Tontine2026!  [TRÉSORIER]"
+          echo "     paola    / Tontine2026!  [SECRÉTAIRE]"
+          echo "     ronaldo  / Tontine2026!"
+          echo "     ryan     / Tontine2026!"
+          echo "     steve    / Tontine2026!"
+          echo "     romeo    / Tontine2026!"
           echo ""
-          echo "  📅  Ordre de passage 2025 :"
-          echo "     Jan:Ronaldo  Fév:Patrick  Mar:Steve  Avr:Ronaldo"
-          echo "     Mai:Steve    Juin:Patrick Jul:Romeo  Aoû:Paola"
-          echo "     Sep:Ryan     Oct:Albert   Nov:Albert Déc:Ryan"
+          echo "  📅  Ordre de passage 2026 :"
+          echo "     Jan:Albert  Fév:Ryan    Mar:Paola   Avr:Ronaldo"
+          echo "     Mai:Patrick Juin:Steve  Jul:Romeo   Aoû:Albert"
+          echo "     Sep:Ryan    Oct:Paola   Nov:Ronaldo Déc:Patrick"
 
           # Nettoyage
           rm -f /tmp/seed-tontine-test.sql
@@ -160,12 +160,12 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Username | Mot de passe | Rôle |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------------|------|" >> $GITHUB_STEP_SUMMARY
-          echo "| albert   | Tontine2025! | Président |" >> $GITHUB_STEP_SUMMARY
-          echo "| ronaldo  | Tontine2025! | Tontinard |" >> $GITHUB_STEP_SUMMARY
-          echo "| patrick  | Tontine2025! | Tontinard |" >> $GITHUB_STEP_SUMMARY
-          echo "| steve    | Tontine2025! | Tontinard |" >> $GITHUB_STEP_SUMMARY
-          echo "| romeo    | Tontine2025! | Tontinard |" >> $GITHUB_STEP_SUMMARY
-          echo "| paola    | Tontine2025! | Tontinard |" >> $GITHUB_STEP_SUMMARY
-          echo "| ryan     | Tontine2025! | Tontinard |" >> $GITHUB_STEP_SUMMARY
+          echo "| albert   | Tontine2026! | Président |" >> $GITHUB_STEP_SUMMARY
+          echo "| patrick  | Tontine2026! | Trésorier |" >> $GITHUB_STEP_SUMMARY
+          echo "| paola    | Tontine2026! | Secrétaire |" >> $GITHUB_STEP_SUMMARY
+          echo "| ronaldo  | Tontine2026! | Tontinard |" >> $GITHUB_STEP_SUMMARY
+          echo "| ryan     | Tontine2026! | Tontinard |" >> $GITHUB_STEP_SUMMARY
+          echo "| steve    | Tontine2026! | Tontinard |" >> $GITHUB_STEP_SUMMARY
+          echo "| romeo    | Tontine2026! | Tontinard |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Tontine :** Tontine des Amis 2025" >> $GITHUB_STEP_SUMMARY

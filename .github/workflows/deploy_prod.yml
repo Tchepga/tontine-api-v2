@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - deploy
+      - master
   pull_request:
     branches:
       - deploy
+      - master
     types: [closed]
 
 jobs:

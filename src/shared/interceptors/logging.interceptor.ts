@@ -6,7 +6,7 @@ import {
   NestInterceptor,
 } from '@nestjs/common';
 import * as Sentry from '@sentry/node';
-import { Request, Response } from 'express';
+import { FastifyRequest, FastifyReply } from 'fastify';
 import { Observable } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { LoggerService } from '../services/logger.service';
@@ -17,10 +17,10 @@ export class LoggingInterceptor implements NestInterceptor {
   private readonly customLogger = LoggerService.create('HTTP');
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const request = context.switchToHttp().getRequest<Request>();
-    const response = context.switchToHttp().getResponse<Response>();
+    const request = context.switchToHttp().getRequest<FastifyRequest>();
+    const response = context.switchToHttp().getResponse<FastifyReply>();
     const { method, url, body, query, params, headers } = request;
-    const userAgent = headers['user-agent'] || '';
+    const userAgent = (headers['user-agent'] as string) || '';
     const ip = this.getClientIp(request);
     const startTime = Date.now();
     // Log de la requête entrante
@@ -29,7 +29,7 @@ export class LoggingInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap((data) => {
         const duration = Date.now() - startTime;
-        const statusCode = response.statusCode;
+        const statusCode = response.statusCode ?? 200;
         // Log de la réponse
         this.logResponse(method, url, statusCode, duration, data);
         // Log de performance si nécessaire
@@ -110,16 +110,16 @@ export class LoggingInterceptor implements NestInterceptor {
     this.customLogger.error(message, error.stack, 'HTTP');
   }
 
-  private getClientIp(request: Request): string {
+  private getClientIp(request: FastifyRequest): string {
     return (
-      (request.headers['x-forwarded-for'] as string)?.split(',')[0] ||
-      request.connection.remoteAddress ||
-      request.socket.remoteAddress ||
+      (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      request.ip ||
+      request.socket?.remoteAddress ||
       'unknown'
     );
   }
 
-  private extractUserFromRequest(request: Request): any {
+  private extractUserFromRequest(request: FastifyRequest): any {
     return (request as any).user || null;
   }
 

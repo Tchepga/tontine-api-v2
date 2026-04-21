@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -115,8 +116,12 @@ export class MemberController {
   }
 
   private validateAndCreate(createMemberDto: CreateMemberDto) {
-    if (createMemberDto.email) {
-      validateEmail(createMemberDto.email);
+    // Normaliser l'email vide en undefined
+    if (createMemberDto.email === '') {
+      createMemberDto.email = undefined;
+    }
+    if (createMemberDto.email && !validateEmail(createMemberDto.email)) {
+      throw new BadRequestException('Email invalide');
     }
     return this.memberService.create(createMemberDto);
   }
