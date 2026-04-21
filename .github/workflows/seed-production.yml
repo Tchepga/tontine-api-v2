@@ -1,6 +1,12 @@
-name: Seed Production — Tontine de test
+# Pour que ce workflow apparaisse sous Actions > « Seed Production… »,
+# ce fichier doit être présent sur la branche PAR DÉFAUT du dépôt (Settings > Branches).
+# S’il n’existe que sur `deploy`, fusionnez-le vers `main` (ou changez la branche par défaut).
+name: Seed Production - Tontine de test
 
-# ─── Déclenchement UNIQUEMENT manuel depuis l'interface GitHub ─────────────────
+permissions:
+  contents: read
+
+# Déclenchement uniquement manuel (bouton « Run workflow »)
 on:
   workflow_dispatch:
     inputs:
