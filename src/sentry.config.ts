@@ -6,10 +6,13 @@ export function initSentry() {
     return;
   }
 
+  const dsn = process.env.SENTRY_DSN?.trim();
+  if (!dsn) {
+    return;
+  }
+
   Sentry.init({
-    dsn:
-      process.env.SENTRY_DSN ||
-      'https://84fe878816138fb844e0dbdee126c950@o4509946255572992.ingest.de.sentry.io/4510119565590608',
+    dsn,
     environment: process.env.NODE_ENV,
     release: process.env.SENTRY_RELEASE || 'development',
 

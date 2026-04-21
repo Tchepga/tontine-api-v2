@@ -1,5 +1,8 @@
 name: Deploy to Production
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:
@@ -38,21 +41,27 @@ jobs:
       - name: Setup Sentry
         run: |
           echo "📊 Configuration de Sentry..."
-          if [ -n "${{ secrets.SENTRY_AUTH_TOKEN }}" ] && [ -n "${{ secrets.SENTRY_ORG }}" ] && [ -n "${{ secrets.SENTRY_PROJECT }}" ]; then
-            echo "✅ Variables Sentry configurées"
-            echo "SENTRY_ORG=${{ secrets.SENTRY_ORG }}"
-            echo "SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}"
+          if [ -n "$SENTRY_AUTH_TOKEN" ] && [ -n "$SENTRY_ORG" ] && [ -n "$SENTRY_PROJECT" ]; then
+            echo "✅ Secrets Sentry présents (org/projet non affichés dans les logs)"
           else
             echo "⚠️  Variables Sentry manquantes - Sentry ne fonctionnera pas en production"
           fi
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
       - name: Deploy to server with Sentry
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY_VPS_HOSTINGER }}
+          HOST_VPS: ${{ secrets.HOST_VPS_HOSTINGER }}
+          HOST_USER: ${{ secrets.HOST_VPS_USER }}
         run: |
-          # Configuration SSH
+          # Configuration SSH (clé via env — évite d’afficher la valeur dans le script inline)
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY_VPS_HOSTINGER }}" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$HOST_VPS" >> ~/.ssh/known_hosts
           
           # Créer un tar.gz avec tous les fichiers nécessaires
           echo "📦 Création de l'archive de déploiement..."
@@ -79,11 +88,11 @@ jobs:
           
           # TRANSFERT UNIQUE de l'archive
           echo "📤 Transfert de l'archive..."
-          scp -i ~/.ssh/deploy_key deploy.tar.gz ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/tmp/
+          scp -i ~/.ssh/deploy_key deploy.tar.gz "${HOST_USER}@${HOST_VPS}:/tmp/"
           
           # Déploiement complet sur le serveur
           echo "🚀 Déploiement sur le serveur..."
-          ssh -o ConnectTimeout=60 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} "
+          ssh -o ConnectTimeout=60 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -i ~/.ssh/deploy_key "${HOST_USER}@${HOST_VPS}" "
             set -e
             echo \"🔗 Connexion SSH réussie\"
             
@@ -265,15 +274,15 @@ jobs:
           sleep 10
           
           # Test de connectivité directe sur le serveur
-          if curl -f -s --connect-timeout 15 http://${{ secrets.HOST_VPS_HOSTINGER }}:3000/api/health > /dev/null 2>&1; then
+          if curl -f -s --connect-timeout 15 "http://${HOST_VPS}:3000/api/health" > /dev/null 2>&1; then
             echo "✅ Application accessible sur le port 3000"
             echo "🎉 Déploiement réussi !"
           else
             echo "⚠️  Application non accessible sur le port 3000"
-            echo "🔧 Vérifiez manuellement: curl http://${{ secrets.HOST_VPS_HOSTINGER }}:3000/api/health"
+            echo "🔧 Vérifiez manuellement: curl http://<hôte-VPS>:3000/api/health"
             echo "📋 Consultez les logs de l'application sur le serveur pour diagnostiquer"
             echo "💡 Commandes de diagnostic:"
-            echo "   ssh ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}"
+            echo "   ssh ${HOST_USER}@${HOST_VPS}"
             echo "   cd /root/apps/tontine"
             echo "   systemctl status tontine-api.service"
             echo "   journalctl -u tontine-api.service -f"
@@ -281,18 +290,22 @@ jobs:
           fi
 
       - name: Vérifier les connexions WebSocket
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY_VPS_HOSTINGER }}
+          HOST_VPS: ${{ secrets.HOST_VPS_HOSTINGER }}
+          HOST_USER: ${{ secrets.HOST_VPS_USER }}
         run: |
           echo "🔌 Vérification des connexions WebSocket..."
           
           # Configuration SSH
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY_VPS_HOSTINGER }}" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$HOST_VPS" >> ~/.ssh/known_hosts
           
           # Test WebSocket depuis le serveur (localhost)
           echo "📡 Test de connexion WebSocket depuis le serveur..."
-          WEBSOCKET_TEST=$(ssh -o ConnectTimeout=30 -i ~/.ssh/deploy_key ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} '
+          WEBSOCKET_TEST=$(ssh -o ConnectTimeout=30 -i ~/.ssh/deploy_key "${HOST_USER}@${HOST_VPS}" '
             # Vérifier que le serveur répond aux requêtes WebSocket upgrade
             RESPONSE=$(curl -i -N -s --connect-timeout 10 \
               -H "Connection: Upgrade" \
@@ -319,7 +332,7 @@ jobs:
             echo "$WEBSOCKET_TEST"
             echo ""
             echo "🔧 Vérifiez manuellement:"
-            echo "   ssh ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}"
+            echo "   ssh ${HOST_USER}@${HOST_VPS}"
             echo "   curl -i -N -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' http://localhost:3000/socket.io/?EIO=4&transport=websocket"
             echo "   systemctl status tontine-api.service"
             echo "   journalctl -u tontine-api.service -n 50"
@@ -333,7 +346,7 @@ jobs:
             -H "Upgrade: websocket" \
             -H "Sec-WebSocket-Version: 13" \
             -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
-            "http://${{ secrets.HOST_VPS_HOSTINGER }}:3000/socket.io/?EIO=4&transport=websocket" 2>&1 | head -n 5 || echo "FAILED")
+            "http://${HOST_VPS}:3000/socket.io/?EIO=4&transport=websocket" 2>&1 | head -n 5 || echo "FAILED")
           
           if echo "$EXTERNAL_WEBSOCKET_TEST" | grep -qi "HTTP/1.1 101\|HTTP/1.1 200\|Upgrade: websocket"; then
             echo "✅ Les connexions WebSocket sont accessibles depuis l'extérieur"

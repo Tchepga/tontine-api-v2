@@ -2,7 +2,11 @@ node_modules
 dist
 .vscode
 environement.prod.ts
-# Sentry Config File
-.env.sentry-build-plugin
 coverage
 .env
+.env.*
+!.env.example
+*.pem
+*id_rsa*
+*id_ed25519*
+.infisical/

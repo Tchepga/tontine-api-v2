@@ -27,6 +27,11 @@ jobs:
   seed:
     name: Exécuter le seed en production
     runs-on: ubuntu-latest
+    # Secrets uniquement en variables d’environnement (pas dans le corps du script inline)
+    env:
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY_VPS_HOSTINGER }}
+      HOST_VPS: ${{ secrets.HOST_VPS_HOSTINGER }}
+      HOST_USER: ${{ secrets.HOST_VPS_USER }}
 
     # Vérification de sécurité : l'utilisateur doit taper "SEED"
     if: ${{ github.event.inputs.confirm == 'SEED' }}
@@ -39,9 +44,9 @@ jobs:
       - name: Configurer SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY_VPS_HOSTINGER }}" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.HOST_VPS_HOSTINGER }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$HOST_VPS" >> ~/.ssh/known_hosts
           echo "✅ SSH configuré"
 
       # ─── Transfert du fichier SQL ─────────────────────────────────────────────
@@ -49,14 +54,14 @@ jobs:
         run: |
           scp -i ~/.ssh/deploy_key \
             seed-tontine-test.sql \
-            ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }}:/tmp/seed-tontine-test.sql
+            "${HOST_USER}@${HOST_VPS}:/tmp/seed-tontine-test.sql"
           echo "✅ Fichier SQL transféré"
 
       # ─── Exécution du seed ────────────────────────────────────────────────────
       - name: Exécuter le seed sur le serveur
         run: |
           ssh -o ConnectTimeout=60 -i ~/.ssh/deploy_key \
-            ${{ secrets.HOST_VPS_USER }}@${{ secrets.HOST_VPS_HOSTINGER }} << 'ENDSSH'
+            "${HOST_USER}@${HOST_VPS}" << 'ENDSSH'
 
           set -e
           echo "═══════════════════════════════════════════════════"
