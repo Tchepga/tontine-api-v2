@@ -47,13 +47,13 @@ const AppDataSource = new DataSource({
 
 // ─── Données des membres ───────────────────────────────────────────────────────
 const MEMBERS_DATA = [
-  { username: 'ronaldo',  firstname: 'Ronaldo',  lastname: 'Silva',   role: Role.PRESIDENT },
-  { username: 'patrick',  firstname: 'Patrick',  lastname: 'Tchepga', role: Role.ACCOUNT_MANAGER },
+  { username: 'ronaldo',  firstname: 'Ronaldo',  lastname: 'Silva',   role: Role.TONTINARD },
+  { username: 'patrick',  firstname: 'Patrick',  lastname: 'Tchepga', role: Role.TONTINARD },
   { username: 'steve',    firstname: 'Steve',    lastname: 'Martin',  role: Role.TONTINARD },
   { username: 'romeo',    firstname: 'Romeo',    lastname: 'Fontaine',role: Role.TONTINARD },
   { username: 'paola',    firstname: 'Paola',    lastname: 'Dupont',  role: Role.TONTINARD },
   { username: 'ryan',     firstname: 'Ryan',     lastname: 'Bernard', role: Role.TONTINARD },
-  { username: 'albert',   firstname: 'Albert',   lastname: 'Kamga',   role: Role.TONTINARD },
+  { username: 'albert',   firstname: 'Albert',   lastname: 'Kamga',   role: Role.PRESIDENT },
 ];
 
 // ─── Ordre de passage (12 mois) ───────────────────────────────────────────────

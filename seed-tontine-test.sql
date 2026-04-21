@@ -101,15 +101,15 @@ INSERT INTO `tontine_members_member` (`tontineId`, `memberId`) VALUES
   (@tontine_id, @mid_albert);
 
 -- ─── 7. Rôles par tontine ─────────────────────────────────────
--- Ronaldo = PRESIDENT, Patrick = ACCOUNT_MANAGER, autres = TONTINARD
+-- Albert = PRESIDENT, autres = TONTINARD
 INSERT INTO `member_role` (`role`, `userId`, `tontineId`) VALUES
-  ('PRESIDENT',       @uid_ronaldo, @tontine_id),
-  ('ACCOUNT_MANAGER', @uid_patrick, @tontine_id),
+  ('TONTINARD',       @uid_ronaldo, @tontine_id),
+  ('TONTINARD',       @uid_patrick, @tontine_id),
   ('TONTINARD',       @uid_steve,   @tontine_id),
   ('TONTINARD',       @uid_romeo,   @tontine_id),
   ('TONTINARD',       @uid_paola,   @tontine_id),
   ('TONTINARD',       @uid_ryan,    @tontine_id),
-  ('TONTINARD',       @uid_albert,  @tontine_id);
+  ('PRESIDENT',       @uid_albert,  @tontine_id);
 
 -- ─── 8. Ordres de passage (12 mois 2025) ─────────────────────
 -- period = 1er jour du mois correspondant
