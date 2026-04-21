@@ -1,12 +1,17 @@
 name: Deploy to Production
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:
       - deploy
+      - master
   pull_request:
     branches:
       - deploy
+      - master
     types: [closed]
 
 jobs:
@@ -17,34 +22,338 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '22'
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Build project
-        run: npm run build:prod
+      - name: Run linting
+        run: npm run lint
 
-      - name: Copy files to server via SSH
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: 'dist/*'
-          target: '/apps/tontine'
+      - name: Build application
+        run: npm run build
 
-      - name: Run server command via SSH
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            cp config/.env-tontine-api apps/tontine/.env
-            cd /apps/tontine
-            npm install --production || true
-            nohup node dist/main.js &
+
+      - name: Setup Sentry
+        run: |
+          echo "📊 Configuration de Sentry..."
+          if [ -n "$SENTRY_AUTH_TOKEN" ] && [ -n "$SENTRY_ORG" ] && [ -n "$SENTRY_PROJECT" ]; then
+            echo "✅ Secrets Sentry présents (org/projet non affichés dans les logs)"
+          else
+            echo "⚠️  Variables Sentry manquantes - Sentry ne fonctionnera pas en production"
+          fi
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+
+      - name: Deploy to server with Sentry
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY_VPS_HOSTINGER }}
+          HOST_VPS: ${{ secrets.HOST_VPS_HOSTINGER }}
+          HOST_USER: ${{ secrets.HOST_VPS_USER }}
+        run: |
+          # Configuration SSH (clé via env — évite d’afficher la valeur dans le script inline)
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$HOST_VPS" >> ~/.ssh/known_hosts
+          
+          # Créer un tar.gz avec tous les fichiers nécessaires
+          echo "📦 Création de l'archive de déploiement..."
+          tar -czf deploy.tar.gz \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='upload' \
+            --exclude='test' \
+            --exclude='docs' \
+            --exclude='google-cloud-sdk' \
+            --exclude='deploy.tar.gz' \
+            --exclude='coverage' \
+            --exclude='caddy' \
+            scripts/deploy/start-sentry.sh \
+            .sentryclirc \
+            scripts/deploy/tontine-api.service \
+            dist/ \
+            package.json \
+            package-lock.json \
+            tsconfig.json \
+            tsconfig.build.json \
+            nest-cli.json \
+          
+          # TRANSFERT UNIQUE de l'archive
+          echo "📤 Transfert de l'archive..."
+          scp -i ~/.ssh/deploy_key deploy.tar.gz "${HOST_USER}@${HOST_VPS}:/tmp/"
+          
+          # Déploiement complet sur le serveur
+          echo "🚀 Déploiement sur le serveur..."
+          ssh -o ConnectTimeout=60 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -i ~/.ssh/deploy_key "${HOST_USER}@${HOST_VPS}" "
+            set -e
+            echo \"🔗 Connexion SSH réussie\"
+            
+            # Préparer le répertoire de déploiement avec rollback
+            cd /root/apps
+            rm -rf tontine.old
+            mv tontine tontine.old 2>/dev/null || true
+            mkdir -p tontine
+            cd tontine
+            
+            # Extraire l'archive
+            echo 'Extraction de l archive...'
+            tar -xzf /tmp/deploy.tar.gz
+            rm /tmp/deploy.tar.gz
+
+            # Nettoyer les dossiers inutiles
+            echo 'Nettoyage des dossiers inutiles...'
+            rm -rf src/ 2>/dev/null || true
+            echo 'Dossier src/ supprime'
+
+            # Copier le fichier d'environnement
+            echo 'Configuration de l environnement...'
+            cp /root/config/.env-tontine-api .env
+            echo 'Fichier .env copie'
+            
+            # Configurer Sentry si les variables sont disponibles
+            if [ -n \"${{ secrets.SENTRY_DSN }}\" ]; then
+              echo 'Configuration de Sentry...'
+              echo \"SENTRY_DSN=${{ secrets.SENTRY_DSN }}\" >> .env
+              echo \"SENTRY_ORG=${{ secrets.SENTRY_ORG }}\" >> .env
+              echo \"SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}\" >> .env
+              echo 'Sentry configure'
+            else
+              echo 'Variables Sentry manquantes'
+            fi
+            
+            # Utiliser uniquement Volta (pas d'installation Node.js)
+            NODE_PATH=\"/root/.volta/bin/node\"
+            NPM_PATH=\"/root/.volta/bin/npm\"
+
+            echo \"✅ Utilisation de Node.js Volta: \$NODE_PATH\"
+            echo \"✅ Version Node.js: \$(\$NODE_PATH --version)\"
+            echo \"✅ Utilisation de npm: \$NPM_PATH\"
+
+            # Installer les dépendances de production
+            echo \"📦 Installation des dépendances...\"
+            \$NPM_PATH ci --only=production
+            
+            # Créer le répertoire de logs
+            mkdir -p logs
+            
+            # Arrêter l'application existante (simplifié)
+            echo \"🔄 Arrêt de l'application existante...\"
+
+            # Arrêter le service systemd et les processus Node.js
+            if systemctl is-active --quiet tontine-api.service; then
+              echo \"🛑 Arrêt du service systemd...\"
+              systemctl stop tontine-api.service
+              echo \"✅ Service systemd arrêté\"
+            else
+              echo \"ℹ️  Service systemd non actif\"
+            fi
+            
+            echo \"✅ Arrêt des applications terminé\"
+            
+            # Installer et configurer le service systemd
+            echo \"⚙️  Configuration du service systemd...\"
+            cp scripts/deploy/tontine-api.service /etc/systemd/system/
+            systemctl daemon-reload
+
+            # Démarrer l'application avec le service systemd
+            echo \"🚀 Démarrage de l'application avec Sentry...\"
+            systemctl enable tontine-api.service || echo \"Service déjà activé\"
+            systemctl start tontine-api.service || echo \"Erreur au démarrage du service\"
+            
+            # Vérifier et recharger la configuration Caddy
+            echo \"🌐 Vérification de la configuration Caddy...\"
+            if [ -f /root/config/caddy/Caddyfile ]; then
+              # Vérifier la syntaxe du Caddyfile
+              if caddy validate --config /root/config/caddy/Caddyfile 2>/dev/null; then
+                echo \"✅ Configuration Caddy valide\"
+                # Recharger la configuration Caddy
+                echo \"🔄 Rechargement de la configuration Caddy...\"
+                if caddy reload --config /root/config/caddy/Caddyfile 2>/dev/null; then
+                  echo \"✅ Configuration Caddy rechargée avec succès\"
+                else
+                  echo \"⚠️  Erreur lors du rechargement de Caddy\"
+                  # Vérifier si Caddy est en cours d'exécution
+                  if systemctl is-active --quiet caddy 2>/dev/null || pgrep -x caddy > /dev/null 2>&1; then
+                    echo \"⚠️  Caddy est actif mais le rechargement a échoué - vérifiez les logs\"
+                    journalctl -u caddy --no-pager -n 20 2>/dev/null || true
+                  else
+                    echo \"ℹ️  Caddy n'est pas en cours d'exécution - le rechargement sera effectué au prochain démarrage\"
+                  fi
+                fi
+              else
+                echo \"❌ Erreur de syntaxe dans le Caddyfile - le rechargement est ignoré\"
+                echo \"⚠️  Vérifiez la configuration: /root/config/caddy/Caddyfile\"
+              fi
+            else
+              echo \"⚠️  Fichier Caddyfile non trouvé: /root/config/caddy/Caddyfile\"
+              echo \"ℹ️  Caddy utilisera sa configuration par défaut ou existante\"
+            fi
+            
+            # Vérification du déploiement
+            echo \"✅ Vérification du déploiement...\"
+            sleep 10
+
+            # Vérifier que l'application fonctionne (simplifié)
+            echo \"✅ Vérification du déploiement...\"
+            
+            # Attendre que l'application démarre
+            sleep 5
+            
+            # Test simple de connectivité
+            if curl -f -s --connect-timeout 10 http://localhost:3000/api/health > /dev/null 2>&1; then
+              echo \"🎉 Déploiement réussi !\"
+              echo \"📋 Statut du service:\"
+              systemctl status tontine-api.service --no-pager -l
+
+              # Nettoyer l'ancienne version
+              rm -rf /root/apps/tontine.old
+              echo \"✅ Ancienne version nettoyée\"
+            else
+              echo \"❌ Erreur lors du déploiement\"
+              echo \"📋 Logs systemd:\"
+              journalctl -u tontine-api.service --no-pager -n 50
+              echo \"📋 Logs application:\"
+              tail -n 50 /root/apps/tontine/logs/app.log 2>/dev/null || echo \"Aucun log d'application trouvé\"
+
+              # Restaurer l'ancienne version
+              echo \"🔄 Restauration de l'ancienne version...\"
+              if systemctl is-active --quiet tontine-api.service; then
+                systemctl stop tontine-api.service
+                echo \"✅ Service arrêté pour restauration\"
+              else
+                echo \"ℹ️  Service non actif - pas besoin d'arrêt\"
+              fi
+              cd /root/apps
+              rm -rf tontine
+              mv tontine.old tontine
+              cd tontine
+              
+              # Vérifier et recharger la configuration Caddy pour la version restaurée
+              echo \"🌐 Vérification de la configuration Caddy pour la version restaurée...\"
+              if [ -f /root/config/caddy/Caddyfile ]; then
+                # Vérifier la syntaxe du Caddyfile
+                if caddy validate --config /root/config/caddy/Caddyfile 2>/dev/null; then
+                  echo \"✅ Configuration Caddy valide\"
+                  # Recharger la configuration Caddy
+                  echo \"🔄 Rechargement de la configuration Caddy...\"
+                  if caddy reload --config /root/config/caddy/Caddyfile 2>/dev/null; then
+                    echo \"✅ Configuration Caddy rechargée avec succès pour la version restaurée\"
+                  else
+                    echo \"⚠️  Erreur lors du rechargement de Caddy\"
+                    # Vérifier si Caddy est en cours d'exécution
+                    if systemctl is-active --quiet caddy 2>/dev/null || pgrep -x caddy > /dev/null 2>&1; then
+                      echo \"⚠️  Caddy est actif mais le rechargement a échoué - vérifiez les logs\"
+                      journalctl -u caddy --no-pager -n 20 2>/dev/null || true
+                    else
+                      echo \"ℹ️  Caddy n'est pas en cours d'exécution - le rechargement sera effectué au prochain démarrage\"
+                    fi
+                  fi
+                else
+                  echo \"❌ Erreur de syntaxe dans le Caddyfile - le rechargement est ignoré\"
+                  echo \"⚠️  Vérifiez la configuration: /root/config/caddy/Caddyfile\"
+                fi
+              else
+                echo \"⚠️  Fichier Caddyfile non trouvé: /root/config/caddy/Caddyfile\"
+                echo \"ℹ️  Caddy utilisera sa configuration par défaut ou existante\"
+              fi
+            fi
+
+            echo \"🌐 Application accessible sur le port 3000\"
+          "
+                  
+          # Vérification finale de l'application
+          echo "🔍 Vérification finale de l'application..."
+          sleep 10
+          
+          # Test de connectivité directe sur le serveur
+          if curl -f -s --connect-timeout 15 "http://${HOST_VPS}:3000/api/health" > /dev/null 2>&1; then
+            echo "✅ Application accessible sur le port 3000"
+            echo "🎉 Déploiement réussi !"
+          else
+            echo "⚠️  Application non accessible sur le port 3000"
+            echo "🔧 Vérifiez manuellement: curl http://<hôte-VPS>:3000/api/health"
+            echo "📋 Consultez les logs de l'application sur le serveur pour diagnostiquer"
+            echo "💡 Commandes de diagnostic:"
+            echo "   ssh ${HOST_USER}@${HOST_VPS}"
+            echo "   cd /root/apps/tontine"
+            echo "   systemctl status tontine-api.service"
+            echo "   journalctl -u tontine-api.service -f"
+            echo "   curl -v http://localhost:3000/api/health"
+          fi
+
+      - name: Vérifier les connexions WebSocket
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY_VPS_HOSTINGER }}
+          HOST_VPS: ${{ secrets.HOST_VPS_HOSTINGER }}
+          HOST_USER: ${{ secrets.HOST_VPS_USER }}
+        run: |
+          echo "🔌 Vérification des connexions WebSocket..."
+          
+          # Configuration SSH
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$HOST_VPS" >> ~/.ssh/known_hosts
+          
+          # Test WebSocket depuis le serveur (localhost)
+          echo "📡 Test de connexion WebSocket depuis le serveur..."
+          WEBSOCKET_TEST=$(ssh -o ConnectTimeout=30 -i ~/.ssh/deploy_key "${HOST_USER}@${HOST_VPS}" '
+            # Vérifier que le serveur répond aux requêtes WebSocket upgrade
+            RESPONSE=$(curl -i -N -s --connect-timeout 10 \
+              -H "Connection: Upgrade" \
+              -H "Upgrade: websocket" \
+              -H "Sec-WebSocket-Version: 13" \
+              -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+              http://localhost:3000/socket.io/?EIO=4\&transport=websocket 2>&1 | head -n 5)
+            
+            if echo "$RESPONSE" | grep -qi "HTTP/1.1 101\|HTTP/1.1 200\|Upgrade: websocket"; then
+              echo "SUCCESS"
+            else
+              echo "FAILED"
+              echo "Réponse reçue:"
+              echo "$RESPONSE"
+            fi
+          ')
+          
+          if echo "$WEBSOCKET_TEST" | grep -q "SUCCESS"; then
+            echo "✅ Les connexions WebSocket sont acceptées par le serveur"
+            echo "🔌 Le serveur Socket.IO répond correctement aux requêtes WebSocket"
+          else
+            echo "❌ Erreur: Le serveur ne répond pas correctement aux connexions WebSocket"
+            echo "📋 Détails de la réponse:"
+            echo "$WEBSOCKET_TEST"
+            echo ""
+            echo "🔧 Vérifiez manuellement:"
+            echo "   ssh ${HOST_USER}@${HOST_VPS}"
+            echo "   curl -i -N -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' http://localhost:3000/socket.io/?EIO=4&transport=websocket"
+            echo "   systemctl status tontine-api.service"
+            echo "   journalctl -u tontine-api.service -n 50"
+            exit 1
+          fi
+          
+          # Test WebSocket depuis l'extérieur (si accessible)
+          echo "📡 Test de connexion WebSocket depuis l'extérieur..."
+          EXTERNAL_WEBSOCKET_TEST=$(curl -i -N -s --connect-timeout 10 \
+            -H "Connection: Upgrade" \
+            -H "Upgrade: websocket" \
+            -H "Sec-WebSocket-Version: 13" \
+            -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+            "http://${HOST_VPS}:3000/socket.io/?EIO=4&transport=websocket" 2>&1 | head -n 5 || echo "FAILED")
+          
+          if echo "$EXTERNAL_WEBSOCKET_TEST" | grep -qi "HTTP/1.1 101\|HTTP/1.1 200\|Upgrade: websocket"; then
+            echo "✅ Les connexions WebSocket sont accessibles depuis l'extérieur"
+          else
+            echo "⚠️  Les connexions WebSocket ne sont pas accessibles depuis l'extérieur (peut être normal si le port 3000 n'est pas exposé)"
+            echo "ℹ️  Vérifiez la configuration Caddy pour le proxy WebSocket si nécessaire"
+          fi
+          
+          echo "✅ Vérification WebSocket terminée"
+          

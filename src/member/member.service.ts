@@ -1,7 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { AuthentificationService } from 'src/authentification/authentification.service';
-import { LoginDto } from 'src/authentification/dto/login-dto';
-import { Role } from 'src/authentification/entities/roles/roles.enum';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { AuthentificationService } from '../authentification/authentification.service';
+import { LoginDto } from '../authentification/dto/login-dto';
+import { Role } from '../authentification/entities/roles/roles.enum';
 import { DataSource } from 'typeorm';
 import {
   CreateMemberDto,
@@ -9,14 +13,14 @@ import {
 } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { Member } from './entities/member.entity';
-import { environment } from 'src/shared/environement';
+import { environment } from '../shared/config';
 
 @Injectable()
 export class MemberService {
   constructor(
     private readonly dataSource: DataSource,
-    private readonly authentificationService: AuthentificationService
-  ) { }
+    private readonly authentificationService: AuthentificationService,
+  ) {}
 
   async create(createMemberDto: CreateMemberDto) {
     const member = createToMemberDtoToMember(createMemberDto);
@@ -25,7 +29,7 @@ export class MemberService {
 
     if (createMemberDto.username) {
       const user = await this.authentificationService.findByUsername(
-        createMemberDto.username
+        createMemberDto.username,
       );
       if (user) {
         throw new BadRequestException('Username already used');
@@ -37,7 +41,7 @@ export class MemberService {
     const loginDto = {
       username: createMemberDto.username,
       password: createMemberDto.password,
-      role: createMemberDto?.roles ?? Role.TONTINARD,
+      role: createMemberDto?.roles?.[0] ?? Role.TONTINARD,
     } as LoginDto;
 
     const user = await this.authentificationService.register(loginDto);
@@ -109,10 +113,14 @@ export class MemberService {
     }
     const { minLength, maxLength } = environment.passwordConfig;
     if (createMemberDto.password.length < minLength) {
-      throw new BadRequestException(`Password must be at least ${minLength} characters long`);
+      throw new BadRequestException(
+        `Password must be at least ${minLength} characters long`,
+      );
     }
     if (createMemberDto.password.length > maxLength) {
-      throw new BadRequestException(`Password must be less than ${maxLength} characters long`);
+      throw new BadRequestException(
+        `Password must be less than ${maxLength} characters long`,
+      );
     }
   }
 }

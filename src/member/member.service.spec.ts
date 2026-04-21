@@ -1,64 +1,23 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { DataSource } from 'typeorm';
-import { MemberService } from './member.service';
-import { AuthentificationService } from '../authentification/authentification.service';
 import { HttpException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import { CreateMemberDto } from './dto/create-member.dto';
+import { MemberService } from './member.service';
+import {
+  mockProviders,
+  mockAuthentificationService,
+  mockDataSource,
+} from '../testing.helpers';
 
 describe('MemberService', () => {
   let service: MemberService;
-  let authService: AuthentificationService;
-  let dataSource: DataSource;
-
-  const mockQueryBuilder = {
-    innerJoinAndSelect: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    getOne: jest.fn(),
-  };
-
-  const mockDataSource = {
-    createQueryRunner: jest.fn().mockReturnValue({
-      connect: jest.fn(),
-      startTransaction: jest.fn(),
-      commitTransaction: jest.fn(),
-      rollbackTransaction: jest.fn(),
-      release: jest.fn(),
-      manager: {
-        save: jest.fn(),
-      },
-    }),
-    getRepository: jest.fn().mockReturnValue({
-      find: jest.fn(),
-      findOne: jest.fn(),
-      save: jest.fn(),
-      remove: jest.fn(),
-      createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
-    }),
-  };
-
-  const mockAuthService = {
-    findByUsername: jest.fn(),
-    create: jest.fn(),
-  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        MemberService,
-        {
-          provide: DataSource,
-          useValue: mockDataSource,
-        },
-        {
-          provide: AuthentificationService,
-          useValue: mockAuthService,
-        },
-      ],
+      providers: [MemberService, ...mockProviders],
     }).compile();
 
     service = module.get<MemberService>(MemberService);
-    authService = module.get<AuthentificationService>(AuthentificationService);
-    dataSource = module.get<DataSource>(DataSource);
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -81,9 +40,11 @@ describe('MemberService', () => {
         id: 1,
         username: 'test',
         email: 'test@test.com',
+        roles: [],
+        password: 'hashedpassword',
       };
 
-      mockAuthService.create.mockResolvedValue(mockUser);
+      mockAuthentificationService.register.mockResolvedValue(mockUser);
       mockDataSource.getRepository().save.mockImplementation((entity) => ({
         ...entity,
         id: 1,
@@ -108,8 +69,8 @@ describe('MemberService', () => {
         country: 'FR',
       };
 
-      mockAuthService.create.mockRejectedValue(
-        new Error('User creation failed')
+      mockAuthentificationService.register.mockRejectedValue(
+        new Error('User creation failed'),
       );
 
       await expect(service.create(mockCreateMemberDto)).rejects.toThrow();
@@ -125,14 +86,20 @@ describe('MemberService', () => {
         user: { username: 'test' },
       };
 
-      mockDataSource.getRepository().findOne.mockResolvedValue(mockMember);
+      mockAuthentificationService.findByUsername.mockResolvedValue(
+        mockMember.user as any,
+      );
+      mockDataSource
+        .getRepository()
+        .createQueryBuilder()
+        .getOne.mockResolvedValue(mockMember);
 
       const result = await service.findByUsername('test');
       expect(result).toEqual(mockMember);
     });
 
     it('should return null if member not found', async () => {
-      mockDataSource.getRepository().findOne.mockResolvedValue(null);
+      mockAuthentificationService.findByUsername.mockResolvedValue(null);
 
       const result = await service.findByUsername('nonexistent');
       expect(result).toBeNull();
@@ -174,10 +141,12 @@ describe('MemberService', () => {
       };
 
       mockDataSource.getRepository().findOne.mockResolvedValue(mockMember);
-      mockDataSource.getRepository().save.mockImplementation((entity) => ({
-        ...mockMember,
-        ...entity,
-      }));
+      mockDataSource.getRepository().save.mockImplementation((entity) =>
+        Promise.resolve({
+          ...mockMember,
+          ...entity,
+        }),
+      );
 
       const result = await service.update(1, updateDto);
 
@@ -189,7 +158,7 @@ describe('MemberService', () => {
       mockDataSource.getRepository().findOne.mockResolvedValue(null);
 
       await expect(service.update(999, { firstname: 'Test' })).rejects.toThrow(
-        HttpException
+        HttpException,
       );
     });
   });
@@ -198,15 +167,19 @@ describe('MemberService', () => {
     it('should remove member', async () => {
       const mockMember = {
         id: 1,
-        firstName: 'Test',
-        lastName: 'User',
+        isActive: true,
       };
 
       mockDataSource.getRepository().findOne.mockResolvedValue(mockMember);
-      mockDataSource.getRepository().remove.mockResolvedValue(mockMember);
+      mockDataSource
+        .getRepository()
+        .save.mockResolvedValue({ ...mockMember, isActive: false });
 
-      const result = await service.remove(1);
-      expect(result).toEqual(mockMember);
+      await service.remove(1);
+      expect(mockDataSource.getRepository().save).toHaveBeenCalledWith({
+        ...mockMember,
+        isActive: false,
+      });
     });
 
     it('should throw error if member not found', async () => {

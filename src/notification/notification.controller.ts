@@ -1,16 +1,20 @@
-import { Body, Controller, Get, Logger, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
-import { NotificationService } from './notification.service';
-import { Role } from 'src/authentification/entities/roles/roles.enum';
-import { Roles } from 'src/authentification/entities/roles/roles.decorator';
-import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
+import {
+  Body,
+  Controller,
+  Get,
+  Logger,
+  Param,
+  Patch,
+  Post,
+  Req,
+} from '@nestjs/common';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { NotificationService } from './notification.service';
 
 @Controller('notification')
-@UseGuards(RolesGuard)
-@Roles(Role.TONTINARD)
 export class NotificationController {
   private readonly logger = new Logger(NotificationController.name);
-  constructor(private readonly notificationService: NotificationService) { }
+  constructor(private readonly notificationService: NotificationService) {}
 
   @Get('tontine/:tontineId')
   async findAll(@Param('tontineId') tontineId: string) {
@@ -18,7 +22,15 @@ export class NotificationController {
   }
 
   @Post()
-  create(@Body() createNotificationDto: CreateNotificationDto, @Req() req: any) {
+  create(
+    @Body() createNotificationDto: CreateNotificationDto,
+    @Req() req: any,
+  ) {
     return this.notificationService.create(createNotificationDto, req.user);
+  }
+
+  @Patch(':id/status/read')
+  updateStatus(@Param('id') id: string) {
+    return this.notificationService.updateStatusRead(+id);
   }
 }

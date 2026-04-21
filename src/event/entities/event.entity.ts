@@ -7,8 +7,8 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { EventType } from '../enum/event-type';
-import { Member } from 'src/member/entities/member.entity';
-import { Tontine } from 'src/tontine/entities/tontine.entity';
+import { Member } from '../../member/entities/member.entity';
+import { Tontine } from '../../tontine/entities/tontine.entity';
 
 @Entity()
 export class Event {

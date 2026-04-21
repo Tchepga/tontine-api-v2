@@ -1,9 +1,8 @@
-import { Member } from 'src/member/entities/member.entity';
+import { Member } from '../../member/entities/member.entity';
 import {
   Column,
   Entity,
   JoinColumn,
-  ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
@@ -26,7 +25,7 @@ export class Sanction {
   @Column({ nullable: true })
   endDate: Date;
 
-  @ManyToMany(() => Member, (member) => member.sanctions)
+  @ManyToOne(() => Member, (member) => member.sanctions, { nullable: false })
   @JoinColumn()
   gulty: Member;
 

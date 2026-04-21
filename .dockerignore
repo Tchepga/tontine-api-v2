@@ -1,0 +1,43 @@
+# Dépendances
+node_modules
+npm-debug.log*
+
+# Logs
+logs
+*.log
+
+# Fichiers de configuration locale
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+docs
+
+# Tests
+coverage
+.nyc_output
+
+# Fichiers temporaires
+tmp
+temp
+
+# GitHub Actions
+.github

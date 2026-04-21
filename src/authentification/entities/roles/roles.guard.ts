@@ -1,23 +1,22 @@
-// src/auth/roles.guard.ts
 import {
-  Injectable,
   CanActivate,
   ExecutionContext,
+  Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role } from './roles.enum';
-import { ROLES_KEY } from './roles.decorator';
 import { JwtService } from '@nestjs/jwt';
-import { environment } from 'src/shared/environement';
-import { TontineService } from 'src/tontine/tontine.service';
+import { environment } from '../../../shared/config';
+import { TontineService } from '../../../tontine/tontine.service';
+import { ROLES_KEY } from './roles.decorator';
+import { Role } from './roles.enum';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private readonly jwtService: JwtService,
-    private readonly tontineService: TontineService
+    private readonly tontineService: TontineService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -48,11 +47,16 @@ export class RolesGuard implements CanActivate {
 
       const memberRole = await this.tontineService.getMemberRole(
         payload.username,
-        +tontineId
+        +tontineId,
       );
 
+      // Si aucun rôle par tontine n'existe (ancienne tontine ou données manquantes),
+      // on se rabat sur le rôle global du JWT plutôt que de supposer TONTINARD.
       if (!memberRole) {
-        throw new UnauthorizedException('User is not a member of this tontine');
+        const globalRoles: Role[] = Array.isArray(payload.role)
+          ? payload.role
+          : [payload.role];
+        return this.isRoleMatchOrHigher(requiredRoles, globalRoles);
       }
 
       return this.isRoleMatchOrHigher(requiredRoles, [memberRole.role]);
@@ -68,7 +72,7 @@ export class RolesGuard implements CanActivate {
 
   private isRoleMatchOrHigher(
     requiredRoles: Role[],
-    userRoles: Role[]
+    userRoles: Role[],
   ): boolean {
     if (userRoles.includes(Role.PRESIDENT)) {
       return true;
@@ -79,7 +83,7 @@ export class RolesGuard implements CanActivate {
 
     if (requiredRoles.includes(Role.ACCOUNT_MANAGER)) {
       return userRoles.some(
-        (role) => role === Role.ACCOUNT_MANAGER || role === Role.PRESIDENT
+        (role) => role === Role.ACCOUNT_MANAGER || role === Role.PRESIDENT,
       );
     }
 
@@ -88,7 +92,7 @@ export class RolesGuard implements CanActivate {
         (role) =>
           role === Role.SECRETARY ||
           role === Role.PRESIDENT ||
-          role === Role.ACCOUNT_MANAGER
+          role === Role.ACCOUNT_MANAGER,
       );
     }
 
@@ -98,7 +102,7 @@ export class RolesGuard implements CanActivate {
           role === Role.OFFICE_MANAGER ||
           role === Role.PRESIDENT ||
           role === Role.ACCOUNT_MANAGER ||
-          role === Role.SECRETARY
+          role === Role.SECRETARY,
       );
     }
 

@@ -3,19 +3,19 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { Event } from './entities/event.entity';
 import { DataSource } from 'typeorm';
-import { Member } from 'src/member/entities/member.entity';
-import { Tontine } from 'src/tontine/entities/tontine.entity';
-import { User } from 'src/authentification/entities/user.entity';
-import { NotificationService } from 'src/notification/notification.service';
-import { Action } from 'src/notification/utility/message-notification';
-import { TypeNotification } from 'src/notification/enum/type-notification';
+import { Member } from '../member/entities/member.entity';
+import { Tontine } from '../tontine/entities/tontine.entity';
+import { User } from '../authentification/entities/user.entity';
+import { NotificationService } from '../notification/notification.service';
+import { Action } from '../notification/utility/message-notification';
+import { TypeNotification } from '../notification/enum/type-notification';
 
 @Injectable()
 export class EventService {
   constructor(
     private readonly dataSource: DataSource,
-    private readonly notificationService: NotificationService
-  ) { }
+    private readonly notificationService: NotificationService,
+  ) {}
 
   async create(createEventDto: CreateEventDto, user: User) {
     const {
@@ -48,6 +48,7 @@ export class EventService {
     event.type = type;
     event.description = description;
     event.startDate = startDate;
+    event.participants = [];
     if (endDate) {
       event.endDate = endDate;
     }
@@ -66,13 +67,14 @@ export class EventService {
 
     const eventSaved = await this.dataSource.getRepository(Event).save(event);
 
-    this.notificationService.create({
-      action: Action.CREATE,
-      tontineId,
-      eventId: eventSaved.id,
-      type: TypeNotification.EVENT
-    },
-      user
+    this.notificationService.create(
+      {
+        action: Action.CREATE,
+        tontineId,
+        eventId: eventSaved.id,
+        type: TypeNotification.EVENT,
+      },
+      user,
     );
 
     return eventSaved;

@@ -1,32 +1,18 @@
-import { Module } from '@nestjs/common';
-import { ErrorCode } from './utilities/error-code';
-import { availableMemory } from 'process';
-import { BasicEntity } from './utilities/basic.entity';
+import { Module, Global } from '@nestjs/common';
+import { LoggerService } from './services/logger.service';
+import { LoggingInterceptor } from './interceptors/logging.interceptor';
+import { EmailService } from './services/email.service';
 
+@Global()
 @Module({
-  imports: [],
-  controllers: [],
   providers: [
     {
-      provide: 'ErrorCode',
-      useValue: ErrorCode,
+      provide: LoggerService,
+      useFactory: () => new LoggerService(),
     },
-    {
-      provide: 'availableLanguages',
-      useValue: availableMemory,
-    },
-    BasicEntity,
+    LoggingInterceptor,
+    EmailService,
   ],
-  exports: [
-    {
-      provide: 'ErrorCode',
-      useValue: ErrorCode,
-    },
-    {
-      provide: 'availableLanguages',
-      useValue: availableMemory,
-    },
-    BasicEntity,
-  ],
+  exports: [LoggerService, LoggingInterceptor, EmailService],
 })
 export class SharedModule {}

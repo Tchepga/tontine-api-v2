@@ -6,6 +6,7 @@ export class CashFlow {
   @PrimaryGeneratedColumn()
   id: number;
 
+  /** Solde du pot de rotation (cotisations COTISATION validées) */
   @Column()
   amount: number;
 
@@ -14,6 +15,10 @@ export class CashFlow {
 
   @Column()
   dividendes: number;
+
+  /** Solde du fond de la tontine (cotisations FOND validées — réserve commune) */
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  fondBalance: number;
 
   @OneToMany(() => Deposit, (deposit) => deposit.cashFlow)
   deposits: Deposit[];

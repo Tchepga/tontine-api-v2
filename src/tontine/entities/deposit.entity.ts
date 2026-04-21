@@ -1,6 +1,7 @@
-import { Member } from 'src/member/entities/member.entity';
+import { Member } from '../../member/entities/member.entity';
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { StatusDeposit } from '../enum/status-deposit';
+import { DepositType } from '../enum/deposit-type';
 import { CashFlow } from './cashflow.entity';
 
 @Entity()
@@ -20,11 +21,26 @@ export class Deposit {
   @Column()
   status: StatusDeposit;
 
+  /**
+   * Type de dépôt :
+   * - COTISATION : cotisation de rotation (alimente le pot du mois)
+   * - FOND       : contribution au fond de la tontine (réserve commune)
+   */
+  @Column({
+    type: 'enum',
+    enum: DepositType,
+    default: DepositType.COTISATION,
+  })
+  type: DepositType;
+
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   creationDate: Date;
 
   @Column({ nullable: true })
   reasons: string;
+
+  @Column({ nullable: true })
+  comment: string;
 
   @ManyToOne(() => CashFlow, (cashFlow) => cashFlow.deposits)
   cashFlow: CashFlow;

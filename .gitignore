@@ -2,3 +2,11 @@ node_modules
 dist
 .vscode
 environement.prod.ts
+coverage
+.env
+.env.*
+!.env.example
+*.pem
+*id_rsa*
+*id_ed25519*
+.infisical/

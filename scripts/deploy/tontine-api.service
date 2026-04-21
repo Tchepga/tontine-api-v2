@@ -1,0 +1,27 @@
+[Unit]
+Description=Tontine API Service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/apps/tontine
+ExecStart=/root/.volta/bin/node /root/apps/tontine/dist/main.js
+Restart=always
+RestartSec=10
+StandardOutput=append:/root/apps/tontine/logs/app.log
+StandardError=append:/root/apps/tontine/logs/app.log
+EnvironmentFile=/root/apps/tontine/.env
+
+# Gestion des signaux
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Sécurité (allégée pour éviter les conflits)
+NoNewPrivileges=false
+PrivateTmp=false
+
+[Install]
+WantedBy=multi-user.target
