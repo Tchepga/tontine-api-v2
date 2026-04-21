@@ -30,7 +30,7 @@ export class AuthentificationService {
     try {
       await this.jwtService.verify(token);
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -160,7 +160,7 @@ export class AuthentificationService {
         resetToken,
         member.user.username,
       );
-    } catch (error) {
+    } catch {
       throw new BadRequestException(
         "Erreur lors de l'envoi de l'email. Veuillez réessayer plus tard.",
       );
@@ -172,7 +172,7 @@ export class AuthentificationService {
     };
   }
 
-  public async  resetPassword(
+  public async resetPassword(
     resetPasswordDto: ResetPasswordDto,
   ): Promise<{ message: string }> {
     const { token, newPassword } = resetPasswordDto;
