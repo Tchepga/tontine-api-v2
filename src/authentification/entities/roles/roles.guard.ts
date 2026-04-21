@@ -50,14 +50,13 @@ export class RolesGuard implements CanActivate {
         +tontineId,
       );
 
-      if (
-        !memberRole &&
-        payload.role.length === 1 &&
-        payload.role[0] === Role.TONTINARD
-      ) {
-        return this.isRoleMatchOrHigher(requiredRoles, [Role.TONTINARD]);
-      } else if (!memberRole) {
-        throw new UnauthorizedException('User is not a member of this tontine');
+      // Si aucun rôle par tontine n'existe (ancienne tontine ou données manquantes),
+      // on se rabat sur le rôle global du JWT plutôt que de supposer TONTINARD.
+      if (!memberRole) {
+        const globalRoles: Role[] = Array.isArray(payload.role)
+          ? payload.role
+          : [payload.role];
+        return this.isRoleMatchOrHigher(requiredRoles, globalRoles);
       }
 
       return this.isRoleMatchOrHigher(requiredRoles, [memberRole.role]);

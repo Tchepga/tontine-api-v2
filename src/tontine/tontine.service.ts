@@ -41,6 +41,7 @@ import { RateMap } from './entities/rate-map.entity';
 import { Sanction } from './entities/sanction.entity';
 import { Tontine } from './entities/tontine.entity';
 import { StatusDeposit } from './enum/status-deposit';
+import { DepositType } from './enum/deposit-type';
 
 @Injectable()
 export class TontineService {
@@ -425,17 +426,137 @@ export class TontineService {
   }
 
   /**
-   * Recalcule le solde du cashflow en sommant tous les dépôts APPROVED.
-   * Méthode unique de mise à jour — évite les incohérences.
+   * Recalcule les deux soldes du cashflow :
+   * - amount      : somme des dépôts COTISATION validés (pot de rotation)
+   * - fondBalance : somme des dépôts FOND validés (réserve commune)
    */
   async recalculateCashflowAmount(cashFlowId: number): Promise<void> {
     const deposits = await this.dataSource.getRepository(Deposit).find({
       where: { cashFlow: { id: cashFlowId }, status: StatusDeposit.APPROVED },
     });
-    const total = deposits.reduce((acc, d) => acc + Number(d.amount), 0);
+    const rotation = deposits
+      .filter(d => !d.type || d.type === DepositType.COTISATION)
+      .reduce((acc, d) => acc + Number(d.amount), 0);
+    const fond = deposits
+      .filter(d => d.type === DepositType.FOND)
+      .reduce((acc, d) => acc + Number(d.amount), 0);
     await this.dataSource
       .getRepository(CashFlow)
-      .update(cashFlowId, { amount: total });
+      .update(cashFlowId, { amount: rotation, fondBalance: fond });
+  }
+
+  /**
+   * Enregistre la contribution mensuelle au fond pour un ou tous les membres.
+   * Si memberId est fourni → un seul membre ; sinon → tous les membres de la tontine.
+   */
+  /**
+   * Retourne le nombre de parts d'un membre dans une tontine.
+   * (= nombre d'entrées dans part_order pour ce membre + cette config)
+   */
+  async getPartCount(tontineId: number, memberId: number): Promise<number> {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) return 1;
+    const count = tontine.config?.partOrders?.filter(
+      po => po.member?.id === memberId,
+    ).length ?? 1;
+    return count > 0 ? count : 1;
+  }
+
+  /**
+   * Enregistre la contribution mensuelle au fond pour un ou tous les membres.
+   * Le montant est automatiquement multiplié par le nombre de parts du membre :
+   *   fond_membre = baseAmount × nb_parts
+   *
+   * Si memberId est fourni → un seul membre ; sinon → tous les membres.
+   * Si baseAmount est absent, utilise config.monthlyFondAmount.
+   */
+  async recordFondContribution(
+    tontineId: number,
+    memberId: number | null,
+    baseAmount: number | null,
+    creationDate: Date = new Date(),
+  ): Promise<Deposit[]> {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) throw new NotFoundException('Tontine not found');
+
+    const perPartAmount = baseAmount ?? tontine.config?.monthlyFondAmount;
+    if (!perPartAmount || perPartAmount <= 0)
+      throw new HttpException(
+        'Montant invalide ou monthlyFondAmount non configuré',
+        400,
+      );
+
+    const targets = memberId
+      ? tontine.members.filter(m => m.id === memberId)
+      : tontine.members;
+
+    if (!targets.length) throw new NotFoundException('Aucun membre trouvé');
+
+    const saved: Deposit[] = [];
+    for (const member of targets) {
+      const parts = tontine.config?.partOrders?.filter(
+        po => po.member?.id === member.id,
+      ).length ?? 1;
+      const amount = perPartAmount * (parts > 0 ? parts : 1);
+
+      const deposit = this.dataSource.getRepository(Deposit).create({
+        amount,
+        currency: tontine.cashFlow.currency,
+        status: StatusDeposit.APPROVED,
+        reasons: 'VERSEMENT',
+        type: DepositType.FOND,
+        author: member,
+        cashFlow: tontine.cashFlow,
+        creationDate,
+        comment: `Fond mensuel — ${member.firstname} ${member.lastname} (${parts > 1 ? parts + ' parts × ' : ''}${perPartAmount} ${tontine.cashFlow.currency})`,
+      });
+      saved.push(await this.dataSource.getRepository(Deposit).save(deposit));
+    }
+
+    await this.recalculateCashflowAmount(tontine.cashFlow.id);
+    return saved;
+  }
+
+  /** Retourne l'historique des contributions au fond + solde + config */
+  async getFondContributions(tontineId: number): Promise<{
+    deposits: Deposit[];
+    fondBalance: number;
+    monthlyFondAmount: number | null;
+    summary: { memberId: number; firstname: string; parts: number; totalFond: number }[];
+  }> {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) throw new NotFoundException('Tontine not found');
+
+    const deposits = await this.dataSource.getRepository(Deposit).find({
+      where: {
+        cashFlow: { id: tontine.cashFlow.id },
+        type: DepositType.FOND,
+      },
+      relations: ['author'],
+      order: { creationDate: 'DESC' },
+    });
+
+    const cashflow = await this.dataSource
+      .getRepository(CashFlow)
+      .findOne({ where: { id: tontine.cashFlow.id } });
+
+    // Résumé par membre
+    const summary = tontine.members.map(member => {
+      const parts = tontine.config?.partOrders?.filter(
+        po => po.member?.id === member.id,
+      ).length ?? 1;
+      const totalFond = deposits
+        .filter(d => d.author?.id === member.id)
+        .reduce((sum, d) => sum + Number(d.amount), 0);
+      return { memberId: member.id, firstname: member.firstname, parts, totalFond };
+    });
+
+    return {
+      deposits,
+      fondBalance: Number(cashflow?.fondBalance ?? 0),
+      monthlyFondAmount: tontine.config?.monthlyFondAmount ?? null,
+      summary,
+    };
   }
 
   async updateDeposit(

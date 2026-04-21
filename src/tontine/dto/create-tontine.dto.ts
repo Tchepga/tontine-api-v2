@@ -137,6 +137,42 @@ export class CreateConfigTontineDto {
   })
   @IsNumber()
   maxLoanAmount?: number;
+
+  @ApiProperty({
+    description:
+      'Montant prélevé par participant chaque mois pour le fond de la tontine (réserve commune). null = pas de fond.',
+    example: 10,
+    required: false,
+    nullable: true,
+  })
+  @IsNumber()
+  monthlyFondAmount?: number | null;
+}
+
+export class RecordFondContributionDto {
+  @ApiProperty({
+    description:
+      'Montant par part (optionnel — si absent, utilise config.monthlyFondAmount). ' +
+      'Le montant réel = amount × nb_parts_du_membre.',
+    example: 10,
+    required: false,
+  })
+  @IsNumber()
+  amount?: number;
+
+  @ApiProperty({
+    description: 'ID du membre (optionnel — si absent, enregistre pour tous les membres)',
+    required: false,
+  })
+  @IsNumber()
+  memberId?: number;
+
+  @ApiProperty({
+    description: 'Date de la contribution (défaut : aujourd\'hui)',
+    required: false,
+    example: '2026-04-01',
+  })
+  creationDate?: Date;
 }
 
 export class CreateTontineDto {
@@ -209,6 +245,9 @@ export function createToConfigTontineDtoToConfigTontine(
   }
   if (createConfigTontineDto.maxLoanAmount !== undefined) {
     configTontine.maxLoanAmount = createConfigTontineDto.maxLoanAmount;
+  }
+  if (createConfigTontineDto.monthlyFondAmount !== undefined) {
+    configTontine.monthlyFondAmount = createConfigTontineDto.monthlyFondAmount ?? null;
   }
   return configTontine;
 }

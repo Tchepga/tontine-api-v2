@@ -36,6 +36,7 @@ import {
   CreateConfigTontineDto,
   CreateTontineDto,
   PartOrderDto,
+  RecordFondContributionDto,
 } from './dto/create-tontine.dto';
 import { UpdateDepositStatusDto } from './dto/update-deposit-status.dto';
 import { UpdateTontineDto } from './dto/update-tontine.dto';
@@ -192,7 +193,7 @@ export class TontineController {
   }
 
   @Patch(':id/config')
-  @Roles(Role.PRESIDENT)
+  @Roles(Role.ACCOUNT_MANAGER)
   updateConfig(
     @Param('id') id: string,
     @Body() updateConfigDto: CreateConfigTontineDto,
@@ -687,6 +688,38 @@ export class TontineController {
   @ApiOperation({ summary: 'Historique des distributions du pot' })
   getDistributions(@Param('id') id: string) {
     return this.tontineService.getDistributions(+id);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Fond de la tontine (réserve commune)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  @Post(':id/fond')
+  @Roles(Role.ACCOUNT_MANAGER)
+  @ApiOperation({
+    summary: 'Enregistrer une contribution au fond de la tontine',
+    description:
+      'Enregistre la contribution mensuelle au fond. Si memberId est absent, enregistre pour tous les membres.',
+  })
+  recordFondContribution(
+    @Param('id') id: string,
+    @Body() dto: RecordFondContributionDto,
+  ) {
+    return this.tontineService.recordFondContribution(
+      +id,
+      dto.memberId ?? null,
+      dto.amount ?? null,   // null → utilise config.monthlyFondAmount
+      dto.creationDate ? new Date(dto.creationDate) : new Date(),
+    );
+  }
+
+  @Get(':id/fond')
+  @Roles(Role.TONTINARD)
+  @ApiOperation({
+    summary: 'Historique et solde du fond de la tontine',
+  })
+  getFondContributions(@Param('id') id: string) {
+    return this.tontineService.getFondContributions(+id);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

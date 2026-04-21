@@ -46,6 +46,14 @@ export class ConfigTontine {
   @Column({ nullable: true, default: null })
   maxLoanAmount: number;
 
+  /**
+   * Montant prélevé par participant chaque mois pour alimenter le fond de la tontine.
+   * null = pas de fond dans cette tontine.
+   * Ex : 10 = 10 € par membre et par mois vont en réserve (non redistribués en rotation).
+   */
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true, default: null })
+  monthlyFondAmount: number | null;
+
   @OneToMany(() => RateMap, (rateMap) => rateMap.configTontine, {
     cascade: true,
   })
