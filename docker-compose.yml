@@ -1,19 +1,26 @@
+# Les mots de passe viennent du fichier .env à la racine (non versionné).
+# Copier env.example vers .env et renseigner MYSQL_ROOT_PASSWORD / MYSQL_PASSWORD.
 services:
   mysql:
     image: mysql:8.0
     container_name: tontine-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: tontine
-      MYSQL_USER: tontine
-      MYSQL_PASSWORD: tontine
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Définir MYSQL_ROOT_PASSWORD dans .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-tontine}
+      MYSQL_USER: ${MYSQL_USER:-tontine}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Définir MYSQL_PASSWORD dans .env}
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      # $$ → $ dans le conteneur ; MYSQL_ROOT_PASSWORD est injecté par l’image
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,10 +32,10 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     environment:
       ADMINER_DEFAULT_SERVER: mysql
 
 volumes:
   mysql_data:
-
