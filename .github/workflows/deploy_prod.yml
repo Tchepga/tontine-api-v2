@@ -1,5 +1,12 @@
 name: Deploy to Production
 
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   SERVER_HOST     — SSH host (hostname or IP)
+#   SERVER_USER     — SSH login user
+#   SERVER_SSH_KEY  — full private key PEM (-----BEGIN … KEY----- through -----END …)
+# If SERVER_SSH_KEY is missing/empty, appleboy/scp-action fails with:
+#   "can't connect without a private SSH key or password"
+
 # Deploy only runs when master moves (direct push or merge of a PR into master).
 on:
   push:
@@ -13,6 +20,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Verify deploy secrets are set
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          ok=0
+          [ -n "$SERVER_HOST" ] || { echo "::error::SERVER_HOST is missing or empty (repo Actions secrets)."; ok=1; }
+          [ -n "$SERVER_USER" ] || { echo "::error::SERVER_USER is missing or empty (repo Actions secrets)."; ok=1; }
+          [ -n "$SERVER_SSH_KEY" ] || { echo "::error::SERVER_SSH_KEY is missing or empty. Paste the full private key (including BEGIN/END lines) as a repository secret."; ok=1; }
+          exit $ok
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
