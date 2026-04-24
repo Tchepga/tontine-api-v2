@@ -31,7 +31,7 @@ export class Tontine extends BasicEntity {
   legacy: string;
 
   @ManyToMany(() => Member, (member) => member.tontines, { eager: true })
-  @JoinTable()
+  @JoinTable({ name: 'tontine_members_member' })
   members: Member[];
 
   @OneToOne(() => ConfigTontine)

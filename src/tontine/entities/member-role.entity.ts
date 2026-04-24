@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tontine } from './tontine.entity';
 import { User } from '../../authentification/entities/user.entity';
 import { Role } from '../../authentification/entities/roles/roles.enum';
@@ -9,6 +15,7 @@ export class MemberRole {
   id: number;
 
   @ManyToOne(() => User)
+  @JoinColumn({ name: 'userUsername', referencedColumnName: 'username' })
   user: User;
 
   @ManyToOne(() => Tontine)

@@ -23,7 +23,7 @@ export class Member extends BasicEntity {
   id: number;
 
   @OneToOne(() => User)
-  @JoinColumn()
+  @JoinColumn({ name: 'userUsername', referencedColumnName: 'username' })
   user: User;
 
   @Column()
