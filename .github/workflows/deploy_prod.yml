@@ -1,9 +1,9 @@
 name: Deploy to Production
 
-# Required repository secrets (Settings → Secrets and variables → Actions):
-#   SERVER_HOST     — SSH host (hostname or IP)
-#   SERVER_USER     — SSH login user
-#   SERVER_SSH_KEY  — full private key PEM (-----BEGIN … KEY----- through -----END …)
+# SSH deploy credentials must be available to this job. They are read from the
+# GitHub Environment "Production" (Settings → Environments → Production → Environment secrets):
+#   SERVER_HOST, SERVER_USER, SERVER_SSH_KEY
+# Optional repo-level duplicates work too; env secrets take precedence when both exist.
 # If SERVER_SSH_KEY is missing/empty, appleboy/scp-action fails with:
 #   "can't connect without a private SSH key or password"
 
@@ -16,6 +16,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: Production
     if: github.ref == 'refs/heads/master'
     steps:
       - name: Checkout code
@@ -28,9 +29,9 @@ jobs:
           SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
         run: |
           ok=0
-          [ -n "$SERVER_HOST" ] || { echo "::error::SERVER_HOST is missing or empty (repo Actions secrets)."; ok=1; }
-          [ -n "$SERVER_USER" ] || { echo "::error::SERVER_USER is missing or empty (repo Actions secrets)."; ok=1; }
-          [ -n "$SERVER_SSH_KEY" ] || { echo "::error::SERVER_SSH_KEY is missing or empty. Paste the full private key (including BEGIN/END lines) as a repository secret."; ok=1; }
+          [ -n "$SERVER_HOST" ] || { echo "::error::SERVER_HOST is missing or empty (Environment Production or repo Actions secrets)."; ok=1; }
+          [ -n "$SERVER_USER" ] || { echo "::error::SERVER_USER is missing or empty (Environment Production or repo Actions secrets)."; ok=1; }
+          [ -n "$SERVER_SSH_KEY" ] || { echo "::error::SERVER_SSH_KEY is missing or empty (Environment Production: full private key with BEGIN/END lines)."; ok=1; }
           exit $ok
 
       - name: Set up Node.js
