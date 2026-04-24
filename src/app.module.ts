@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
+import type { StringValue } from 'ms';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -18,7 +19,9 @@ import { TontineModule } from './tontine/tontine.module';
     JwtModule.register({
       global: environment.jwtConfig.global,
       secret: environment.jwtConfig.secret,
-      signOptions: { expiresIn: environment.jwtConfig.expiresIn },
+      signOptions: {
+        expiresIn: environment.jwtConfig.expiresIn as StringValue,
+      },
     }),
     TypeOrmModule.forRoot({
       type: environment.databaseConfig.type as any,
