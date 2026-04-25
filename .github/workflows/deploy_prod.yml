@@ -1,11 +1,9 @@
 name: Deploy to Production
 
-# SSH deploy credentials must be available to this job. They are read from the
-# GitHub Environment "Production" (Settings → Environments → Production → Environment secrets):
-#   SERVER_HOST, SERVER_USER, SERVER_SSH_KEY
-# Optional repo-level duplicates work too; env secrets take precedence when both exist.
-# If SERVER_SSH_KEY is missing/empty, appleboy/scp-action fails with:
-#   "can't connect without a private SSH key or password"
+# SSH deploy credentials are read from Repository secrets (Settings → Secrets → Actions):
+#   HOST_VPS_HOSTINGER  → IP ou domaine du serveur
+#   HOST_VPS_USER       → utilisateur SSH (ex: root ou ubuntu)
+#   SSH_KEY_VPS_HOSTINGER → clé privée SSH complète (BEGIN/END inclus)
 
 # Deploy only runs when master moves (direct push or merge of a PR into master).
 on:
@@ -24,14 +22,14 @@ jobs:
 
       - name: Verify deploy secrets are set
         env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          HOST_VPS_HOSTINGER: ${{ secrets.HOST_VPS_HOSTINGER }}
+          HOST_VPS_USER: ${{ secrets.HOST_VPS_USER }}
+          SSH_KEY_VPS_HOSTINGER: ${{ secrets.SSH_KEY_VPS_HOSTINGER }}
         run: |
           ok=0
-          [ -n "$SERVER_HOST" ] || { echo "::error::SERVER_HOST is missing or empty (Environment Production or repo Actions secrets)."; ok=1; }
-          [ -n "$SERVER_USER" ] || { echo "::error::SERVER_USER is missing or empty (Environment Production or repo Actions secrets)."; ok=1; }
-          [ -n "$SERVER_SSH_KEY" ] || { echo "::error::SERVER_SSH_KEY is missing or empty (Environment Production: full private key with BEGIN/END lines)."; ok=1; }
+          [ -n "$HOST_VPS_HOSTINGER" ] || { echo "::error::HOST_VPS_HOSTINGER is missing or empty."; ok=1; }
+          [ -n "$HOST_VPS_USER" ] || { echo "::error::HOST_VPS_USER is missing or empty."; ok=1; }
+          [ -n "$SSH_KEY_VPS_HOSTINGER" ] || { echo "::error::SSH_KEY_VPS_HOSTINGER is missing or empty (full private key with BEGIN/END lines required)."; ok=1; }
           exit $ok
 
       - name: Set up Node.js
@@ -48,18 +46,18 @@ jobs:
       - name: Copy files to server via SSH
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          host: ${{ secrets.HOST_VPS_HOSTINGER }}
+          username: ${{ secrets.HOST_VPS_USER }}
+          key: ${{ secrets.SSH_KEY_VPS_HOSTINGER }}
           source: 'dist/*'
           target: '/apps/tontine'
 
       - name: Run server command via SSH
         uses: appleboy/ssh-action@v0.1.10
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          host: ${{ secrets.HOST_VPS_HOSTINGER }}
+          username: ${{ secrets.HOST_VPS_USER }}
+          key: ${{ secrets.SSH_KEY_VPS_HOSTINGER }}
           script: |
             cp config/.env-tontine-api apps/tontine/.env
             cd /apps/tontine
