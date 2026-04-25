@@ -50,7 +50,7 @@ jobs:
           username: ${{ secrets.HOST_VPS_USER }}
           key: ${{ secrets.SSH_KEY_VPS_HOSTINGER }}
           source: 'dist/*'
-          target: '/apps/tontine'
+          target: '/root/apps/tontine'
 
       - name: Run server command via SSH
         uses: appleboy/ssh-action@v0.1.10
@@ -59,7 +59,7 @@ jobs:
           username: ${{ secrets.HOST_VPS_USER }}
           key: ${{ secrets.SSH_KEY_VPS_HOSTINGER }}
           script: |
-            cp ~/config/.env-tontine-api /apps/tontine/.env
-            cd /apps/tontine
+            cp ~/config/.env-tontine-api ~/apps/tontine/.env
+            cd ~/apps/tontine
             npm install --production || true
-            nohup node dist/main.js > /apps/tontine/app.log 2>&1 &
+            nohup node dist/main.js > ~/apps/tontine/app.log 2>&1 &
