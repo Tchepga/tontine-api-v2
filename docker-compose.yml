@@ -13,6 +13,10 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    # Évite les verrous de socket obsolètes après crash / docker restart (même conteneur).
+    # Sans tmpfs, /var/run/mysqld persiste et MySQL peut boucler sur "Invalid pid in unix socket lock file".
+    tmpfs:
+      - /var/run/mysqld
     healthcheck:
       # $$ → $ dans le conteneur ; MYSQL_ROOT_PASSWORD est injecté par l’image
       test:
@@ -22,7 +26,8 @@ services:
         ]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
   adminer:
     image: adminer:latest
