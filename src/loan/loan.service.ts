@@ -102,10 +102,11 @@ export class LoanService {
   }
 
   private hasManagerRole(user: User): boolean {
+    const roles: string[] = (user as any).roles ?? user.roles ?? [];
     return (
-      user.roles.includes(Role.PRESIDENT) ||
-      user.roles.includes(Role.ACCOUNT_MANAGER) ||
-      user.roles.includes(Role.OFFICE_MANAGER)
+      roles.includes(Role.PRESIDENT) ||
+      roles.includes(Role.ACCOUNT_MANAGER) ||
+      roles.includes(Role.OFFICE_MANAGER)
     );
   }
 
