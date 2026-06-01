@@ -62,4 +62,10 @@ jobs:
             cp ~/config/.env-tontine-api ~/apps/tontine/.env
             cd ~/apps/tontine
             npm install --production || true
+            # Arrêter le process existant avant de démarrer le nouveau
+            pkill -f "node dist/main.js" || true
+            sleep 2
             nohup node dist/main.js > ~/apps/tontine/app.log 2>&1 &
+            # Attendre que le serveur démarre et vérifier qu'il répond
+            sleep 3
+            curl -sf http://localhost:3000/api/health && echo "✓ Server started successfully" || echo "⚠ Health check failed"
