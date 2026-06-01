@@ -9,7 +9,6 @@ import { Reflector } from '@nestjs/core';
 import { Role } from './roles.enum';
 import { ROLES_KEY } from './roles.decorator';
 import { JwtService } from '@nestjs/jwt';
-import { environment } from 'src/shared/environement';
 import { TontineService } from 'src/tontine/tontine.service';
 
 @Injectable()
@@ -37,9 +36,7 @@ export class RolesGuard implements CanActivate {
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret: environment.jwtConfig.secret,
-      });
+      const payload = await this.jwtService.verifyAsync(token);
       request['user'] = payload;
       const tontineId = request.params.id ?? request.headers['tontine-id'];
       if (!tontineId) {

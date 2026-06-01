@@ -8,7 +8,8 @@ export class UpdateLoanDto {
   amount?: number;
 
   @IsEnum(StatusLoan, {
-    message: 'Status must be PENDING, ACCEPTED or REFUSED',
+    message:
+      'Status must be PENDING, APPROVED, PAID, CANCELLED or REJECTED',
   })
   status?: StatusLoan;
 

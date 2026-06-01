@@ -1,6 +1,11 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { Member } from 'src/member/entities/member.entity';
 import { Tontine } from 'src/tontine/entities/tontine.entity';
+import { TontineService } from 'src/tontine/tontine.service';
 import { DataSource } from 'typeorm';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto } from './dto/update-loan.dto';
@@ -17,6 +22,7 @@ export class LoanService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly notificationService: NotificationService,
+    private readonly tontineService: TontineService,
   ) { }
 
   async create(createLoanDto: CreateLoanDto, user: User) {
@@ -84,7 +90,87 @@ export class LoanService {
     return loan;
   }
 
-  async update(id: number, updateLoanDto: UpdateLoanDto): Promise<void> {
+  private async findOneWithRelations(id: number): Promise<Loan> {
+    const loan = await this.dataSource.getRepository(Loan).findOne({
+      where: { id },
+      relations: ['author', 'author.user', 'tontine'],
+    });
+    if (!loan) {
+      throw new BadRequestException('Loan not found');
+    }
+    return loan;
+  }
+
+  async approve(id: number, user: User): Promise<Loan> {
+    const loan = await this.findOneWithRelations(id);
+
+    const memberRole = await this.tontineService.getMemberRole(
+      user.username,
+      loan.tontine.id,
+    );
+    if (!memberRole || memberRole.role !== Role.PRESIDENT) {
+      throw new ForbiddenException('Only the president can approve a loan');
+    }
+    if (loan.status !== StatusLoan.PENDING) {
+      throw new BadRequestException('Only pending loans can be approved');
+    }
+
+    loan.status = StatusLoan.APPROVED;
+    const saved = await this.dataSource.getRepository(Loan).save(loan);
+
+    this.notificationService.create(
+      {
+        action: Action.UPDATE,
+        loanId: saved.id,
+        type: TypeNotification.LOAN,
+        tontineId: loan.tontine.id,
+      },
+      user,
+    );
+
+    return saved;
+  }
+
+  async cancel(id: number, user: User): Promise<Loan> {
+    const loan = await this.findOneWithRelations(id);
+
+    const memberRole = await this.tontineService.getMemberRole(
+      user.username,
+      loan.tontine.id,
+    );
+    const isAuthor = loan.author?.user?.username === user.username;
+    const canCancel =
+      isAuthor ||
+      memberRole?.role === Role.PRESIDENT ||
+      memberRole?.role === Role.ACCOUNT_MANAGER;
+
+    if (!canCancel) {
+      throw new ForbiddenException('Not authorized to cancel this loan');
+    }
+    if (
+      loan.status === StatusLoan.CANCELLED ||
+      loan.status === StatusLoan.PAID
+    ) {
+      throw new BadRequestException('This loan cannot be cancelled');
+    }
+
+    loan.status = StatusLoan.CANCELLED;
+    const saved = await this.dataSource.getRepository(Loan).save(loan);
+
+    this.notificationService.create(
+      {
+        action: Action.UPDATE,
+        loanId: saved.id,
+        type: TypeNotification.LOAN,
+        tontineId: loan.tontine.id,
+      },
+      user,
+    );
+
+    return saved;
+  }
+
+  async update(id: number, updateLoanDto: UpdateLoanDto): Promise<Loan> {
     const { amount, status, currency, voters } = updateLoanDto;
     const loan = await this.findOne(id);
     if (!loan) {
@@ -113,7 +199,7 @@ export class LoanService {
       loan.voters = cleanVoters;
     }
 
-    this.dataSource.getRepository(Loan).save(loan);
+    return this.dataSource.getRepository(Loan).save(loan);
   }
 
   async remove(id: number, user: User) {
