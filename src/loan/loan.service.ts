@@ -101,18 +101,24 @@ export class LoanService {
     return loan;
   }
 
+  private hasManagerRole(user: User): boolean {
+    return (
+      user.roles.includes(Role.PRESIDENT) ||
+      user.roles.includes(Role.ACCOUNT_MANAGER) ||
+      user.roles.includes(Role.OFFICE_MANAGER)
+    );
+  }
+
   async approve(id: number, user: User): Promise<Loan> {
     const loan = await this.findOneWithRelations(id);
 
-    const memberRole = await this.tontineService.getMemberRole(
-      user.username,
-      loan.tontine.id,
-    );
-    if (!memberRole || memberRole.role !== Role.PRESIDENT) {
-      throw new ForbiddenException('Only the president can approve a loan');
+    if (!this.hasManagerRole(user)) {
+      throw new ForbiddenException(
+        'Seuls le président et les gestionnaires peuvent approuver un prêt',
+      );
     }
     if (loan.status !== StatusLoan.PENDING) {
-      throw new BadRequestException('Only pending loans can be approved');
+      throw new BadRequestException('Seuls les prêts en attente peuvent être approuvés');
     }
 
     loan.status = StatusLoan.APPROVED;
@@ -131,27 +137,51 @@ export class LoanService {
     return saved;
   }
 
+  async reject(id: number, user: User, rejectionReason?: string): Promise<Loan> {
+    const loan = await this.findOneWithRelations(id);
+
+    if (!this.hasManagerRole(user)) {
+      throw new ForbiddenException(
+        'Seuls le président et les gestionnaires peuvent rejeter un prêt',
+      );
+    }
+    if (loan.status !== StatusLoan.PENDING) {
+      throw new BadRequestException('Seuls les prêts en attente peuvent être rejetés');
+    }
+
+    loan.status = StatusLoan.REJECTED;
+    if (rejectionReason) {
+      (loan as any).rejectionReason = rejectionReason;
+    }
+    const saved = await this.dataSource.getRepository(Loan).save(loan);
+
+    this.notificationService.create(
+      {
+        action: Action.UPDATE,
+        loanId: saved.id,
+        type: TypeNotification.LOAN,
+        tontineId: loan.tontine.id,
+      },
+      user,
+    );
+
+    return saved;
+  }
+
   async cancel(id: number, user: User): Promise<Loan> {
     const loan = await this.findOneWithRelations(id);
 
-    const memberRole = await this.tontineService.getMemberRole(
-      user.username,
-      loan.tontine.id,
-    );
     const isAuthor = loan.author?.user?.username === user.username;
-    const canCancel =
-      isAuthor ||
-      memberRole?.role === Role.PRESIDENT ||
-      memberRole?.role === Role.ACCOUNT_MANAGER;
+    const canCancel = isAuthor || this.hasManagerRole(user);
 
     if (!canCancel) {
-      throw new ForbiddenException('Not authorized to cancel this loan');
+      throw new ForbiddenException('Non autorisé à annuler ce prêt');
     }
     if (
       loan.status === StatusLoan.CANCELLED ||
       loan.status === StatusLoan.PAID
     ) {
-      throw new BadRequestException('This loan cannot be cancelled');
+      throw new BadRequestException('Ce prêt ne peut pas être annulé');
     }
 
     loan.status = StatusLoan.CANCELLED;

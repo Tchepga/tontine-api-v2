@@ -1,4 +1,4 @@
-import { IsEnum, IsNumber, IsOptional, Min } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { Member } from 'src/member/entities/member.entity';
 import { StatusLoan } from '../enum/status-loan';
 
@@ -20,6 +20,10 @@ export class UpdateLoanDto {
     message: 'Currency must be one of the following: euro, fcfa, dollar',
   })
   currency?: string;
+
+  @IsOptional()
+  @IsString()
+  rejectionReason?: string;
 
   voters?: Member[];
 }

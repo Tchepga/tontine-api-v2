@@ -5,6 +5,7 @@ import {
   Body,
   Patch,
   Param,
+  Query,
   Delete,
   UseGuards,
   Req,
@@ -31,7 +32,7 @@ export class LoanController {
   }
 
   @Get()
-  findAll(@Param('tontineId') tontineId: number) {
+  findAll(@Query('tontineId') tontineId: number) {
     return this.loanService.findAll(tontineId);
   }
 
@@ -61,10 +62,16 @@ export class LoanController {
     @Body() updateLoanDto: UpdateLoanDto,
     @Req() req: { user: User },
   ) {
-    if (updateLoanDto.status === StatusLoan.CANCELLED) {
-      return this.loanService.cancel(+id, req.user);
+    switch (updateLoanDto.status) {
+      case StatusLoan.CANCELLED:
+        return this.loanService.cancel(+id, req.user);
+      case StatusLoan.APPROVED:
+        return this.loanService.approve(+id, req.user);
+      case StatusLoan.REJECTED:
+        return this.loanService.reject(+id, req.user, updateLoanDto.rejectionReason);
+      default:
+        return this.loanService.update(+id, updateLoanDto);
     }
-    return this.loanService.update(+id, updateLoanDto);
   }
 
   @Delete(':id')
