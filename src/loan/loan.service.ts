@@ -102,7 +102,10 @@ export class LoanService {
   }
 
   private hasManagerRole(user: User): boolean {
-    const roles: string[] = (user as any).roles ?? user.roles ?? [];
+    // Le guard injecte le payload JWT brut dans req.user.
+    // Le champ est 'role' (singulier) dans le JWT, 'roles' (pluriel) dans l'entité User.
+    const raw = (user as any).role ?? (user as any).roles ?? user.roles;
+    const roles: string[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
     return (
       roles.includes(Role.PRESIDENT) ||
       roles.includes(Role.ACCOUNT_MANAGER) ||
