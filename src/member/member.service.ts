@@ -37,11 +37,10 @@ export class MemberService {
         return !!user;
       },
     );
-
     const loginDto = {
       username,
       password: createMemberDto.password,
-      role: createMemberDto?.roles ?? Role.TONTINARD,
+      role: createMemberDto?.roles?.[0] ?? Role.TONTINARD,
     } as LoginDto;
 
     const user = await this.authentificationService.register(loginDto);

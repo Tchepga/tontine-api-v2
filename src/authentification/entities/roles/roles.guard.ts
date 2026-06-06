@@ -8,6 +8,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Role } from './roles.enum';
 import { ROLES_KEY } from './roles.decorator';
+import { IS_PUBLIC_KEY } from '../public.decorator';
 import { JwtService } from '@nestjs/jwt';
 import { environment } from 'src/shared/environement';
 import { TontineService } from 'src/tontine/tontine.service';
@@ -21,6 +22,14 @@ export class RolesGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) {
+      return true;
+    }
+
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),

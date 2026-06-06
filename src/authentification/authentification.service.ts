@@ -1,5 +1,5 @@
 import {
-  HttpException,
+  ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -72,15 +72,16 @@ export class AuthentificationService {
     });
 
     if (userFound) {
-      throw new UnauthorizedException(ErrorCode.USER_ALREADY_EXISTS);
+      throw new ConflictException(ErrorCode.USER_ALREADY_EXISTS);
     }
 
     const hashedPassword = await bcrypt.hash(password, this.saltRounds);
+    const resolvedRole = Array.isArray(role) ? role[0] : role;
 
     return this.dataSource.getRepository(User).save({
       username,
       password: hashedPassword,
-      roles: [role ?? Role.TONTINARD],
+      roles: [resolvedRole ?? Role.TONTINARD],
     });
   }
 
