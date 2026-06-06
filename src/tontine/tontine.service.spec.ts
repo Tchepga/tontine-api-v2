@@ -44,6 +44,7 @@ describe('TontineService', () => {
 
   const mockMemberService = {
     findByUsername: jest.fn(),
+    buildUsernameForMember: jest.fn(),
     findOne: jest.fn(),
     create: jest.fn(),
   };
@@ -79,13 +80,12 @@ describe('TontineService', () => {
         currency: 'EUR',
         members: [
           {
-            username: 'test',
             email: 'test@test.com',
             password: 'test',
             firstname: 'test',
             lastname: 'test',
             phone: 'test',
-            country: 'test',
+            country: 'FR',
           },
         ],
         config: {
@@ -105,6 +105,7 @@ describe('TontineService', () => {
         user: { username: 'test', roles: ['TONTINARD'] },
       };
 
+      mockMemberService.buildUsernameForMember.mockReturnValue('test.test');
       mockMemberService.findByUsername.mockResolvedValue(null);
       mockMemberService.create.mockResolvedValue(mockMember);
       mockDataSource.getRepository().save.mockImplementation((entity) => ({

@@ -1,11 +1,6 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Member } from 'src/member/entities/member.entity';
 import { Tontine } from 'src/tontine/entities/tontine.entity';
-import { TontineService } from 'src/tontine/tontine.service';
 import { DataSource } from 'typeorm';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto } from './dto/update-loan.dto';
@@ -22,7 +17,6 @@ export class LoanService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly notificationService: NotificationService,
-    private readonly tontineService: TontineService,
   ) { }
 
   async create(createLoanDto: CreateLoanDto, user: User) {
@@ -90,121 +84,7 @@ export class LoanService {
     return loan;
   }
 
-  private async findOneWithRelations(id: number): Promise<Loan> {
-    const loan = await this.dataSource.getRepository(Loan).findOne({
-      where: { id },
-      relations: ['author', 'author.user', 'tontine'],
-    });
-    if (!loan) {
-      throw new BadRequestException('Loan not found');
-    }
-    return loan;
-  }
-
-  private hasManagerRole(user: User): boolean {
-    // Le guard injecte le payload JWT brut dans req.user.
-    // Le champ est 'role' (singulier) dans le JWT, 'roles' (pluriel) dans l'entité User.
-    const raw = (user as any).role ?? (user as any).roles ?? user.roles;
-    const roles: string[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
-    return (
-      roles.includes(Role.PRESIDENT) ||
-      roles.includes(Role.ACCOUNT_MANAGER) ||
-      roles.includes(Role.OFFICE_MANAGER)
-    );
-  }
-
-  async approve(id: number, user: User): Promise<Loan> {
-    const loan = await this.findOneWithRelations(id);
-
-    if (!this.hasManagerRole(user)) {
-      throw new ForbiddenException(
-        'Seuls le président et les gestionnaires peuvent approuver un prêt',
-      );
-    }
-    if (loan.status !== StatusLoan.PENDING) {
-      throw new BadRequestException('Seuls les prêts en attente peuvent être approuvés');
-    }
-
-    loan.status = StatusLoan.APPROVED;
-    const saved = await this.dataSource.getRepository(Loan).save(loan);
-
-    this.notificationService.create(
-      {
-        action: Action.UPDATE,
-        loanId: saved.id,
-        type: TypeNotification.LOAN,
-        tontineId: loan.tontine.id,
-      },
-      user,
-    );
-
-    return saved;
-  }
-
-  async reject(id: number, user: User, rejectionReason?: string): Promise<Loan> {
-    const loan = await this.findOneWithRelations(id);
-
-    if (!this.hasManagerRole(user)) {
-      throw new ForbiddenException(
-        'Seuls le président et les gestionnaires peuvent rejeter un prêt',
-      );
-    }
-    if (loan.status !== StatusLoan.PENDING) {
-      throw new BadRequestException('Seuls les prêts en attente peuvent être rejetés');
-    }
-
-    loan.status = StatusLoan.REJECTED;
-    if (rejectionReason) {
-      (loan as any).rejectionReason = rejectionReason;
-    }
-    const saved = await this.dataSource.getRepository(Loan).save(loan);
-
-    this.notificationService.create(
-      {
-        action: Action.UPDATE,
-        loanId: saved.id,
-        type: TypeNotification.LOAN,
-        tontineId: loan.tontine.id,
-      },
-      user,
-    );
-
-    return saved;
-  }
-
-  async cancel(id: number, user: User): Promise<Loan> {
-    const loan = await this.findOneWithRelations(id);
-
-    const isAuthor = loan.author?.user?.username === user.username;
-    const canCancel = isAuthor || this.hasManagerRole(user);
-
-    if (!canCancel) {
-      throw new ForbiddenException('Non autorisé à annuler ce prêt');
-    }
-    if (
-      loan.status === StatusLoan.CANCELLED ||
-      loan.status === StatusLoan.PAID
-    ) {
-      throw new BadRequestException('Ce prêt ne peut pas être annulé');
-    }
-
-    loan.status = StatusLoan.CANCELLED;
-    const saved = await this.dataSource.getRepository(Loan).save(loan);
-
-    this.notificationService.create(
-      {
-        action: Action.UPDATE,
-        loanId: saved.id,
-        type: TypeNotification.LOAN,
-        tontineId: loan.tontine.id,
-      },
-      user,
-    );
-
-    return saved;
-  }
-
-  async update(id: number, updateLoanDto: UpdateLoanDto): Promise<Loan> {
+  async update(id: number, updateLoanDto: UpdateLoanDto): Promise<void> {
     const { amount, status, currency, voters } = updateLoanDto;
     const loan = await this.findOne(id);
     if (!loan) {
@@ -233,7 +113,7 @@ export class LoanService {
       loan.voters = cleanVoters;
     }
 
-    return this.dataSource.getRepository(Loan).save(loan);
+    this.dataSource.getRepository(Loan).save(loan);
   }
 
   async remove(id: number, user: User) {

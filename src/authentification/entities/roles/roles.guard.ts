@@ -9,6 +9,7 @@ import { Reflector } from '@nestjs/core';
 import { Role } from './roles.enum';
 import { ROLES_KEY } from './roles.decorator';
 import { JwtService } from '@nestjs/jwt';
+import { environment } from 'src/shared/environement';
 import { TontineService } from 'src/tontine/tontine.service';
 
 @Injectable()
@@ -36,19 +37,11 @@ export class RolesGuard implements CanActivate {
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync(token);
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: environment.jwtConfig.secret,
+      });
       request['user'] = payload;
-      // Résolution de l'ID de tontine (ordre de priorité) :
-      //   1. Header 'tontine-id'   → utilisé par les routes non-tontine (loan, event…)
-      //      où params.id est l'ID de la ressource, pas de la tontine.
-      //   2. params.tontineId      → routes avec param explicite (ex. /loan/:tontineId/…)
-      //   3. query.tontineId       → ?tontineId=X
-      //   4. params.id             → fallback legacy pour les routes /tontine/:id
-      const tontineId =
-        request.headers['tontine-id'] ??
-        request.params.tontineId ??
-        request.query.tontineId ??
-        request.params.id;
+      const tontineId = request.params.id ?? request.headers['tontine-id'];
       if (!tontineId) {
         return true;
       }

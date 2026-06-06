@@ -4,8 +4,6 @@ import { User } from 'src/authentification/entities/user.entity';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
 
 export class CreateMemberDto {
-  username: string;
-
   password?: string | undefined;
 
   @IsString({ message: 'Le prénom est requis' })
@@ -31,11 +29,10 @@ export class CreateMemberDto {
 export function createToMemberDtoToMember(
   createMemberDto: CreateMemberDto
 ): Member {
-  const { username, password, firstname, lastname, email, phone, country } =
+  const { password, firstname, lastname, email, phone, country } =
     createMemberDto;
   const member = new Member();
   const user = new User();
-  user.username = username;
   user.password = password;
 
   member.user = user;

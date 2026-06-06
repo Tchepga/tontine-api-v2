@@ -38,7 +38,7 @@ describe('MemberService', () => {
 
   const mockAuthService = {
     findByUsername: jest.fn(),
-    create: jest.fn(),
+    register: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -59,31 +59,42 @@ describe('MemberService', () => {
     service = module.get<MemberService>(MemberService);
     authService = module.get<AuthentificationService>(AuthentificationService);
     dataSource = module.get<DataSource>(DataSource);
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
+  describe('buildUsernameForMember', () => {
+    it('should build normalized username from firstname and lastname', () => {
+      expect(service.buildUsernameForMember('Jean', 'Dupont')).toBe(
+        'jean.dupont',
+      );
+      expect(service.buildUsernameForMember('Élodie', 'Müller')).toBe(
+        'elodie.muller',
+      );
+    });
+  });
+
   describe('create', () => {
-    it('should create a new member', async () => {
-      const mockCreateMemberDto: CreateMemberDto = {
-        username: 'test',
-        email: 'test@test.com',
-        password: 'password',
-        firstname: 'Test',
-        lastname: 'User',
-        phone: '1234567890',
-        country: 'FR',
-      };
+    const mockCreateMemberDto: CreateMemberDto = {
+      email: 'test@test.com',
+      password: 'password',
+      firstname: 'Test',
+      lastname: 'User',
+      phone: '1234567890',
+      country: 'FR',
+    };
 
+    it('should create a new member with auto-generated username', async () => {
       const mockUser = {
-        id: 1,
-        username: 'test',
-        email: 'test@test.com',
+        username: 'test.user',
+        roles: ['TONTINARD'],
       };
 
-      mockAuthService.create.mockResolvedValue(mockUser);
+      mockAuthService.findByUsername.mockResolvedValue(null);
+      mockAuthService.register.mockResolvedValue(mockUser);
       mockDataSource.getRepository().save.mockImplementation((entity) => ({
         ...entity,
         id: 1,
@@ -95,21 +106,38 @@ describe('MemberService', () => {
       expect(result.user).toEqual(mockUser);
       expect(result.firstname).toBe(mockCreateMemberDto.firstname);
       expect(result.lastname).toBe(mockCreateMemberDto.lastname);
+      expect(mockAuthService.register).toHaveBeenCalledWith(
+        expect.objectContaining({ username: 'test.user' }),
+      );
+    });
+
+    it('should add numeric suffix when username already exists', async () => {
+      const mockUser = {
+        username: 'test.user2',
+        roles: ['TONTINARD'],
+      };
+
+      mockAuthService.findByUsername
+        .mockResolvedValueOnce({ username: 'test.user' })
+        .mockResolvedValueOnce(null);
+      mockAuthService.register.mockResolvedValue(mockUser);
+      mockDataSource.getRepository().save.mockImplementation((entity) => ({
+        ...entity,
+        id: 1,
+      }));
+
+      const result = await service.create(mockCreateMemberDto);
+
+      expect(result.user.username).toBe('test.user2');
+      expect(mockAuthService.register).toHaveBeenCalledWith(
+        expect.objectContaining({ username: 'test.user2' }),
+      );
     });
 
     it('should throw error if user creation fails', async () => {
-      const mockCreateMemberDto = {
-        username: 'test',
-        email: 'test@test.com',
-        password: 'password',
-        firstname: 'Test',
-        lastname: 'User',
-        phone: '1234567890',
-        country: 'FR',
-      };
-
-      mockAuthService.create.mockRejectedValue(
-        new Error('User creation failed')
+      mockAuthService.findByUsername.mockResolvedValue(null);
+      mockAuthService.register.mockRejectedValue(
+        new Error('User creation failed'),
       );
 
       await expect(service.create(mockCreateMemberDto)).rejects.toThrow();
@@ -125,14 +153,15 @@ describe('MemberService', () => {
         user: { username: 'test' },
       };
 
-      mockDataSource.getRepository().findOne.mockResolvedValue(mockMember);
+      mockAuthService.findByUsername.mockResolvedValue({ username: 'test' });
+      mockQueryBuilder.getOne.mockResolvedValue(mockMember);
 
       const result = await service.findByUsername('test');
       expect(result).toEqual(mockMember);
     });
 
     it('should return null if member not found', async () => {
-      mockDataSource.getRepository().findOne.mockResolvedValue(null);
+      mockAuthService.findByUsername.mockResolvedValue(null);
 
       const result = await service.findByUsername('nonexistent');
       expect(result).toBeNull();
@@ -189,24 +218,28 @@ describe('MemberService', () => {
       mockDataSource.getRepository().findOne.mockResolvedValue(null);
 
       await expect(service.update(999, { firstname: 'Test' })).rejects.toThrow(
-        HttpException
+        HttpException,
       );
     });
   });
 
   describe('remove', () => {
-    it('should remove member', async () => {
+    it('should deactivate member', async () => {
       const mockMember = {
         id: 1,
-        firstName: 'Test',
-        lastName: 'User',
+        firstname: 'Test',
+        lastname: 'User',
+        isActive: true,
       };
 
       mockDataSource.getRepository().findOne.mockResolvedValue(mockMember);
-      mockDataSource.getRepository().remove.mockResolvedValue(mockMember);
+      mockDataSource.getRepository().save.mockImplementation((entity) => entity);
 
-      const result = await service.remove(1);
-      expect(result).toEqual(mockMember);
+      await service.remove(1);
+
+      expect(mockDataSource.getRepository().save).toHaveBeenCalledWith(
+        expect.objectContaining({ isActive: false }),
+      );
     });
 
     it('should throw error if member not found', async () => {

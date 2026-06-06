@@ -5,7 +5,6 @@ import {
   Body,
   Patch,
   Param,
-  Query,
   Delete,
   UseGuards,
   Req,
@@ -16,8 +15,6 @@ import { UpdateLoanDto } from './dto/update-loan.dto';
 import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
 import { Roles } from 'src/authentification/entities/roles/roles.decorator';
-import { User } from 'src/authentification/entities/user.entity';
-import { StatusLoan } from './enum/status-loan';
 
 @Controller('loan')
 @UseGuards(RolesGuard)
@@ -32,7 +29,7 @@ export class LoanController {
   }
 
   @Get()
-  findAll(@Query('tontineId') tontineId: number) {
+  findAll(@Param('tontineId') tontineId: number) {
     return this.loanService.findAll(tontineId);
   }
 
@@ -41,42 +38,21 @@ export class LoanController {
     return this.loanService.findOne(+id);
   }
 
-  @Patch(':id/approve')
-  approve(@Param('id') id: string, @Req() req: { user: User }) {
-    return this.loanService.approve(+id, req.user);
-  }
-
-  @Patch(':id/cancel')
-  cancel(@Param('id') id: string, @Req() req: { user: User }) {
-    return this.loanService.cancel(+id, req.user);
-  }
-
-  @Patch(':id/vote')
-  vote(@Param('id') id: string, @Req() req: { user: User }) {
-    return this.loanService.vote(+id, req.user);
-  }
-
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateLoanDto: UpdateLoanDto,
-    @Req() req: { user: User },
-  ) {
-    switch (updateLoanDto.status) {
-      case StatusLoan.CANCELLED:
-        return this.loanService.cancel(+id, req.user);
-      case StatusLoan.APPROVED:
-        return this.loanService.approve(+id, req.user);
-      case StatusLoan.REJECTED:
-        return this.loanService.reject(+id, req.user, updateLoanDto.rejectionReason);
-      default:
-        return this.loanService.update(+id, updateLoanDto);
-    }
+  update(@Param('id') id: string, @Body() updateLoanDto: UpdateLoanDto) {
+    return this.loanService.update(+id, updateLoanDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string, @Req() req: any) {
     const user = req.user;
     return this.loanService.remove(+id, user);
+  }
+
+  @Patch(':id/vote')
+  @Roles(Role.TONTINARD)
+  vote(@Param('id') id: string, @Req() req: any) {
+    const user = req.user;
+    return this.loanService.vote(+id, user);
   }
 }

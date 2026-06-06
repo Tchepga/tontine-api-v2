@@ -69,7 +69,10 @@ export class TontineService {
       const members = await Promise.all(
         createTontineDto.members.map(async (memberDto) => {
           const memberFind = await this.memberService.findByUsername(
-            memberDto.username,
+            this.memberService.buildUsernameForMember(
+              memberDto.firstname,
+              memberDto.lastname,
+            ),
           );
           if (!memberFind) {
             return await this.memberService.create({
@@ -681,7 +684,13 @@ export class TontineService {
     if (!tontine) {
       throw new NotFoundException('Tontine not found');
     }
-    const member = await this.memberService.findByUsername(data.username) ?? await this.memberService.create(data);
+    const member =
+      (await this.memberService.findByUsername(
+        this.memberService.buildUsernameForMember(
+          data.firstname,
+          data.lastname,
+        ),
+      )) ?? (await this.memberService.create(data));
 
     return this.addMember(tontineId, member.id);
   }

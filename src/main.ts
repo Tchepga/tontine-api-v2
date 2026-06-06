@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import {
@@ -18,11 +17,9 @@ async function bootstrap() {
   // TODO: need to restrict validation
   app.useGlobalPipes(new ValidationPipe());
   app.setGlobalPrefix('api');
-
-  const port = parseInt(process.env.PORT || '3000', 10);
-  const host = process.env.HOST || '127.0.0.1';
-
-  await app.listen({ port, host });
-  console.log(`Application running on http://${host}:${port}/api`);
+  await app.listen({
+    port: 8080,
+    host: 'localhost',
+  });
 }
 bootstrap();

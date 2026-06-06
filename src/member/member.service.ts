@@ -10,6 +10,10 @@ import {
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { Member } from './entities/member.entity';
 import { environment } from 'src/shared/environement';
+import {
+  buildUsername,
+  generateUniqueUsername,
+} from 'src/shared/utilities/username-generator';
 
 @Injectable()
 export class MemberService {
@@ -23,19 +27,19 @@ export class MemberService {
 
     this.validatePassword(createMemberDto);
 
-    if (createMemberDto.username) {
-      const user = await this.authentificationService.findByUsername(
-        createMemberDto.username
-      );
-      if (user) {
-        throw new BadRequestException('Username already used');
-      }
-    } else {
-      createMemberDto.username =
-        createMemberDto.firstname + '.' + createMemberDto.lastname;
-    }
+    const username = await generateUniqueUsername(
+      createMemberDto.firstname,
+      createMemberDto.lastname,
+      async (candidate) => {
+        const user = await this.authentificationService.findByUsername(
+          candidate,
+        );
+        return !!user;
+      },
+    );
+
     const loginDto = {
-      username: createMemberDto.username,
+      username,
       password: createMemberDto.password,
       role: createMemberDto?.roles ?? Role.TONTINARD,
     } as LoginDto;
@@ -59,6 +63,10 @@ export class MemberService {
     } else {
       throw new NotFoundException(`Member with id ${id} not found`);
     }
+  }
+
+  buildUsernameForMember(firstname: string, lastname: string): string {
+    return buildUsername(firstname, lastname);
   }
 
   async findByUsername(username: string): Promise<Member | null> {
