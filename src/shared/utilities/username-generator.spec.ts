@@ -9,6 +9,7 @@ describe('username-generator', () => {
       expect(buildUsername('Jean', 'Dupont')).toBe('jean.dupont');
       expect(buildUsername('Élodie', 'Müller')).toBe('elodie.muller');
       expect(buildUsername('Jean-Paul', 'De La Cruz')).toBe('jeanpaul.delacruz');
+      expect(buildUsername('  Jean  ', '  Dupont  ')).toBe('jean.dupont');
     });
   });
 

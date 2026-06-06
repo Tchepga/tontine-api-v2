@@ -2,8 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import { MemberService } from './member.service';
 import { AuthentificationService } from '../authentification/authentification.service';
+import { MailService } from '../mail/mail.service';
 import { HttpException } from '@nestjs/common';
 import { CreateMemberDto } from './dto/create-member.dto';
+import { Role } from '../authentification/entities/roles/roles.enum';
 
 describe('MemberService', () => {
   let service: MemberService;
@@ -41,6 +43,10 @@ describe('MemberService', () => {
     register: jest.fn(),
   };
 
+  const mockMailService = {
+    sendRegistrationWelcomeEmail: jest.fn().mockResolvedValue(true),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -52,6 +58,10 @@ describe('MemberService', () => {
         {
           provide: AuthentificationService,
           useValue: mockAuthService,
+        },
+        {
+          provide: MailService,
+          useValue: mockMailService,
         },
       ],
     }).compile();
@@ -109,6 +119,57 @@ describe('MemberService', () => {
       expect(mockAuthService.register).toHaveBeenCalledWith(
         expect.objectContaining({ username: 'test.user' }),
       );
+    });
+
+    it('should trim firstname and lastname before generating username', async () => {
+      const mockUser = {
+        username: 'test.user',
+        roles: ['TONTINARD'],
+      };
+
+      mockAuthService.findByUsername.mockResolvedValue(null);
+      mockAuthService.register.mockResolvedValue(mockUser);
+      mockDataSource.getRepository().save.mockImplementation((entity) => ({
+        ...entity,
+        id: 1,
+      }));
+
+      await service.create({
+        ...mockCreateMemberDto,
+        firstname: '  Test  ',
+        lastname: '  User  ',
+      });
+
+      expect(mockAuthService.register).toHaveBeenCalledWith(
+        expect.objectContaining({ username: 'test.user' }),
+      );
+    });
+
+    it('should send welcome email for president registration when email is valid', async () => {
+      const mockUser = {
+        username: 'test.user',
+        roles: ['PRESIDENT'],
+      };
+
+      mockAuthService.findByUsername.mockResolvedValue(null);
+      mockAuthService.register.mockResolvedValue(mockUser);
+      mockDataSource.getRepository().save.mockImplementation((entity) => ({
+        ...entity,
+        id: 1,
+      }));
+
+      const result = await service.create({
+        ...mockCreateMemberDto,
+        roles: [Role.PRESIDENT],
+      });
+
+      expect(mockMailService.sendRegistrationWelcomeEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'test@test.com',
+          username: 'test.user',
+        }),
+      );
+      expect(result.emailSent).toBe(true);
     });
 
     it('should add numeric suffix when username already exists', async () => {

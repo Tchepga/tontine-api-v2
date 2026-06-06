@@ -23,6 +23,13 @@ const prodEnvironment = {
     maxLength: parseInt(process.env.PASSWORD_MAX_LENGTH || '100', 10),
     defaultPassword: process.env.DEFAULT_PASSWORD || 'changeme1@',
   },
+  mailConfig: {
+    apiKey: process.env.RESEND_API_KEY || '',
+    fromEmail: process.env.RESEND_FROM_EMAIL || '',
+    enabled: !!(
+      process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL
+    ),
+  },
 };
 
 export const environment = process.env.NODE_ENV === 'production'

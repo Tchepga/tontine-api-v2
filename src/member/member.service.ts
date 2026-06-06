@@ -1,7 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuthentificationService } from 'src/authentification/authentification.service';
 import { LoginDto } from 'src/authentification/dto/login-dto';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
+import { MailService } from 'src/mail/mail.service';
 import { DataSource } from 'typeorm';
 import {
   CreateMemberDto,
@@ -10,6 +15,7 @@ import {
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { Member } from './entities/member.entity';
 import { environment } from 'src/shared/environement';
+import { validateEmail } from 'src/shared/utilities/custom-validator';
 import {
   buildUsername,
   generateUniqueUsername,
@@ -19,10 +25,17 @@ import {
 export class MemberService {
   constructor(
     private readonly dataSource: DataSource,
-    private readonly authentificationService: AuthentificationService
-  ) { }
+    private readonly authentificationService: AuthentificationService,
+    private readonly mailService: MailService,
+  ) {}
 
   async create(createMemberDto: CreateMemberDto) {
+    this.sanitizeCreateMemberDto(createMemberDto);
+
+    if (!createMemberDto.firstname || !createMemberDto.lastname) {
+      throw new BadRequestException('Le prénom et le nom sont requis');
+    }
+
     const member = createToMemberDtoToMember(createMemberDto);
 
     this.validatePassword(createMemberDto);
@@ -46,7 +59,24 @@ export class MemberService {
     const user = await this.authentificationService.register(loginDto);
     member.user = user;
 
-    return await this.dataSource.getRepository(Member).save(member);
+    const saved = await this.dataSource.getRepository(Member).save(member);
+
+    const isPresident = createMemberDto.roles?.includes(Role.PRESIDENT) ?? false;
+    let emailSent = false;
+    if (
+      isPresident &&
+      createMemberDto.email &&
+      validateEmail(createMemberDto.email)
+    ) {
+      emailSent = await this.mailService.sendRegistrationWelcomeEmail({
+        to: createMemberDto.email,
+        firstname: createMemberDto.firstname,
+        lastname: createMemberDto.lastname,
+        username,
+      });
+    }
+
+    return Object.assign(saved, { emailSent, username });
   }
 
   findAll() {
@@ -110,16 +140,31 @@ export class MemberService {
     }
   }
 
+  private sanitizeCreateMemberDto(createMemberDto: CreateMemberDto): void {
+    createMemberDto.firstname = createMemberDto.firstname?.trim() ?? '';
+    createMemberDto.lastname = createMemberDto.lastname?.trim() ?? '';
+    if (createMemberDto.email) {
+      createMemberDto.email = createMemberDto.email.trim();
+    }
+    if (createMemberDto.phone) {
+      createMemberDto.phone = createMemberDto.phone.trim();
+    }
+  }
+
   private validatePassword(createMemberDto: CreateMemberDto) {
     if (!createMemberDto.password) {
       createMemberDto.password = environment.passwordConfig.defaultPassword;
     }
     const { minLength, maxLength } = environment.passwordConfig;
     if (createMemberDto.password.length < minLength) {
-      throw new BadRequestException(`Password must be at least ${minLength} characters long`);
+      throw new BadRequestException(
+        `Password must be at least ${minLength} characters long`,
+      );
     }
     if (createMemberDto.password.length > maxLength) {
-      throw new BadRequestException(`Password must be less than ${maxLength} characters long`);
+      throw new BadRequestException(
+        `Password must be less than ${maxLength} characters long`,
+      );
     }
   }
 }

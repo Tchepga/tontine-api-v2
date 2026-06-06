@@ -20,5 +20,10 @@ export const environment = {
     maxLength: 100,
     defaultPassword: 'changeme1@',
   },
+  mailConfig: {
+    apiKey: '',
+    fromEmail: '',
+    enabled: false,
+  },
 };
 

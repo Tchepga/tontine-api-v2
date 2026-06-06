@@ -38,6 +38,7 @@
     "mysql2": "^3.11.3",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.0",
+    "resend": "^6.12.4",
     "rxjs": "^7.8.1",
     "tontine-api-v2": "file:",
     "typeorm": "^0.3.20"

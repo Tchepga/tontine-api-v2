@@ -11,11 +11,13 @@ import { Deposit } from 'src/tontine/entities/deposit.entity';
 import { TontineService } from 'src/tontine/tontine.service';
 import { AuthentificationService } from 'src/authentification/authentification.service';
 import { NotificationService } from 'src/notification/notification.service';
+import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Member, User, Event, RapportMeeting, Deposit]),
     AuthentificationModule,
+    MailModule,
   ],
   controllers: [MemberController],
   providers: [
