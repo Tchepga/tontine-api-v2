@@ -1,0 +1,34 @@
+# Unité systemd template installée sur le VPS dans /etc/systemd/system/tontine-api@.service
+#
+# L'API tourne en 2 instances : tontine-api@8081 (primaire) et tontine-api@8082 (secours),
+# derrière Caddy (lb_policy first + health check /api/health) pour un failover automatique
+# et des déploiements sans coupure (rolling restart, voir .github/workflows/deploy_prod.yml).
+#
+# Installation :
+#   cp deploy/tontine-api@.service /etc/systemd/system/
+#   systemctl daemon-reload
+#   systemctl enable --now tontine-api@8081 tontine-api@8082
+
+[Unit]
+Description=Tontine API (port %i)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/apps/tontine
+EnvironmentFile=/root/apps/tontine/.env
+# /usr/bin/env PORT=%i prime sur le PORT du fichier .env (dotenv n'écrase pas
+# les variables déjà présentes dans l'environnement).
+ExecStart=/usr/bin/env PORT=%i /root/.volta/bin/node /root/apps/tontine/dist/main.js
+Restart=always
+RestartSec=5
+StandardOutput=append:/root/apps/tontine/logs/app-%i.log
+StandardError=append:/root/apps/tontine/logs/app-%i.log
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

@@ -57,6 +57,10 @@ jobs:
           command_timeout: 20m
           overwrite: true
 
+      # Déploiement sans coupure : l'API tourne en 2 instances systemd
+      # (tontine-api@8081 et tontine-api@8082) derrière Caddy (failover,
+      # health check sur /api/health). On redémarre les instances une par
+      # une : Caddy route vers l'instance saine pendant le restart.
       - name: Run server command via SSH
         uses: appleboy/ssh-action@v0.1.10
         with:
@@ -69,12 +73,11 @@ jobs:
             set -e
             APP_DIR=~/apps/tontine
             ENV_SRC=~/config/.env-tontine-api
-            PID_FILE="$APP_DIR/app.pid"
 
             # SSH non-interactif : Volta n'est pas dans le PATH par défaut
             export VOLTA_HOME="${VOLTA_HOME:-$HOME/.volta}"
             export PATH="$VOLTA_HOME/bin:/usr/local/bin:/usr/bin:$PATH"
-            command -v npm >/dev/null 2>&1 || { echo "npm not found. PATH=$PATH"; ls -la "$VOLTA_HOME/bin" 2>/dev/null || true; exit 1; }
+            command -v npm >/dev/null 2>&1 || { echo "npm not found. PATH=$PATH"; exit 1; }
             command -v node >/dev/null 2>&1 || { echo "node not found"; exit 1; }
             echo "Using $(command -v node) ($(node -v)) / $(command -v npm) ($(npm -v))"
 
@@ -87,66 +90,30 @@ jobs:
 
             npm ci --omit=dev
 
-            # Lire le port depuis .env (défaut 8081)
-            APP_PORT=$(grep -E '^PORT=' "$APP_DIR/.env" | tail -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
-            APP_PORT=${APP_PORT:-8081}
+            # Rolling restart : 8082 (secours) d'abord, puis 8081 (primaire).
+            # Pendant le restart de 8081, Caddy bascule le trafic sur 8082.
+            for PORT in 8082 8081; do
+              echo "Restarting tontine-api@$PORT..."
+              systemctl restart "tontine-api@$PORT"
 
-            stop_on_port() {
-              local port="$1"
-              local pids
-              pids=$(ss -tlnp "sport = :$port" 2>/dev/null | sed -n 's/.*pid=\([0-9]\+\).*/\1/p' | sort -u)
-              if [ -z "$pids" ] && command -v fuser >/dev/null 2>&1; then
-                pids=$(fuser "${port}/tcp" 2>/dev/null || true)
-              fi
-              if [ -n "$pids" ]; then
-                echo "Stopping PIDs on port $port: $pids"
-                # shellcheck disable=SC2086
-                kill $pids 2>/dev/null || true
-                sleep 2
-                # shellcheck disable=SC2086
-                kill -9 $pids 2>/dev/null || true
-              fi
-            }
-
-            echo "Stopping previous tontine API instance(s)..."
-            if [ -f "$PID_FILE" ]; then
-              OLD_PID=$(cat "$PID_FILE" || true)
-              if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-                kill "$OLD_PID" || true
+              healthy=0
+              for i in $(seq 1 30); do
+                if curl -fsS "http://127.0.0.1:$PORT/api/health" >/dev/null 2>&1; then
+                  healthy=1
+                  echo "Instance $PORT healthy after ${i}s"
+                  break
+                fi
                 sleep 1
-                kill -9 "$OLD_PID" 2>/dev/null || true
+              done
+
+              if [ "$healthy" != 1 ]; then
+                echo "Instance $PORT FAILED to become healthy. Recent logs:"
+                tail -n 50 "$APP_DIR/logs/app-$PORT.log" || true
+                systemctl status "tontine-api@$PORT" --no-pager || true
+                exit 1
               fi
-              rm -f "$PID_FILE"
-            fi
+            done
 
-            # Couvre cmdline relative (node dist/main.js) et absolue
-            pkill -f "$APP_DIR/dist/main.js" 2>/dev/null || true
-            pkill -f "node dist/main.js" 2>/dev/null || true
-            stop_on_port "$APP_PORT"
-            # Ancien process parfois resté sur 8080 après un démarrage partiel
-            stop_on_port 8080
-            sleep 1
-
-            if ss -tln | grep -qE ":${APP_PORT}\\b"; then
-              echo "Port $APP_PORT still in use after stop attempts:"
-              ss -tlnp | grep -E ":${APP_PORT}\\b" || true
-              exit 1
-            fi
-
-            # dotenv charge .env au boot ; NODE_ENV exporté en plus pour le shell
-            export NODE_ENV=production
-            nohup node dist/main.js > "$APP_DIR/app.log" 2>&1 &
-            echo $! > "$PID_FILE"
-
-            sleep 3
-            if ! kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-              echo "Process failed to start. Last log lines:"
-              tail -n 50 "$APP_DIR/app.log" || true
-              exit 1
-            fi
-            if ! ss -tln | grep -qE ":${APP_PORT}\\b"; then
-              echo "Process alive but port $APP_PORT not listening. Last log lines:"
-              tail -n 50 "$APP_DIR/app.log" || true
-              exit 1
-            fi
-            echo "Deployed PID=$(cat "$PID_FILE") on port $APP_PORT"
+            echo "Deploy OK:"
+            systemctl is-active tontine-api@8081 tontine-api@8082
+            curl -fsS -o /dev/null -w "public health: %{http_code}\n" https://api.tontine.devcoorp.net/api/health
