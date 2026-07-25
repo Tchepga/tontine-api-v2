@@ -4,6 +4,7 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Role } from './roles.enum';
@@ -18,7 +19,7 @@ export class RolesGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private readonly jwtService: JwtService,
-    private readonly tontineService: TontineService
+    private readonly tontineService: TontineService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -40,43 +41,49 @@ export class RolesGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
     if (!token) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException(
+        'Authentification requise. Veuillez vous reconnecter.',
+      );
     }
 
+    let payload: any;
     try {
-      const payload = await this.jwtService.verifyAsync(token, {
+      payload = await this.jwtService.verifyAsync(token, {
         secret: environment.jwtConfig.secret,
       });
       request['user'] = payload;
-
-      if (!requiredRoles?.length) {
-        return true;
-      }
-
-      const tontineId = request.params.id ?? request.headers['tontine-id'];
-      if (!tontineId) {
-        return true;
-      }
-
-      const memberRoles = await this.tontineService.getMemberRoles(
-        payload.username,
-        +tontineId
+    } catch {
+      throw new UnauthorizedException(
+        'Session expirée ou invalide. Veuillez vous reconnecter.',
       );
-
-      if (!memberRoles?.length) {
-        throw new UnauthorizedException('User is not a member of this tontine');
-      }
-
-      return this.isRoleMatchOrHigher(
-        requiredRoles,
-        memberRoles.map((memberRole) => memberRole.role),
-      );
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-      throw new UnauthorizedException();
     }
+
+    if (!requiredRoles?.length) {
+      return true;
+    }
+
+    const tontineId = request.params.id ?? request.headers['tontine-id'];
+    if (!tontineId) {
+      return true;
+    }
+
+    const memberRoles = await this.tontineService.getMemberRoles(
+      payload.username,
+      +tontineId,
+    );
+
+    if (!memberRoles?.length) {
+      throw new ForbiddenException(
+        "Vous n'êtes pas membre de cette tontine.",
+      );
+    }
+
+    const userRoles = memberRoles.map((memberRole) => memberRole.role);
+    if (!this.isRoleMatchOrHigher(requiredRoles, userRoles)) {
+      throw new ForbiddenException(this.buildForbiddenMessage(requiredRoles));
+    }
+
+    return true;
   }
 
   private extractTokenFromHeader(request: any): string | undefined {
@@ -84,20 +91,48 @@ export class RolesGuard implements CanActivate {
     return type === 'Bearer' ? token : undefined;
   }
 
+  private buildForbiddenMessage(requiredRoles: Role[]): string {
+    if (requiredRoles.includes(Role.PRESIDENT)) {
+      return 'Seul le président peut effectuer cette action.';
+    }
+    if (requiredRoles.includes(Role.ACCOUNT_MANAGER)) {
+      return 'Seuls le président, le vice-président ou le trésorier peuvent effectuer cette action.';
+    }
+    if (requiredRoles.includes(Role.SECRETARY)) {
+      return 'Seuls les membres du bureau (président, vice-président, trésorier ou secrétaire) peuvent effectuer cette action.';
+    }
+    if (requiredRoles.includes(Role.OFFICE_MANAGER)) {
+      return 'Seuls les membres du bureau peuvent effectuer cette action.';
+    }
+    return "Vous n'avez pas les droits nécessaires pour effectuer cette action.";
+  }
+
   private isRoleMatchOrHigher(
     requiredRoles: Role[],
-    userRoles: Role[]
+    userRoles: Role[],
   ): boolean {
     if (userRoles.includes(Role.PRESIDENT)) {
       return true;
     }
+
+    // Vice-président : tous les droits sauf ceux strictement réservés au président
+    if (
+      userRoles.includes(Role.VICE_PRESIDENT) &&
+      !requiredRoles.includes(Role.PRESIDENT)
+    ) {
+      return true;
+    }
+
     if (requiredRoles.includes(Role.PRESIDENT)) {
       return userRoles.includes(Role.PRESIDENT);
     }
 
     if (requiredRoles.includes(Role.ACCOUNT_MANAGER)) {
       return userRoles.some(
-        (role) => role === Role.ACCOUNT_MANAGER || role === Role.PRESIDENT
+        (role) =>
+          role === Role.ACCOUNT_MANAGER ||
+          role === Role.VICE_PRESIDENT ||
+          role === Role.PRESIDENT,
       );
     }
 
@@ -106,7 +141,8 @@ export class RolesGuard implements CanActivate {
         (role) =>
           role === Role.SECRETARY ||
           role === Role.PRESIDENT ||
-          role === Role.ACCOUNT_MANAGER
+          role === Role.VICE_PRESIDENT ||
+          role === Role.ACCOUNT_MANAGER,
       );
     }
 
@@ -115,8 +151,9 @@ export class RolesGuard implements CanActivate {
         (role) =>
           role === Role.OFFICE_MANAGER ||
           role === Role.PRESIDENT ||
+          role === Role.VICE_PRESIDENT ||
           role === Role.ACCOUNT_MANAGER ||
-          role === Role.SECRETARY
+          role === Role.SECRETARY,
       );
     }
 
