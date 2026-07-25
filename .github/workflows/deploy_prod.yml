@@ -71,6 +71,13 @@ jobs:
             ENV_SRC=~/config/.env-tontine-api
             PID_FILE="$APP_DIR/app.pid"
 
+            # SSH non-interactif : Volta n'est pas dans le PATH par défaut
+            export VOLTA_HOME="${VOLTA_HOME:-$HOME/.volta}"
+            export PATH="$VOLTA_HOME/bin:/usr/local/bin:/usr/bin:$PATH"
+            command -v npm >/dev/null 2>&1 || { echo "npm not found. PATH=$PATH"; ls -la "$VOLTA_HOME/bin" 2>/dev/null || true; exit 1; }
+            command -v node >/dev/null 2>&1 || { echo "node not found"; exit 1; }
+            echo "Using $(command -v node) ($(node -v)) / $(command -v npm) ($(npm -v))"
+
             test -f "$ENV_SRC" || { echo "Missing $ENV_SRC"; exit 1; }
             grep -q '^JWT_SECRET=.\+' "$ENV_SRC" || { echo "JWT_SECRET missing or empty in $ENV_SRC"; exit 1; }
             grep -q '^NODE_ENV=production' "$ENV_SRC" || { echo "NODE_ENV=production required in $ENV_SRC"; exit 1; }
