@@ -52,6 +52,10 @@ jobs:
           # dist/ + manifests npm : nécessaires pour installer dotenv et deps runtime
           source: 'dist,package.json,package-lock.json'
           target: '/root/apps/tontine'
+          # Connexion VPS parfois lente depuis les runners GitHub
+          timeout: 120s
+          command_timeout: 20m
+          overwrite: true
 
       - name: Run server command via SSH
         uses: appleboy/ssh-action@v0.1.10
@@ -59,6 +63,8 @@ jobs:
           host: ${{ secrets.HOST_VPS_HOSTINGER }}
           username: ${{ secrets.HOST_VPS_USER }}
           key: ${{ secrets.SSH_KEY_VPS_HOSTINGER }}
+          timeout: 120s
+          command_timeout: 20m
           script: |
             set -e
             APP_DIR=~/apps/tontine
