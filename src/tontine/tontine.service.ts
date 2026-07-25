@@ -615,17 +615,19 @@ export class TontineService {
   ): Promise<{ roles: Role[] }> {
     const uniqueRoles = [...new Set(roles)];
     if (uniqueRoles.length === 0) {
-      throw new BadRequestException('At least one role is required');
+      throw new BadRequestException('Au moins un rôle est requis.');
     }
 
     const tontine = await this.findOne(tontineId);
     if (!tontine) {
-      throw new NotFoundException('Tontine not found');
+      throw new NotFoundException('Tontine introuvable.');
     }
 
     const member = tontine.members?.find((m) => m.id === memberId);
     if (!member?.user) {
-      throw new NotFoundException('Member not found in this tontine');
+      throw new NotFoundException(
+        "Ce membre n'appartient pas à cette tontine.",
+      );
     }
 
     const memberRoleRepo = this.dataSource.getRepository(MemberRole);

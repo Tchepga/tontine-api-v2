@@ -87,28 +87,66 @@ jobs:
 
             npm ci --omit=dev
 
-            # Arrêter l'instance précédente (pid file, puis fallback pkill)
+            # Lire le port depuis .env (défaut 8081)
+            APP_PORT=$(grep -E '^PORT=' "$APP_DIR/.env" | tail -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
+            APP_PORT=${APP_PORT:-8081}
+
+            stop_on_port() {
+              local port="$1"
+              local pids
+              pids=$(ss -tlnp "sport = :$port" 2>/dev/null | sed -n 's/.*pid=\([0-9]\+\).*/\1/p' | sort -u)
+              if [ -z "$pids" ] && command -v fuser >/dev/null 2>&1; then
+                pids=$(fuser "${port}/tcp" 2>/dev/null || true)
+              fi
+              if [ -n "$pids" ]; then
+                echo "Stopping PIDs on port $port: $pids"
+                # shellcheck disable=SC2086
+                kill $pids 2>/dev/null || true
+                sleep 2
+                # shellcheck disable=SC2086
+                kill -9 $pids 2>/dev/null || true
+              fi
+            }
+
+            echo "Stopping previous tontine API instance(s)..."
             if [ -f "$PID_FILE" ]; then
               OLD_PID=$(cat "$PID_FILE" || true)
               if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
                 kill "$OLD_PID" || true
-                sleep 2
+                sleep 1
                 kill -9 "$OLD_PID" 2>/dev/null || true
               fi
               rm -f "$PID_FILE"
             fi
+
+            # Couvre cmdline relative (node dist/main.js) et absolue
             pkill -f "$APP_DIR/dist/main.js" 2>/dev/null || true
+            pkill -f "node dist/main.js" 2>/dev/null || true
+            stop_on_port "$APP_PORT"
+            # Ancien process parfois resté sur 8080 après un démarrage partiel
+            stop_on_port 8080
             sleep 1
+
+            if ss -tln | grep -qE ":${APP_PORT}\\b"; then
+              echo "Port $APP_PORT still in use after stop attempts:"
+              ss -tlnp | grep -E ":${APP_PORT}\\b" || true
+              exit 1
+            fi
 
             # dotenv charge .env au boot ; NODE_ENV exporté en plus pour le shell
             export NODE_ENV=production
             nohup node dist/main.js > "$APP_DIR/app.log" 2>&1 &
             echo $! > "$PID_FILE"
 
-            sleep 2
+            sleep 3
             if ! kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
               echo "Process failed to start. Last log lines:"
               tail -n 50 "$APP_DIR/app.log" || true
               exit 1
             fi
-            echo "Deployed PID=$(cat "$PID_FILE")"
+            if ! ss -tln | grep -qE ":${APP_PORT}\\b"; then
+              echo "Process alive but port $APP_PORT not listening. Last log lines:"
+              tail -n 50 "$APP_DIR/app.log" || true
+              exit 1
+            fi
+            echo "Deployed PID=$(cat "$PID_FILE") on port $APP_PORT"
