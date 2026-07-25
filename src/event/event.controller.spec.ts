@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
 import { EventController } from './event.controller';
 import { EventService } from './event.service';
 
@@ -8,8 +9,24 @@ describe('EventController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [EventController],
-      providers: [EventService],
-    }).compile();
+      providers: [
+        {
+          provide: EventService,
+          useValue: {
+            create: jest.fn(),
+            findAll: jest.fn(),
+            findOne: jest.fn(),
+            update: jest.fn(),
+            remove: jest.fn(),
+            addParticipant: jest.fn(),
+            removeParticipant: jest.fn(),
+          },
+        },
+      ],
+    })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<EventController>(EventController);
   });

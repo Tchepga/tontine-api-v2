@@ -38,7 +38,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build project
         run: npm run build:prod
@@ -49,7 +49,8 @@ jobs:
           host: ${{ secrets.HOST_VPS_HOSTINGER }}
           username: ${{ secrets.HOST_VPS_USER }}
           key: ${{ secrets.SSH_KEY_VPS_HOSTINGER }}
-          source: 'dist/*'
+          # dist/ + manifests npm : nécessaires pour installer dotenv et deps runtime
+          source: 'dist,package.json,package-lock.json'
           target: '/root/apps/tontine'
 
       - name: Run server command via SSH
@@ -59,7 +60,42 @@ jobs:
           username: ${{ secrets.HOST_VPS_USER }}
           key: ${{ secrets.SSH_KEY_VPS_HOSTINGER }}
           script: |
-            cp ~/config/.env-tontine-api ~/apps/tontine/.env
-            cd ~/apps/tontine
-            npm install --production || true
-            nohup node dist/main.js > ~/apps/tontine/app.log 2>&1 &
+            set -e
+            APP_DIR=~/apps/tontine
+            ENV_SRC=~/config/.env-tontine-api
+            PID_FILE="$APP_DIR/app.pid"
+
+            test -f "$ENV_SRC" || { echo "Missing $ENV_SRC"; exit 1; }
+            grep -q '^JWT_SECRET=.\+' "$ENV_SRC" || { echo "JWT_SECRET missing or empty in $ENV_SRC"; exit 1; }
+            grep -q '^NODE_ENV=production' "$ENV_SRC" || { echo "NODE_ENV=production required in $ENV_SRC"; exit 1; }
+
+            cp "$ENV_SRC" "$APP_DIR/.env"
+            cd "$APP_DIR"
+
+            npm ci --omit=dev
+
+            # Arrêter l'instance précédente (pid file, puis fallback pkill)
+            if [ -f "$PID_FILE" ]; then
+              OLD_PID=$(cat "$PID_FILE" || true)
+              if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+                kill "$OLD_PID" || true
+                sleep 2
+                kill -9 "$OLD_PID" 2>/dev/null || true
+              fi
+              rm -f "$PID_FILE"
+            fi
+            pkill -f "$APP_DIR/dist/main.js" 2>/dev/null || true
+            sleep 1
+
+            # dotenv charge .env au boot ; NODE_ENV exporté en plus pour le shell
+            export NODE_ENV=production
+            nohup node dist/main.js > "$APP_DIR/app.log" 2>&1 &
+            echo $! > "$PID_FILE"
+
+            sleep 2
+            if ! kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+              echo "Process failed to start. Last log lines:"
+              tail -n 50 "$APP_DIR/app.log" || true
+              exit 1
+            fi
+            echo "Deployed PID=$(cat "$PID_FILE")"

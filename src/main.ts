@@ -11,15 +11,23 @@ async function bootstrap() {
     AppModule,
     new FastifyAdapter({
       bodyLimit: 10 * 1024 * 1024, // 10MB
-    })
+    }),
   );
 
-  // TODO: need to restrict validation
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
   app.setGlobalPrefix('api');
+
+  const port = parseInt(process.env.PORT || '8080', 10);
+  // 0.0.0.0 : accessible derrière reverse proxy / depuis le réseau (prod).
   await app.listen({
-    port: 8080,
-    host: 'localhost',
+    port,
+    host: '0.0.0.0',
   });
 }
 bootstrap();

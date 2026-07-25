@@ -40,6 +40,7 @@ export class TontineController {
   ) { }
 
   @Post()
+  @Roles(Role.TONTINARD)
   create(@Body() createTontineDto: CreateTontineDto) {
     return this.tontineService.create(createTontineDto);
   }
@@ -93,6 +94,7 @@ export class TontineController {
   }
 
   @Get(':id/config/part-order')
+  @Roles(Role.TONTINARD)
   getPartOrder(@Param('id') id: string) {
     return this.tontineService.getPartOrder(+id);
   }

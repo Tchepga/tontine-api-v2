@@ -2,3 +2,10 @@ node_modules
 dist
 .vscode
 environement.prod.ts
+.env
+.env.*
+!.env.example
+upload/
+*.log
+app.pid
+coverage

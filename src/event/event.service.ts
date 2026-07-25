@@ -48,11 +48,12 @@ export class EventService {
     event.type = type;
     event.description = description;
     event.startDate = startDate;
+    event.participants = [];
     if (endDate) {
       event.endDate = endDate;
     }
     if (participants) {
-      participants.forEach(async (id) => {
+      for (const id of participants) {
         const member = await this.dataSource
           .getRepository(Member)
           .findOne({ where: { id } });
@@ -60,7 +61,7 @@ export class EventService {
         if (member) {
           event.participants.push(member);
         }
-      });
+      }
     }
     event.tontine = tontine;
 

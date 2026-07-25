@@ -1,6 +1,9 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
+import { NotificationService } from 'src/notification/notification.service';
+import { Role } from '../authentification/entities/roles/roles.enum';
+import { User } from '../authentification/entities/user.entity';
 import { MemberService } from '../member/member.service';
 import {
   CreateConfigTontineDto,
@@ -8,6 +11,7 @@ import {
 } from './dto/create-tontine.dto';
 import { Currency } from './enum/shared';
 import { StatusDeposit } from './enum/status-deposit';
+import { SystemType } from './enum/system-type';
 import { TontineService } from './tontine.service';
 
 describe('TontineService', () => {
@@ -21,6 +25,15 @@ describe('TontineService', () => {
     getOne: jest.fn(),
   };
 
+  const createMockRepository = () => ({
+    find: jest.fn(),
+    findOne: jest.fn(),
+    save: jest.fn(),
+    remove: jest.fn(),
+    delete: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+  });
+
   const mockDataSource = {
     createQueryRunner: jest.fn().mockReturnValue({
       connect: jest.fn(),
@@ -32,14 +45,7 @@ describe('TontineService', () => {
         save: jest.fn(),
       },
     }),
-    getRepository: jest.fn().mockReturnValue({
-      find: jest.fn(),
-      findOne: jest.fn(),
-      save: jest.fn(),
-      remove: jest.fn(),
-      delete: jest.fn(),
-      createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
-    }),
+    getRepository: jest.fn().mockReturnValue(createMockRepository()),
   };
 
   const mockMemberService = {
@@ -47,6 +53,11 @@ describe('TontineService', () => {
     buildUsernameForMember: jest.fn(),
     findOne: jest.fn(),
     create: jest.fn(),
+  };
+
+  const mockNotificationService = {
+    create: jest.fn(),
+    notify: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -61,6 +72,10 @@ describe('TontineService', () => {
           provide: MemberService,
           useValue: mockMemberService,
         },
+        {
+          provide: NotificationService,
+          useValue: mockNotificationService,
+        },
       ],
     }).compile();
 
@@ -70,6 +85,17 @@ describe('TontineService', () => {
 
     // Reset all mocks before each test
     jest.clearAllMocks();
+    mockDataSource.getRepository.mockReturnValue(createMockRepository());
+    mockDataSource.createQueryRunner.mockReturnValue({
+      connect: jest.fn(),
+      startTransaction: jest.fn(),
+      commitTransaction: jest.fn(),
+      rollbackTransaction: jest.fn(),
+      release: jest.fn(),
+      manager: {
+        save: jest.fn(),
+      },
+    });
   });
 
   describe('create', () => {
@@ -96,6 +122,7 @@ describe('TontineService', () => {
           countPersonPerMovement: 1,
           movementType: 'CUMULATIVE',
           countMaxMember: 10,
+          systemType: SystemType.PART,
           rateMaps: [],
         },
       };
@@ -143,6 +170,7 @@ describe('TontineService', () => {
       };
 
       const mockMember = { id: 1 };
+      const mockCashflow = { id: 1, amount: 1000, deposits: [] };
       const mockDeposit = {
         amount: 500,
         memberId: 1,
@@ -154,15 +182,31 @@ describe('TontineService', () => {
 
       mockQueryBuilder.getOne.mockResolvedValue(mockTontine);
       mockMemberService.findOne.mockResolvedValue(mockMember);
+      mockDataSource.getRepository.mockReturnValue({
+        find: jest.fn().mockResolvedValue([]),
+        findOne: jest.fn().mockResolvedValue(mockCashflow),
+        save: jest.fn().mockImplementation((entity) => ({ ...entity, id: 1 })),
+        remove: jest.fn(),
+        delete: jest.fn(),
+        createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+      });
+      // Premier findOne = author (Member), suivants = CashFlow
       mockDataSource
         .getRepository()
         .findOne.mockResolvedValueOnce(mockMember)
-        .mockResolvedValueOnce({ id: 1, amount: 1000 });
+        .mockResolvedValue(mockCashflow);
+
+      const mockUser = {
+        username: 'testuser',
+        password: 'secret',
+        roles: [Role.TONTINARD],
+      } as User;
 
       const result = await service.createDeposit(
         1,
         mockDeposit,
-        StatusDeposit.APPROVED
+        StatusDeposit.APPROVED,
+        mockUser,
       );
 
       expect(result).toBeDefined();
@@ -183,8 +227,13 @@ describe('TontineService', () => {
             cashFlowId: 1,
             status: StatusDeposit.PENDING,
           },
-          StatusDeposit.PENDING
-        )
+          StatusDeposit.PENDING,
+          {
+            username: 'testuser',
+            password: 'secret',
+            roles: [Role.TONTINARD],
+          } as User,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -209,6 +258,7 @@ describe('TontineService', () => {
         countPersonPerMovement: 1,
         movementType: 'CUMULATIVE',
         countMaxMember: 10,
+        systemType: SystemType.PART,
         rateMaps: [],
       };
 

@@ -10,7 +10,7 @@ import { Role } from './roles.enum';
 import { ROLES_KEY } from './roles.decorator';
 import { IS_PUBLIC_KEY } from '../public.decorator';
 import { JwtService } from '@nestjs/jwt';
-import { environment } from 'src/shared/environement';
+import { environment } from 'src/shared/config';
 import { TontineService } from 'src/tontine/tontine.service';
 
 @Injectable()
@@ -35,10 +35,8 @@ export class RolesGuard implements CanActivate {
       context.getClass(),
     ]);
 
-    if (!requiredRoles) {
-      return true;
-    }
-
+    // Auth by default: JWT obligatoire sauf @Public().
+    // Sans @Roles, un token valide suffit (pas de check de rôle tontine).
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
     if (!token) {
@@ -50,6 +48,11 @@ export class RolesGuard implements CanActivate {
         secret: environment.jwtConfig.secret,
       });
       request['user'] = payload;
+
+      if (!requiredRoles?.length) {
+        return true;
+      }
+
       const tontineId = request.params.id ?? request.headers['tontine-id'];
       if (!tontineId) {
         return true;
@@ -65,7 +68,10 @@ export class RolesGuard implements CanActivate {
       }
 
       return this.isRoleMatchOrHigher(requiredRoles, [memberRole.role]);
-    } catch {
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       throw new UnauthorizedException();
     }
   }

@@ -1,24 +1,42 @@
+import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { EventService } from './event.service';
 import { DataSource } from 'typeorm';
+import { NotificationService } from 'src/notification/notification.service';
+import { Role } from '../authentification/entities/roles/roles.enum';
+import { User } from '../authentification/entities/user.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventType } from './enum/event-type';
-import { BadRequestException } from '@nestjs/common';
+import { EventService } from './event.service';
+
+const mockUser = {
+  username: 'testuser',
+  password: 'secret',
+  roles: [Role.TONTINARD],
+} as User;
 
 describe('EventService', () => {
   let service: EventService;
-  let dataSource: DataSource;
+
+  const mockRepository = {
+    find: jest.fn(),
+    findOne: jest.fn(),
+    save: jest.fn(),
+    delete: jest.fn(),
+  };
 
   const mockDataSource = {
-    getRepository: jest.fn().mockReturnValue({
-      find: jest.fn(),
-      findOne: jest.fn(),
-      save: jest.fn(),
-      delete: jest.fn(),
-    }),
+    getRepository: jest.fn().mockReturnValue(mockRepository),
+  };
+
+  const mockNotificationService = {
+    create: jest.fn(),
+    notify: jest.fn(),
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+    mockDataSource.getRepository.mockReturnValue(mockRepository);
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EventService,
@@ -26,11 +44,14 @@ describe('EventService', () => {
           provide: DataSource,
           useValue: mockDataSource,
         },
+        {
+          provide: NotificationService,
+          useValue: mockNotificationService,
+        },
       ],
     }).compile();
 
     service = module.get<EventService>(EventService);
-    dataSource = module.get<DataSource>(DataSource);
   });
 
   it('should be defined', () => {
@@ -48,18 +69,17 @@ describe('EventService', () => {
         participants: [1, 2],
       };
 
-      const mockUser = { username: 'testuser' };
       const mockTontine = { id: 1 };
       const mockAuthor = { id: 1, user: { username: 'testuser' } };
       const mockMember = { id: 1 };
 
-      mockDataSource
-        .getRepository()
-        .findOne.mockResolvedValueOnce(mockTontine)
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockTontine)
         .mockResolvedValueOnce(mockAuthor)
+        .mockResolvedValueOnce(mockMember)
         .mockResolvedValueOnce(mockMember);
 
-      mockDataSource.getRepository().save.mockImplementation((entity) => ({
+      mockRepository.save.mockImplementation((entity) => ({
         ...entity,
         id: 1,
       }));
@@ -80,10 +100,13 @@ describe('EventService', () => {
         startDate: new Date(),
       };
 
-      mockDataSource.getRepository().findOne.mockResolvedValue(null);
+      mockRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.create(createEventDto, { username: 'test' })
+        service.create(createEventDto, {
+          ...mockUser,
+          username: 'test',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -96,8 +119,8 @@ describe('EventService', () => {
         { id: 2, title: 'Event 2' },
       ];
 
-      mockDataSource.getRepository().findOne.mockResolvedValue(mockTontine);
-      mockDataSource.getRepository().find.mockResolvedValue(mockEvents);
+      mockRepository.findOne.mockResolvedValue(mockTontine);
+      mockRepository.find.mockResolvedValue(mockEvents);
 
       const result = await service.findAll(1);
 
@@ -105,7 +128,7 @@ describe('EventService', () => {
     });
 
     it('should throw error if tontine not found', async () => {
-      mockDataSource.getRepository().findOne.mockResolvedValue(null);
+      mockRepository.findOne.mockResolvedValue(null);
 
       await expect(service.findAll(999)).rejects.toThrow(BadRequestException);
     });
@@ -123,14 +146,10 @@ describe('EventService', () => {
         title: 'New Title',
       };
 
-      mockDataSource.getRepository().findOne.mockResolvedValue(mockEvent);
-      mockDataSource
-        .getRepository()
-        .save.mockImplementation((entity) => entity);
+      mockRepository.findOne.mockResolvedValue(mockEvent);
+      mockRepository.save.mockImplementation((entity) => entity);
 
-      const result = await service.update(1, updateEventDto, {
-        username: 'testuser',
-      });
+      const result = await service.update(1, updateEventDto, mockUser);
 
       expect(result.title).toBe(updateEventDto.title);
     });
@@ -141,10 +160,10 @@ describe('EventService', () => {
         author: { user: { username: 'otheruser' } },
       };
 
-      mockDataSource.getRepository().findOne.mockResolvedValue(mockEvent);
+      mockRepository.findOne.mockResolvedValue(mockEvent);
 
       await expect(
-        service.update(1, { title: 'New Title' }, { username: 'testuser' })
+        service.update(1, { title: 'New Title' }, mockUser),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -157,13 +176,10 @@ describe('EventService', () => {
       };
       const mockMember = { id: 2 };
 
-      mockDataSource
-        .getRepository()
-        .findOne.mockResolvedValueOnce(mockEvent)
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockEvent)
         .mockResolvedValueOnce(mockMember);
-      mockDataSource
-        .getRepository()
-        .save.mockImplementation((entity) => entity);
+      mockRepository.save.mockImplementation((entity) => entity);
 
       const result = await service.addParticipant(1, 2);
 
@@ -171,10 +187,10 @@ describe('EventService', () => {
     });
 
     it('should throw error if event not found', async () => {
-      mockDataSource.getRepository().findOne.mockResolvedValue(null);
+      mockRepository.findOne.mockResolvedValue(null);
 
       await expect(service.addParticipant(999, 1)).rejects.toThrow(
-        BadRequestException
+        BadRequestException,
       );
     });
   });
@@ -187,13 +203,10 @@ describe('EventService', () => {
         participants: [mockMember],
       };
 
-      mockDataSource
-        .getRepository()
-        .findOne.mockResolvedValueOnce(mockEvent)
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockEvent)
         .mockResolvedValueOnce(mockMember);
-      mockDataSource
-        .getRepository()
-        .save.mockImplementation((entity) => entity);
+      mockRepository.save.mockImplementation((entity) => entity);
 
       const result = await service.removeParticipant(1, 2);
 

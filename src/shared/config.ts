@@ -1,10 +1,21 @@
+import { config as loadEnv } from 'dotenv';
 import { environment as devEnvironment } from './environement';
 
-// Configuration de production basée sur les variables d'environnement
+// Charge .env avant toute lecture de process.env (dev local + prod après deploy).
+loadEnv({ quiet: true });
+
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction && !process.env.JWT_SECRET) {
+  throw new Error(
+    'JWT_SECRET must be set when NODE_ENV=production (see .env / env.example)',
+  );
+}
+
 const prodEnvironment = {
   production: true,
   jwtConfig: {
-    secret: process.env.JWT_SECRET || 'default-secret-change-in-production',
+    secret: process.env.JWT_SECRET as string,
     expiresIn: process.env.JWT_EXPIRES_IN || '24h',
     global: true,
   },
@@ -26,12 +37,8 @@ const prodEnvironment = {
   mailConfig: {
     apiKey: process.env.RESEND_API_KEY || '',
     fromEmail: process.env.RESEND_FROM_EMAIL || '',
-    enabled: !!(
-      process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL
-    ),
+    enabled: !!(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL),
   },
 };
 
-export const environment = process.env.NODE_ENV === 'production'
-    ? prodEnvironment
-    : devEnvironment; 
+export const environment = isProduction ? prodEnvironment : devEnvironment;

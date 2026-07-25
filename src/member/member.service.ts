@@ -14,7 +14,7 @@ import {
 } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { Member } from './entities/member.entity';
-import { environment } from 'src/shared/environement';
+import { environment } from 'src/shared/config';
 import { validateEmail } from 'src/shared/utilities/custom-validator';
 import {
   buildUsername,

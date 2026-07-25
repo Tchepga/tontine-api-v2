@@ -1,5 +1,4 @@
-// src/auth/dto/login.dto.ts
-import { IsIn, IsString } from 'class-validator';
+import { IsIn, IsOptional, IsString } from 'class-validator';
 import { User } from '../entities/user.entity';
 import { Role } from '../entities/roles/roles.enum';
 
@@ -10,10 +9,10 @@ export class LoginDto {
   @IsString({ message: 'Le mot de passe est requis' })
   password: string;
 
-  @IsIn([...Object.values(Role), undefined, null], {
-    message: 'Le rôle est invalide',
-  })
-  role?: Role | undefined | null;
+  /** Réservé aux appels internes (MemberService). Ignoré / écrasé sur POST /auth/register. */
+  @IsOptional()
+  @IsIn(Object.values(Role), { message: 'Le rôle est invalide' })
+  role?: Role;
 
   public toUser(): User {
     const { username, password } = this;
