@@ -127,7 +127,15 @@ export class TontineService {
 
   findTontineByMember(member: Member): Promise<Tontine[]> {
     const tontines = this.dataSource.getRepository(Tontine).find({
-      relations: ['members', 'members.user', 'config', 'cashFlow'],
+      relations: [
+        'members',
+        'members.user',
+        'config',
+        'config.partOrders',
+        'config.partOrders.member',
+        'config.partOrders.member.user',
+        'cashFlow',
+      ],
     });
     return tontines.then((tontines) =>
       tontines.filter((tontine) =>
@@ -342,7 +350,10 @@ export class TontineService {
       .createQueryBuilder('tontine')
       .innerJoinAndSelect('tontine.members', 'members')
       .innerJoinAndSelect('tontine.config', 'config')
-      .innerJoinAndSelect('tontine.cashFlow', 'cashFlow');
+      .innerJoinAndSelect('tontine.cashFlow', 'cashFlow')
+      .leftJoinAndSelect('config.partOrders', 'partOrders')
+      .leftJoinAndSelect('partOrders.member', 'partMember')
+      .leftJoinAndSelect('partMember.user', 'partMemberUser');
   }
 
   // deposit part
