@@ -50,7 +50,7 @@ export class TontineController {
   @Roles(Role.TONTINARD)
   async findOne(@Param('id') id: string, @Req() req: any) {
     const user = await this.userService.findByUsername(req?.user?.username);
-    const tontine = await this.tontineService.findOne(+id);
+    const tontine = await this.tontineService.findOneWithScopedRoles(+id);
 
     const isMember = isMemberOfTontine(tontine, user?.username);
     if (!isMember) {

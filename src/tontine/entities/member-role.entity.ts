@@ -21,9 +21,13 @@ export class MemberRole {
   @ManyToOne(() => Tontine)
   tontine: Tontine;
 
+  /**
+   * varchar plutôt qu'enum MySQL : TypeORM ne met pas à jour l'ENUM
+   * (ex. VICE_PRESIDENT / OFFICE_MANAGER) quand synchronize=false.
+   */
   @Column({
-    type: 'enum',
-    enum: Role,
+    type: 'varchar',
+    length: 50,
     default: Role.TONTINARD,
   })
   role: Role;

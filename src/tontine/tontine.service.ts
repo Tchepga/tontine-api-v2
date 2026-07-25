@@ -50,7 +50,10 @@ export class TontineService {
     if (!member) {
       return [];
     }
-    return await this.findTontineByMember(member);
+    const tontines = await this.findTontineByMember(member);
+    return Promise.all(
+      tontines.map((tontine) => this.withTontineScopedRoles(tontine)),
+    );
   }
 
   async create(createTontineDto: CreateTontineDto): Promise<any> {
@@ -140,13 +143,25 @@ export class TontineService {
       .getOne();
   }
 
+  /** Version destinée aux réponses client : rôles = MemberRole de la tontine. */
+  async findOneWithScopedRoles(id: number): Promise<Tontine> {
+    const tontine = await this.findOne(id);
+    if (!tontine) {
+      return tontine;
+    }
+    return this.withTontineScopedRoles(tontine);
+  }
+
   async addMember(id: number, memberId: number): Promise<Tontine> {
     const tontine = await this.findOne(id);
     if (!tontine) {
       throw new HttpException('Tontine not found', 404);
     }
 
-    const member = await this.memberService.findOne(memberId);
+    const member = await this.dataSource.getRepository(Member).findOne({
+      where: { id: memberId },
+      relations: ['user'],
+    });
     if (!member) {
       throw new HttpException(ErrorCode.NOT_FOUND, 404);
     }
@@ -156,7 +171,18 @@ export class TontineService {
     }
 
     tontine.members.push(member);
-    return this.dataSource.getRepository(Tontine).save(tontine);
+    await this.dataSource.getRepository(Tontine).save(tontine);
+
+    // Rôle dans la tontine (source de vérité pour les droits)
+    const existingRoles = await this.getMemberRoles(
+      member.user.username,
+      id,
+    );
+    if (existingRoles.length === 0) {
+      await this.addMemberWithRole(id, member.user.username, Role.TONTINARD);
+    }
+
+    return this.findOneWithScopedRoles(id);
   }
 
   async update(id: number, updateTontineDto: UpdateTontineDto) {
@@ -562,6 +588,46 @@ export class TontineService {
     config.rateMaps = rateMaps;
 
     return this.dataSource.getRepository(ConfigTontine).save(config);
+  }
+
+  /**
+   * Remplace user.roles (global) par les rôles MemberRole de cette tontine
+   * pour l'affichage client. Ne pas persister User après cet appel.
+   */
+  private async withTontineScopedRoles(tontine: Tontine): Promise<Tontine> {
+    if (!tontine?.members?.length) {
+      return tontine;
+    }
+
+    const memberRoles = await this.dataSource.getRepository(MemberRole).find({
+      where: { tontine: { id: tontine.id } },
+      relations: ['user'],
+    });
+
+    const rolesByUsername = new Map<string, Role[]>();
+    for (const memberRole of memberRoles) {
+      const username = memberRole.user?.username;
+      if (!username) {
+        continue;
+      }
+      const key = username.toLowerCase();
+      const roles = rolesByUsername.get(key) ?? [];
+      roles.push(memberRole.role);
+      rolesByUsername.set(key, roles);
+    }
+
+    for (const member of tontine.members) {
+      if (!member.user?.username) {
+        continue;
+      }
+      const scopedRoles = rolesByUsername.get(
+        member.user.username.toLowerCase(),
+      );
+      member.user.roles =
+        scopedRoles?.length > 0 ? [...scopedRoles] : [Role.TONTINARD];
+    }
+
+    return tontine;
   }
 
   async getMemberRoles(

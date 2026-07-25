@@ -62,7 +62,11 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const tontineId = request.params.id ?? request.headers['tontine-id'];
+    // Préférer le header : sur /loan/:id, params.id est l'ID du prêt.
+    const tontineId =
+      request.headers['tontine-id'] ??
+      request.params.tontineId ??
+      request.params.id;
     if (!tontineId) {
       return true;
     }
