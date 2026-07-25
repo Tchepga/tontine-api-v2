@@ -29,6 +29,7 @@ import { StatusDeposit } from './enum/status-deposit';
 import { TontineService } from './tontine.service';
 import { isMemberOfTontine } from './utilities/service.helper';
 import { CreateMemberDto } from 'src/member/dto/create-member.dto';
+import { UpdateMemberRolesDto } from './dto/update-member-roles.dto';
 
 @UseGuards(RolesGuard)
 @Controller('tontine')
@@ -134,6 +135,20 @@ export class TontineController {
   @Roles(Role.PRESIDENT)
   removeMember(@Param('id') id: string, @Param('memberId') memberId: string) {
     return this.tontineService.removeMember(+id, +memberId);
+  }
+
+  @Patch(':id/member/:memberId/roles')
+  @Roles(Role.PRESIDENT)
+  updateMemberRoles(
+    @Param('id') id: string,
+    @Param('memberId') memberId: string,
+    @Body() updateMemberRolesDto: UpdateMemberRolesDto,
+  ) {
+    return this.tontineService.updateMemberRoles(
+      +id,
+      +memberId,
+      updateMemberRolesDto.roles,
+    );
   }
 
   @Delete(':id')

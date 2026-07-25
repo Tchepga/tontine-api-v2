@@ -58,16 +58,19 @@ export class RolesGuard implements CanActivate {
         return true;
       }
 
-      const memberRole = await this.tontineService.getMemberRole(
+      const memberRoles = await this.tontineService.getMemberRoles(
         payload.username,
         +tontineId
       );
 
-      if (!memberRole) {
+      if (!memberRoles?.length) {
         throw new UnauthorizedException('User is not a member of this tontine');
       }
 
-      return this.isRoleMatchOrHigher(requiredRoles, [memberRole.role]);
+      return this.isRoleMatchOrHigher(
+        requiredRoles,
+        memberRoles.map((memberRole) => memberRole.role),
+      );
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;

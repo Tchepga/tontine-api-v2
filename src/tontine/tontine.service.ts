@@ -1,4 +1,9 @@
-import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
 import { User } from 'src/authentification/entities/user.entity';
 import { Member } from 'src/member/entities/member.entity';
@@ -559,17 +564,25 @@ export class TontineService {
     return this.dataSource.getRepository(ConfigTontine).save(config);
   }
 
-  async getMemberRole(
+  async getMemberRoles(
     username: string,
     tontineId: number,
-  ): Promise<MemberRole> {
-    return this.dataSource.getRepository(MemberRole).findOne({
+  ): Promise<MemberRole[]> {
+    return this.dataSource.getRepository(MemberRole).find({
       where: {
         user: { username },
         tontine: { id: tontineId },
       },
       relations: ['user', 'tontine'],
     });
+  }
+
+  async getMemberRole(
+    username: string,
+    tontineId: number,
+  ): Promise<MemberRole> {
+    const roles = await this.getMemberRoles(username, tontineId);
+    return roles[0] ?? null;
   }
 
   async addMemberWithRole(
@@ -595,6 +608,48 @@ export class TontineService {
     return this.dataSource.getRepository(MemberRole).save(memberRole);
   }
 
+  async updateMemberRoles(
+    tontineId: number,
+    memberId: number,
+    roles: Role[],
+  ): Promise<{ roles: Role[] }> {
+    const uniqueRoles = [...new Set(roles)];
+    if (uniqueRoles.length === 0) {
+      throw new BadRequestException('At least one role is required');
+    }
+
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+
+    const member = tontine.members?.find((m) => m.id === memberId);
+    if (!member?.user) {
+      throw new NotFoundException('Member not found in this tontine');
+    }
+
+    const memberRoleRepo = this.dataSource.getRepository(MemberRole);
+    const existing = await this.getMemberRoles(
+      member.user.username,
+      tontineId,
+    );
+    if (existing.length > 0) {
+      await memberRoleRepo.remove(existing);
+    }
+
+    const saved = await Promise.all(
+      uniqueRoles.map((role) => {
+        const memberRole = new MemberRole();
+        memberRole.user = member.user;
+        memberRole.tontine = tontine;
+        memberRole.role = role;
+        return memberRoleRepo.save(memberRole);
+      }),
+    );
+
+    return { roles: saved.map((memberRole) => memberRole.role) };
+  }
+
   async removeMember(tontineId: number, memberId: number) {
     const tontine = await this.findOne(tontineId);
     if (!tontine) {
@@ -607,9 +662,12 @@ export class TontineService {
     if (!member) {
       throw new NotFoundException('Member not found');
     }
-    const memberRole = await this.getMemberRole(member.user.username, tontineId);
-    if (memberRole) {
-      await this.dataSource.getRepository(MemberRole).delete(memberRole.id);
+    const memberRoles = await this.getMemberRoles(
+      member.user.username,
+      tontineId,
+    );
+    if (memberRoles.length > 0) {
+      await this.dataSource.getRepository(MemberRole).remove(memberRoles);
     }
     tontine.members = tontine.members.filter((m) => m.id !== memberId);
     return this.dataSource.getRepository(Tontine).save(tontine);
