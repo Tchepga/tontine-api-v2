@@ -8,6 +8,8 @@ import {
   Delete,
   UseGuards,
   Req,
+  Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { LoanService } from './loan.service';
 import { CreateLoanDto } from './dto/create-loan.dto';
@@ -29,7 +31,19 @@ export class LoanController {
   }
 
   @Get()
-  findAll(@Param('tontineId') tontineId: number) {
+  findAll(
+    @Query('tontineId') tontineIdQuery: string | undefined,
+    @Req() req: { headers: Record<string, string | string[] | undefined> },
+  ) {
+    const raw =
+      tontineIdQuery ??
+      (req.headers['tontine-id'] as string | undefined);
+    const tontineId = raw ? +raw : NaN;
+    if (!raw || Number.isNaN(tontineId)) {
+      throw new BadRequestException(
+        'tontineId requis (query ?tontineId= ou header tontine-id)',
+      );
+    }
     return this.loanService.findAll(tontineId);
   }
 

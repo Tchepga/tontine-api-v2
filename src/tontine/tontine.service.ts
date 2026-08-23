@@ -928,9 +928,10 @@ export class TontineService {
     await this.assertTontineWritable(id);
     const tontine = await this.assertIsMemberOfTontine(id, user.username);
 
-    const deposit = await this.dataSource
-      .getRepository(Deposit)
-      .findOne({ where: { id: depositId } });
+    const deposit = await this.dataSource.getRepository(Deposit).findOne({
+      where: { id: depositId },
+      relations: ['author'],
+    });
     if (!deposit) {
       throw new NotFoundException('Deposit not found');
     }
@@ -940,21 +941,22 @@ export class TontineService {
       throw new NotFoundException('Member not found');
     }
 
-    const depositRemoved = await this.dataSource
-      .getRepository(Deposit)
-      .remove(deposit);
+    const authorId = deposit.author?.id ?? member.id;
+    const removedDepositId = deposit.id;
+
+    await this.dataSource.getRepository(Deposit).remove(deposit);
 
     this.notificationService.create({
       action: Action.DELETE,
-      depositId: depositRemoved.id,
-      memberId: depositRemoved.author.id,
+      depositId: removedDepositId,
+      memberId: authorId,
       tontineId: tontine.id,
       type: TypeNotification.DEPOSIT,
     },
       user
     );
 
-    return depositRemoved;
+    return { id: removedDepositId };
   }
 
   async setSelectedTontine(id: number, username: string) {

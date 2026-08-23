@@ -9,13 +9,18 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 
+const loginThrottle =
+  process.env.NODE_ENV === 'production'
+    ? { default: { limit: 5, ttl: 60_000 } }
+    : { default: { limit: 10_000, ttl: 60_000 } };
+
 @Controller('auth')
 export class AuthentificationController {
   constructor(private authService: AuthentificationService) {}
 
   @Public()
   @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle(loginThrottle)
   @Post('login')
   login(@Body() loginDto: LoginDto): Promise<any> {
     return this.authService.login(loginDto.username, loginDto.password);

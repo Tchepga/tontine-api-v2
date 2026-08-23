@@ -7,6 +7,7 @@ import { Tontine } from './entities/tontine.entity';
 import { TontineController } from './tontine.controller';
 import { TontineService } from './tontine.service';
 import { MemberModule } from 'src/member/member.module';
+import { MailModule } from 'src/mail/mail.module';
 import { AuthentificationService } from 'src/authentification/authentification.service';
 import { User } from 'src/authentification/entities/user.entity';
 import { RapportMeeting } from './entities/rapport-meeting.entity';
@@ -33,6 +34,7 @@ import { PartOrder } from './entities/part-order.entity';
       PartOrder,
     ]),
     MemberModule,
+    MailModule,
   ],
   controllers: [TontineController],
   providers: [TontineService, AuthentificationService, NotificationService],

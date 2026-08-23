@@ -10,6 +10,7 @@ import { Reflector } from '@nestjs/core';
 import { Role } from './roles.enum';
 import { ROLES_KEY } from './roles.decorator';
 import { IS_PUBLIC_KEY } from '../public.decorator';
+import { SKIP_TONTINE_CONTEXT_KEY } from './skip-tontine-context.decorator';
 import { JwtService } from '@nestjs/jwt';
 import { environment } from 'src/shared/config';
 import { TontineService } from 'src/tontine/tontine.service';
@@ -59,6 +60,14 @@ export class RolesGuard implements CanActivate {
     }
 
     if (!requiredRoles?.length) {
+      return true;
+    }
+
+    const skipTontineContext = this.reflector.getAllAndOverride<boolean>(
+      SKIP_TONTINE_CONTEXT_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (skipTontineContext) {
       return true;
     }
 

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
@@ -16,6 +17,7 @@ import { AuthentificationService } from 'src/authentification/authentification.s
 import { Roles } from 'src/authentification/entities/roles/roles.decorator';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
 import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
+import { SkipTontineContext } from 'src/authentification/entities/roles/skip-tontine-context.decorator';
 import { CreateDepositDto } from './dto/create-deposit.dto';
 import { GetDepositsQueryDto } from './dto/get-deposits-query.dto';
 import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
@@ -44,6 +46,7 @@ export class TontineController {
   ) { }
 
   @Post()
+  @SkipTontineContext()
   @Roles(Role.TONTINARD)
   create(@Body() createTontineDto: CreateTontineDto) {
     return this.tontineService.create(createTontineDto);
@@ -92,8 +95,18 @@ export class TontineController {
   }
 
   @Get('member/:username')
+  @SkipTontineContext()
   @Roles(Role.TONTINARD)
-  async findByMember(@Param('username') username: string): Promise<Tontine[]> {
+  async findByMember(
+    @Param('username') username: string,
+    @Req() req: any,
+  ): Promise<Tontine[]> {
+    if (req.user?.username !== username) {
+      throw new ForbiddenException(
+        'Vous ne pouvez consulter que vos propres tontines.',
+      );
+    }
+
     const tontines = await this.tontineService.findByMember(username);
 
     if (tontines.length === 0) {

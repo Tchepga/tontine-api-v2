@@ -1,9 +1,11 @@
-import { IsString, Length } from 'class-validator';
+import { IsOptional, IsString, Length } from 'class-validator';
 import { Member } from '../entities/member.entity';
 import { User } from 'src/authentification/entities/user.entity';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
 
 export class CreateMemberDto {
+  @IsOptional()
+  @IsString()
   password?: string | undefined;
 
   @IsString({ message: 'Le prénom est requis' })
@@ -12,7 +14,8 @@ export class CreateMemberDto {
   @IsString({ message: 'Le nom est requis' })
   lastname: string;
 
-  // The email field is optional
+  @IsOptional()
+  @IsString()
   email?: string;
 
   @IsString({ message: 'Le numéro de téléphone est requis' })
@@ -22,7 +25,7 @@ export class CreateMemberDto {
   @Length(2, 2, { message: 'Le pays doit avoir exactement 2 caractères' })
   country: string;
 
-  // The roles field is optional
+  @IsOptional()
   roles?: Role[];
 }
 
