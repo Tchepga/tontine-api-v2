@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
@@ -10,6 +10,7 @@ import {
 import { Tontine } from 'src/tontine/entities/tontine.entity';
 import { User } from 'src/authentification/entities/user.entity';
 import { Member } from 'src/member/entities/member.entity';
+import { isMemberOfTontine } from 'src/tontine/utilities/service.helper';
 
 @Injectable()
 export class NotificationService {
@@ -19,9 +20,18 @@ export class NotificationService {
 
   async create(data: CreateNotificationDto, user: User) {
 
-    const tontine = await this.dataSource.getRepository(Tontine).findOne({ where: { id: data.tontineId } });
+    const tontine = await this.dataSource.getRepository(Tontine).findOne({
+      where: { id: data.tontineId },
+      relations: ['members', 'members.user'],
+    });
     if (!tontine) {
       throw new BadRequestException('Tontine not found');
+    }
+
+    if (!isMemberOfTontine(tontine, user.username)) {
+      throw new ForbiddenException(
+        "Vous n'êtes pas membre de cette tontine.",
+      );
     }
 
     const member = await this.dataSource.getRepository(Member).findOne({
@@ -30,9 +40,6 @@ export class NotificationService {
     });
     if (!member) {
       throw new BadRequestException('Member not found');
-    }
-    if (!tontine.members.some(m => m.id === member.id)) {
-      throw new BadRequestException('Member not found in tontine');
     }
 
 
@@ -68,11 +75,20 @@ export class NotificationService {
     });
   }
 
-  async findFromTontine(tontineId: number,) {
+  async findFromTontine(tontineId: number, username: string) {
 
-    const tontine = await this.dataSource.getRepository(Tontine).findOne({ where: { id: tontineId } });
+    const tontine = await this.dataSource.getRepository(Tontine).findOne({
+      where: { id: tontineId },
+      relations: ['members', 'members.user'],
+    });
     if (!tontine) {
       throw new BadRequestException('Tontine not found');
+    }
+
+    if (!isMemberOfTontine(tontine, username)) {
+      throw new ForbiddenException(
+        "Vous n'êtes pas membre de cette tontine.",
+      );
     }
 
     const notifications = await this.dataSource.getRepository(Notification).find({

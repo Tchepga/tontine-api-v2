@@ -93,4 +93,64 @@ export class MailService {
       return false;
     }
   }
+
+  async sendPasswordResetEmail(params: {
+    to: string;
+    username: string;
+    resetToken: string;
+  }): Promise<boolean> {
+    if (!this.isConfigured() || !this.resend) {
+      this.logger.warn(
+        'Resend non configuré — email de réinitialisation non envoyé pour %s',
+        params.to,
+      );
+      return false;
+    }
+
+    const subject = 'Réinitialisation de votre mot de passe Tontine';
+    const text = [
+      `Bonjour,`,
+      '',
+      'Vous avez demandé la réinitialisation de votre mot de passe.',
+      '',
+      `Nom d'utilisateur : ${params.username}`,
+      `Token de réinitialisation (valide 1 h) : ${params.resetToken}`,
+      '',
+      'Utilisez ce token avec POST /api/auth/reset-password pour définir un nouveau mot de passe.',
+    ].join('\n');
+
+    const html = `
+      <p>Bonjour,</p>
+      <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
+      <p><strong>Nom d'utilisateur :</strong> ${params.username}</p>
+      <p><strong>Token de réinitialisation</strong> (valide 1 h) :</p>
+      <p><code>${params.resetToken}</code></p>
+      <p>Utilisez ce token avec <code>POST /api/auth/reset-password</code> pour définir un nouveau mot de passe.</p>
+    `;
+
+    try {
+      const { error } = await this.resend.emails.send({
+        from: environment.mailConfig.fromEmail,
+        to: params.to,
+        subject,
+        html,
+        text,
+      });
+
+      if (error) {
+        this.logger.error(
+          `Échec envoi email Resend à ${params.to}: ${error.message}`,
+        );
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Échec envoi email de réinitialisation à ${params.to}`,
+        error instanceof Error ? error.stack : error,
+      );
+      return false;
+    }
+  }
 }

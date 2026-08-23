@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import { NotificationService } from 'src/notification/notification.service';
@@ -12,7 +12,9 @@ import {
 import { Currency } from './enum/shared';
 import { StatusDeposit } from './enum/status-deposit';
 import { SystemType } from './enum/system-type';
+import { TontineStatus } from './enum/tontine-status';
 import { TontineService } from './tontine.service';
+import { ErrorCode } from '../shared/utilities/error-code';
 
 describe('TontineService', () => {
   let service: TontineService;
@@ -156,9 +158,13 @@ describe('TontineService', () => {
         { id: 2, title: 'Rapport 2' },
       ];
 
+      mockQueryBuilder.getOne.mockResolvedValue({
+        id: 1,
+        members: [{ user: { username: 'testuser' } }],
+      });
       mockDataSource.getRepository().find.mockResolvedValue(mockRapports);
 
-      const result = await service.getRapports(1);
+      const result = await service.getRapports(1, 'testuser');
       expect(result).toEqual(mockRapports);
     });
   });
@@ -168,6 +174,7 @@ describe('TontineService', () => {
       const mockTontine = {
         id: 1,
         cashFlow: { id: 1, amount: 1000 },
+        members: [{ user: { username: 'testuser' } }],
       };
 
       const mockMember = { id: 1 };
@@ -277,4 +284,201 @@ describe('TontineService', () => {
   });
 
   // ... autres tests existants ...
+
+  describe('closeTontine', () => {
+    it('should close an active tontine and snapshot member shares', async () => {
+      const mockTontine = {
+        id: 1,
+        status: TontineStatus.ACTIVE,
+        closedAt: null,
+        closureSnapshot: null,
+        cashFlow: { id: 10, amount: 3000, currency: 'EUR', dividendes: 0 },
+        members: [
+          { id: 1, firstname: 'Alice', lastname: 'A' },
+          { id: 2, firstname: 'Bob', lastname: 'B' },
+        ],
+      };
+
+      mockQueryBuilder.getOne.mockResolvedValue(mockTontine);
+      mockDataSource.getRepository.mockReturnValue({
+        find: jest.fn().mockResolvedValue([
+          {
+            status: StatusDeposit.APPROVED,
+            amount: 2000,
+            author: { id: 1 },
+          },
+          {
+            status: StatusDeposit.APPROVED,
+            amount: 1000,
+            author: { id: 2 },
+          },
+        ]),
+        findOne: jest.fn(),
+        save: jest.fn().mockImplementation((entity) => entity),
+        remove: jest.fn(),
+        delete: jest.fn(),
+        createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+      });
+
+      const result = await service.closeTontine(1);
+
+      expect(result.tontine.status).toBe(TontineStatus.CLOSED);
+      expect(result.closureSummary.remainingBalance).toBe(3000);
+      expect(result.closureSummary.memberShares).toHaveLength(2);
+      expect(result.closureSummary.memberShares[0].shareAmount).toBe(2000);
+      expect(result.closureSummary.memberShares[1].shareAmount).toBe(1000);
+    });
+
+    it('should reject closing an already closed tontine', async () => {
+      mockQueryBuilder.getOne.mockResolvedValue({
+        id: 1,
+        status: TontineStatus.CLOSED,
+      });
+
+      await expect(service.closeTontine(1)).rejects.toMatchObject({
+        response: { errorCode: ErrorCode.TONTINE_ALREADY_CLOSED },
+      });
+    });
+  });
+
+  describe('getClosureSummary', () => {
+    it('should return closure summary for closed tontine', async () => {
+      const closedAt = new Date('2026-01-01T00:00:00.000Z');
+      mockQueryBuilder.getOne.mockResolvedValue({
+        id: 1,
+        status: TontineStatus.CLOSED,
+        closedAt,
+        closureSnapshot: {
+          remainingBalance: 500,
+          currency: 'EUR',
+          cashflowAmount: 500,
+          dividendes: 0,
+          memberShares: [],
+        },
+        members: [{ user: { username: 'member.one' } }],
+      });
+
+      const result = await service.getClosureSummary(1, 'member.one');
+
+      expect(result.tontineId).toBe(1);
+      expect(result.closedAt).toEqual(closedAt);
+      expect(result.remainingBalance).toBe(500);
+    });
+
+    it('should reject summary for active tontine', async () => {
+      mockQueryBuilder.getOne.mockResolvedValue({
+        id: 1,
+        status: TontineStatus.ACTIVE,
+        members: [{ user: { username: 'member.one' } }],
+      });
+
+      await expect(
+        service.getClosureSummary(1, 'member.one'),
+      ).rejects.toMatchObject({
+        response: { errorCode: ErrorCode.TONTINE_NOT_CLOSED },
+      });
+    });
+  });
+
+  describe('restartTontine', () => {
+    it('should create a new active tontine with carry-over cash', async () => {
+      const sourceTontine = {
+        id: 1,
+        title: 'Tontine A',
+        legacy: 'legacy',
+        status: TontineStatus.CLOSED,
+        config: { id: 5 },
+        cashFlow: { currency: 'EUR' },
+        closureSnapshot: { remainingBalance: 1200 },
+        members: [
+          {
+            id: 1,
+            user: { username: 'alice.a' },
+          },
+        ],
+      };
+
+      mockQueryBuilder.getOne
+        .mockResolvedValueOnce(sourceTontine)
+        .mockResolvedValueOnce({
+          id: 99,
+          title: 'Tontine A (suite)',
+          status: TontineStatus.ACTIVE,
+          parentTontineId: 1,
+          members: sourceTontine.members,
+        });
+
+      const managerSave = jest
+        .fn()
+        .mockImplementation((entity) => ({ ...entity, id: entity instanceof Object ? 99 : 99 }));
+      const memberRoleRepo = {
+        find: jest.fn().mockResolvedValue([
+          { user: { username: 'alice.a' }, role: Role.PRESIDENT },
+        ]),
+        save: jest.fn().mockImplementation((entity) => entity),
+      };
+
+      mockDataSource.createQueryRunner.mockReturnValue({
+        connect: jest.fn(),
+        startTransaction: jest.fn(),
+        commitTransaction: jest.fn(),
+        rollbackTransaction: jest.fn(),
+        release: jest.fn(),
+        manager: {
+          save: managerSave,
+          getRepository: jest.fn().mockReturnValue(memberRoleRepo),
+        },
+      });
+
+      mockDataSource.getRepository.mockReturnValue({
+        find: jest.fn().mockResolvedValue([]),
+        findOne: jest.fn().mockResolvedValue({
+          id: 5,
+          defaultLoanRate: 5,
+          defaultLoanDuration: 30,
+          loopPeriod: 'MONTHLY',
+          minLoanAmount: 100,
+          countPersonPerMovement: 1,
+          movementType: 'ROTATIVE',
+          countMaxMember: 12,
+          systemType: SystemType.PART,
+          rateMaps: [],
+        }),
+        save: jest.fn(),
+        remove: jest.fn(),
+        delete: jest.fn(),
+        createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+      });
+
+      const result = await service.restartTontine(1, { carryOverCash: true });
+
+      expect(result.status).toBe(TontineStatus.ACTIVE);
+      expect(result.parentTontineId).toBe(1);
+      expect(managerSave).toHaveBeenCalled();
+    });
+
+    it('should reject restart for active tontine', async () => {
+      mockQueryBuilder.getOne.mockResolvedValue({
+        id: 1,
+        status: TontineStatus.ACTIVE,
+      });
+
+      await expect(service.restartTontine(1, {})).rejects.toMatchObject({
+        response: { errorCode: ErrorCode.TONTINE_NOT_CLOSED },
+      });
+    });
+  });
+
+  describe('assertTontineWritable', () => {
+    it('should block writes on closed tontine', async () => {
+      mockQueryBuilder.getOne.mockResolvedValue({
+        id: 1,
+        status: TontineStatus.CLOSED,
+      });
+
+      await expect(service.assertTontineWritable(1)).rejects.toMatchObject({
+        response: { errorCode: ErrorCode.TONTINE_CLOSED },
+      });
+    });
+  });
 });

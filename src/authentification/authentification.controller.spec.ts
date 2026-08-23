@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthentificationController } from './authentification.controller';
 import { AuthentificationService } from './authentification.service';
 
@@ -16,10 +17,16 @@ describe('AuthentificationController', () => {
             register: jest.fn(),
             verify: jest.fn(),
             getUserByUsername: jest.fn(),
+            changePassword: jest.fn(),
+            forgotPassword: jest.fn(),
+            resetPassword: jest.fn(),
           },
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<AuthentificationController>(
       AuthentificationController,

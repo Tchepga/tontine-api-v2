@@ -2,7 +2,11 @@
 -- tous les rôles : PRESIDENT, VICE_PRESIDENT, ACCOUNT_MANAGER,
 -- OFFICE_MANAGER, SECRETARY, TONTINARD.
 --
--- Usage (prod / staging) :
+-- Préférer la migration TypeORM :
+--   npm run migration:run
+-- (voir src/database/migrations/1755945600000-InitialSchema.ts)
+--
+-- Usage manuel (prod / staging) :
 --   mysql -u... -p... tontine < scripts/sql/fix-member-role-column.sql
 
 ALTER TABLE `member_role`

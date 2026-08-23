@@ -10,4 +10,7 @@ export class User {
 
   @Column('simple-array')
   roles: Role[] = [Role.TONTINARD];
+
+  @Column({ default: false })
+  mustChangePassword: boolean;
 }

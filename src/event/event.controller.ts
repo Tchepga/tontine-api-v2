@@ -28,13 +28,13 @@ export class EventController {
   }
 
   @Get('/tontine/:tontineId')
-  findAll(@Param('tontineId') tontineId: string) {
-    return this.eventService.findAll(+tontineId);
+  findAll(@Param('tontineId') tontineId: string, @Req() req: any) {
+    return this.eventService.findAll(+tontineId, req.user.username);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.eventService.findOne(+id);
+  findOne(@Param('id') id: string, @Req() req: any) {
+    return this.eventService.findOne(+id, req.user.username);
   }
 
   @Patch(':id')
@@ -54,16 +54,26 @@ export class EventController {
   @Patch(':id/add-participant/:participantId')
   addParticipant(
     @Param('id') id: string,
-    @Param('participantId') participantId: string
+    @Param('participantId') participantId: string,
+    @Req() req: any,
   ) {
-    return this.eventService.addParticipant(+id, +participantId);
+    return this.eventService.addParticipant(
+      +id,
+      +participantId,
+      req.user.username,
+    );
   }
 
   @Patch(':id/remove-participant/:participantId')
   removeParticipant(
     @Param('id') id: string,
-    @Param('participantId') participantId: string
+    @Param('participantId') participantId: string,
+    @Req() req: any,
   ) {
-    return this.eventService.removeParticipant(+id, +participantId);
+    return this.eventService.removeParticipant(
+      +id,
+      +participantId,
+      req.user.username,
+    );
   }
 }

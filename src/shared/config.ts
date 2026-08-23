@@ -12,6 +12,12 @@ if (isProduction && !process.env.JWT_SECRET) {
   );
 }
 
+if (isProduction && process.env.DB_SYNCHRONIZE === 'true') {
+  throw new Error(
+    'DB_SYNCHRONIZE must be false in production — use npm run migration:run instead',
+  );
+}
+
 const prodEnvironment = {
   production: true,
   jwtConfig: {

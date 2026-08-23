@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { Event } from './entities/event.entity';
@@ -9,12 +9,15 @@ import { User } from 'src/authentification/entities/user.entity';
 import { NotificationService } from 'src/notification/notification.service';
 import { Action } from 'src/notification/utility/message-notification';
 import { TypeNotification } from 'src/notification/enum/type-notification';
+import { isMemberOfTontine } from 'src/tontine/utilities/service.helper';
+import { TontineService } from 'src/tontine/tontine.service';
 
 @Injectable()
 export class EventService {
   constructor(
     private readonly dataSource: DataSource,
-    private readonly notificationService: NotificationService
+    private readonly notificationService: NotificationService,
+    private readonly tontineService: TontineService,
   ) { }
 
   async create(createEventDto: CreateEventDto, user: User) {
@@ -28,11 +31,22 @@ export class EventService {
       participants,
     } = createEventDto;
 
+    await this.tontineService.assertTontineWritable(tontineId);
+
     const tontine = await this.dataSource
       .getRepository(Tontine)
-      .findOne({ where: { id: tontineId } });
+      .findOne({
+        where: { id: tontineId },
+        relations: ['members', 'members.user'],
+      });
     if (!tontine) {
       throw new BadRequestException('Tontine not found');
+    }
+
+    if (!isMemberOfTontine(tontine, user.username)) {
+      throw new ForbiddenException(
+        "Vous n'êtes pas membre de cette tontine.",
+      );
     }
 
     const author = await this.dataSource
@@ -79,12 +93,21 @@ export class EventService {
     return eventSaved;
   }
 
-  async findAll(tontineId: number) {
+  async findAll(tontineId: number, username: string) {
     const tontine = await this.dataSource
       .getRepository(Tontine)
-      .findOne({ where: { id: tontineId } });
+      .findOne({
+        where: { id: tontineId },
+        relations: ['members', 'members.user'],
+      });
     if (!tontine) {
       throw new BadRequestException('Tontine not found');
+    }
+
+    if (!isMemberOfTontine(tontine, username)) {
+      throw new ForbiddenException(
+        "Vous n'êtes pas membre de cette tontine.",
+      );
     }
     return this.dataSource.getRepository(Event).find({
       where: { tontine: { id: tontineId } },
@@ -92,18 +115,30 @@ export class EventService {
     });
   }
 
-  findOne(id: number) {
-    return this.dataSource.getRepository(Event).findOne({
+  async findOne(id: number, username?: string) {
+    const event = await this.dataSource.getRepository(Event).findOne({
       where: { id },
-      relations: ['author', 'author.user', 'participants'],
+      relations: ['author', 'author.user', 'participants', 'tontine', 'tontine.members', 'tontine.members.user'],
     });
+
+    if (event && username) {
+      if (!isMemberOfTontine(event.tontine, username)) {
+        throw new ForbiddenException(
+          "Vous n'êtes pas membre de cette tontine.",
+        );
+      }
+    }
+
+    return event;
   }
 
   async update(id: number, updateEventDto: UpdateEventDto, user: User) {
-    const event = await this.findOne(id);
+    const event = await this.findOne(id, user.username);
     if (!event) {
       throw new BadRequestException('Event not found');
     }
+
+    await this.tontineService.assertTontineWritable(event.tontine.id);
 
     const isOwnerOfEvent = event.author.user.username == user.username;
     if (!isOwnerOfEvent) {
@@ -135,10 +170,12 @@ export class EventService {
   }
 
   async remove(id: number, user: User) {
-    const event = await this.findOne(id);
+    const event = await this.findOne(id, user.username);
     if (!event) {
       throw new BadRequestException('Event not found');
     }
+
+    await this.tontineService.assertTontineWritable(event.tontine.id);
     const isOwnerOfEvent = event.author.user.username == user.username;
     if (!isOwnerOfEvent) {
       throw new BadRequestException('You are not the owner of this event');
@@ -146,11 +183,13 @@ export class EventService {
     return this.dataSource.getRepository(Event).delete(id);
   }
 
-  async addParticipant(eventId: number, memberId: number) {
-    const event = await this.findOne(eventId);
+  async addParticipant(eventId: number, memberId: number, username: string) {
+    const event = await this.findOne(eventId, username);
     if (!event) {
       throw new BadRequestException('Event not found');
     }
+
+    await this.tontineService.assertTontineWritable(event.tontine.id);
 
     const member = await this.dataSource
       .getRepository(Member)
@@ -163,11 +202,13 @@ export class EventService {
     return this.dataSource.getRepository(Event).save(event);
   }
 
-  async removeParticipant(eventId: number, memberId: number) {
-    const event = await this.findOne(eventId);
+  async removeParticipant(eventId: number, memberId: number, username: string) {
+    const event = await this.findOne(eventId, username);
     if (!event) {
       throw new BadRequestException('Event not found');
     }
+
+    await this.tontineService.assertTontineWritable(event.tontine.id);
 
     const member = await this.dataSource
       .getRepository(Member)

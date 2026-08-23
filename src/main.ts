@@ -1,3 +1,5 @@
+import './instrument';
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import {
@@ -5,6 +7,7 @@ import {
   FastifyAdapter,
 } from '@nestjs/platform-fastify';
 import { ValidationPipe } from '@nestjs/common';
+import helmet from '@fastify/helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -13,6 +16,16 @@ async function bootstrap() {
       bodyLimit: 10 * 1024 * 1024, // 10MB
     }),
   );
+
+  await app.register(helmet);
+
+  const corsOrigins = process.env.CORS_ORIGINS?.trim();
+  app.enableCors({
+    origin: corsOrigins
+      ? corsOrigins.split(',').map((origin) => origin.trim())
+      : true,
+    credentials: true,
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({

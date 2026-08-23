@@ -11,16 +11,19 @@ import { User } from 'src/authentification/entities/user.entity';
 import { Action } from 'src/notification/utility/message-notification';
 import { NotificationService } from 'src/notification/notification.service';
 import { TypeNotification } from 'src/notification/enum/type-notification';
+import { TontineService } from 'src/tontine/tontine.service';
 
 @Injectable()
 export class LoanService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly notificationService: NotificationService,
+    private readonly tontineService: TontineService,
   ) { }
 
   async create(createLoanDto: CreateLoanDto, user: User) {
     const { amount, currency, tontineId } = createLoanDto;
+    await this.tontineService.assertTontineWritable(tontineId);
     const tontine = await this.dataSource
       .getRepository(Tontine)
       .findOne({ where: { id: tontineId }, relations: ['config'] });
@@ -76,7 +79,7 @@ export class LoanService {
   async findOne(id: number): Promise<Loan> {
     const loan = await this.dataSource
       .getRepository(Loan)
-      .findOne({ where: { id } });
+      .findOne({ where: { id }, relations: ['tontine', 'author', 'author.user'] });
     if (!loan) {
       throw new BadRequestException('Loan not found');
     }
@@ -90,6 +93,8 @@ export class LoanService {
     if (!loan) {
       throw new BadRequestException('Loan not found');
     }
+
+    await this.tontineService.assertTontineWritable(loan.tontine.id);
 
     if (amount) {
       loan.amount = amount;
@@ -122,6 +127,8 @@ export class LoanService {
       throw new BadRequestException('Loan not found');
     }
 
+    await this.tontineService.assertTontineWritable(loan.tontine.id);
+
     if (
       !user.roles.includes(Role.PRESIDENT) &&
       !user.roles.includes(Role.ACCOUNT_MANAGER) &&
@@ -138,6 +145,8 @@ export class LoanService {
     if (!loan) {
       throw new BadRequestException('Loan not found');
     }
+
+    await this.tontineService.assertTontineWritable(loan.tontine.id);
 
     const member = await this.dataSource.getRepository(Member).findOne({
       where: { user: { username: user.username } },

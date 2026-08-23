@@ -68,7 +68,9 @@ export class RolesGuard implements CanActivate {
       request.params.tontineId ??
       request.params.id;
     if (!tontineId) {
-      return true;
+      throw new ForbiddenException(
+        'Contexte tontine requis pour cette action (header tontine-id ou paramètre tontine).',
+      );
     }
 
     const memberRoles = await this.tontineService.getMemberRoles(

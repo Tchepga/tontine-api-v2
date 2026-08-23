@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import { NotificationService } from 'src/notification/notification.service';
+import { TontineService } from '../tontine/tontine.service';
 import { LoanService } from './loan.service';
 
 describe('LoanService', () => {
@@ -26,6 +27,12 @@ describe('LoanService', () => {
           useValue: {
             create: jest.fn(),
             notify: jest.fn(),
+          },
+        },
+        {
+          provide: TontineService,
+          useValue: {
+            assertTontineWritable: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],

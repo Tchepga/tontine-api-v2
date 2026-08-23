@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
 import { NotificationGateway } from './notification.gateway';
 import { NotificationService } from './notification.service';
 
@@ -14,6 +15,13 @@ describe('NotificationGateway', () => {
           useValue: {
             create: jest.fn(),
             findAll: jest.fn(),
+            findFromTontine: jest.fn(),
+          },
+        },
+        {
+          provide: JwtService,
+          useValue: {
+            verifyAsync: jest.fn(),
           },
         },
       ],

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   HttpException,
   Injectable,
   NotFoundException,
@@ -35,6 +36,14 @@ import { TypeNotification } from 'src/notification/enum/type-notification';
 import { SystemType } from './enum/system-type';
 import { PartOrder } from './entities/part-order.entity';
 import { CreateMemberDto } from 'src/member/dto/create-member.dto';
+import { isMemberOfTontine } from './utilities/service.helper';
+import { RestartTontineDto } from './dto/restart-tontine.dto';
+import { TontineStatus } from './enum/tontine-status';
+import {
+  ClosureSnapshot,
+  ClosureSummaryResponse,
+  MemberClosureShare,
+} from './types/closure-snapshot';
 
 @Injectable()
 export class TontineService {
@@ -97,6 +106,7 @@ export class TontineService {
       tontine.cashFlow = cashflowSaved;
       tontine.config = configTontine;
       tontine.members = members;
+      tontine.status = TontineStatus.ACTIVE;
       await queryRunner.manager.save(tontine);
 
       // just the first member is the president
@@ -144,6 +154,253 @@ export class TontineService {
     );
   }
 
+  /** Vérifie l'appartenance à une tontine avant accès aux ressources scopées. */
+  async assertIsMemberOfTontine(
+    tontineId: number,
+    username: string,
+  ): Promise<Tontine> {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+    if (!isMemberOfTontine(tontine, username)) {
+      throw new ForbiddenException(
+        "Vous n'êtes pas membre de cette tontine.",
+      );
+    }
+    return tontine;
+  }
+
+  /** Bloque toute écriture sur une tontine clôturée. */
+  async assertTontineWritable(tontineId: number): Promise<Tontine> {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+    if (tontine.status === TontineStatus.CLOSED) {
+      throw new BadRequestException({
+        message: 'Cette tontine est clôturée et ne peut plus être modifiée.',
+        errorCode: ErrorCode.TONTINE_CLOSED,
+      });
+    }
+    return tontine;
+  }
+
+  async closeTontine(tontineId: number): Promise<{
+    tontine: Tontine;
+    closureSummary: ClosureSummaryResponse;
+  }> {
+    const tontine = await this.findOne(tontineId);
+    if (!tontine) {
+      throw new NotFoundException('Tontine not found');
+    }
+    if (tontine.status === TontineStatus.CLOSED) {
+      throw new BadRequestException({
+        message: 'Cette tontine est déjà clôturée.',
+        errorCode: ErrorCode.TONTINE_ALREADY_CLOSED,
+      });
+    }
+
+    const memberShares = await this.computeMemberShares(tontine);
+    const closedAt = new Date();
+    const closureSnapshot: ClosureSnapshot = {
+      remainingBalance: tontine.cashFlow.amount,
+      currency: tontine.cashFlow.currency,
+      cashflowAmount: tontine.cashFlow.amount,
+      dividendes: tontine.cashFlow.dividendes,
+      memberShares,
+    };
+
+    tontine.status = TontineStatus.CLOSED;
+    tontine.closedAt = closedAt;
+    tontine.closureSnapshot = closureSnapshot;
+
+    const saved = await this.dataSource.getRepository(Tontine).save(tontine);
+
+    return {
+      tontine: saved,
+      closureSummary: this.buildClosureSummary(saved),
+    };
+  }
+
+  async getClosureSummary(
+    tontineId: number,
+    username: string,
+  ): Promise<ClosureSummaryResponse> {
+    const tontine = await this.assertIsMemberOfTontine(tontineId, username);
+    if (tontine.status !== TontineStatus.CLOSED) {
+      throw new BadRequestException({
+        message: 'Le récapitulatif de clôture est disponible uniquement pour une tontine clôturée.',
+        errorCode: ErrorCode.TONTINE_NOT_CLOSED,
+      });
+    }
+    if (!tontine.closureSnapshot) {
+      throw new NotFoundException('Récapitulatif de clôture introuvable.');
+    }
+    return this.buildClosureSummary(tontine);
+  }
+
+  async restartTontine(
+    tontineId: number,
+    restartDto: RestartTontineDto,
+  ): Promise<Tontine> {
+    const source = await this.findOne(tontineId);
+    if (!source) {
+      throw new NotFoundException('Tontine not found');
+    }
+    if (source.status !== TontineStatus.CLOSED) {
+      throw new BadRequestException({
+        message: 'Seule une tontine clôturée peut être relancée.',
+        errorCode: ErrorCode.TONTINE_NOT_CLOSED,
+      });
+    }
+
+    const carryOverCash = restartDto.carryOverCash ?? true;
+    const reliquat = source.closureSnapshot?.remainingBalance ?? 0;
+
+    const sourceConfig = await this.dataSource
+      .getRepository(ConfigTontine)
+      .findOne({
+        where: { id: source.config.id },
+        relations: ['rateMaps'],
+      });
+    if (!sourceConfig) {
+      throw new NotFoundException('Config not found');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const config = this.cloneConfig(sourceConfig);
+      const configSaved = await queryRunner.manager.save(config);
+
+      const cashflow = new CashFlow();
+      cashflow.currency = source.cashFlow.currency;
+      cashflow.dividendes = 0;
+      cashflow.amount = carryOverCash ? reliquat : 0;
+      const cashflowSaved = await queryRunner.manager.save(cashflow);
+
+      const newTontine = new Tontine();
+      newTontine.title = restartDto.name?.trim() || `${source.title} (suite)`;
+      newTontine.legacy = source.legacy;
+      newTontine.config = configSaved;
+      newTontine.cashFlow = cashflowSaved;
+      newTontine.members = [...source.members];
+      newTontine.status = TontineStatus.ACTIVE;
+      newTontine.parentTontineId = source.id;
+      newTontine.isSelected = false;
+
+      const tontineSaved = await queryRunner.manager.save(newTontine);
+
+      const memberRoleRepo = queryRunner.manager.getRepository(MemberRole);
+      const sourceRoles = await memberRoleRepo.find({
+        where: { tontine: { id: source.id } },
+        relations: ['user'],
+      });
+
+      for (const sourceRole of sourceRoles) {
+        const memberRole = new MemberRole();
+        memberRole.user = sourceRole.user;
+        memberRole.tontine = tontineSaved;
+        memberRole.role = sourceRole.role;
+        await memberRoleRepo.save(memberRole);
+      }
+
+      await queryRunner.commitTransaction();
+      return this.findOneWithScopedRoles(tontineSaved.id);
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  private buildClosureSummary(tontine: Tontine): ClosureSummaryResponse {
+    const snapshot = tontine.closureSnapshot;
+    return {
+      tontineId: tontine.id,
+      closedAt: tontine.closedAt,
+      remainingBalance: snapshot.remainingBalance,
+      currency: snapshot.currency,
+      memberShares: snapshot.memberShares,
+    };
+  }
+
+  private cloneConfig(source: ConfigTontine): ConfigTontine {
+    const config = new ConfigTontine();
+    config.defaultLoanRate = source.defaultLoanRate;
+    config.defaultLoanDuration = source.defaultLoanDuration;
+    config.loopPeriod = source.loopPeriod;
+    config.minLoanAmount = source.minLoanAmount;
+    config.countPersonPerMovement = source.countPersonPerMovement;
+    config.movementType = source.movementType;
+    config.countMaxMember = source.countMaxMember;
+    config.systemType = source.systemType;
+    config.rateMaps =
+      source.rateMaps?.map((rateMap) => {
+        const entity = new RateMap();
+        entity.rate = rateMap.rate;
+        entity.maxAmount = rateMap.maxAmount;
+        entity.minAmount = rateMap.minAmount;
+        return entity;
+      }) ?? [];
+    return config;
+  }
+
+  private async computeMemberShares(
+    tontine: Tontine,
+  ): Promise<MemberClosureShare[]> {
+    const deposits = await this.dataSource.getRepository(Deposit).find({
+      where: { cashFlow: { id: tontine.cashFlow.id } },
+      relations: ['author'],
+    });
+
+    const contributionsByMember = new Map<number, number>();
+    for (const deposit of deposits) {
+      if (deposit.status !== StatusDeposit.APPROVED) {
+        continue;
+      }
+      const memberId = deposit.author.id;
+      contributionsByMember.set(
+        memberId,
+        (contributionsByMember.get(memberId) ?? 0) + deposit.amount,
+      );
+    }
+
+    const remainingBalance = tontine.cashFlow.amount;
+    const totalContributions = [...contributionsByMember.values()].reduce(
+      (acc, amount) => acc + amount,
+      0,
+    );
+    const memberCount = tontine.members.length;
+
+    return tontine.members.map((member) => {
+      const totalDeposits = contributionsByMember.get(member.id) ?? 0;
+      let shareAmount = 0;
+      let sharePercent = 0;
+
+      if (totalContributions > 0) {
+        sharePercent = (totalDeposits / totalContributions) * 100;
+        shareAmount = (totalDeposits / totalContributions) * remainingBalance;
+      } else if (memberCount > 0) {
+        sharePercent = 100 / memberCount;
+        shareAmount = remainingBalance / memberCount;
+      }
+
+      return {
+        memberId: member.id,
+        firstname: member.firstname,
+        lastname: member.lastname,
+        totalDeposits,
+        shareAmount: Math.round(shareAmount * 100) / 100,
+        sharePercent: Math.round(sharePercent * 100) / 100,
+      };
+    });
+  }
+
   findOne(id: number): Promise<Tontine> {
     return this.getTontineQueryBuilder()
       .innerJoinAndSelect('members.user', 'user')
@@ -161,6 +418,7 @@ export class TontineService {
   }
 
   async addMember(id: number, memberId: number): Promise<Tontine> {
+    await this.assertTontineWritable(id);
     const tontine = await this.findOne(id);
     if (!tontine) {
       throw new HttpException('Tontine not found', 404);
@@ -194,6 +452,7 @@ export class TontineService {
   }
 
   async update(id: number, updateTontineDto: UpdateTontineDto) {
+    await this.assertTontineWritable(id);
     const tontine = await this.findOne(id);
     if (!tontine) {
       throw new HttpException('Tontine not found', 404);
@@ -210,7 +469,8 @@ export class TontineService {
     return this.dataSource.getRepository(Tontine).delete(id);
   }
 
-  getRapports(id: number) {
+  async getRapports(id: number, username: string) {
+    await this.assertIsMemberOfTontine(id, username);
     return this.dataSource.getRepository(RapportMeeting).find({
       where: { tontine: { id } },
       relations: ['author', 'author.user'],
@@ -222,10 +482,8 @@ export class TontineService {
     username: string,
     rapport: CreateMeetingRapportDto,
   ): Promise<any> {
-    const tontine = await this.findOne(id);
-    if (!tontine) {
-      throw new HttpException('Tontine not found', 404);
-    }
+    await this.assertTontineWritable(id);
+    const tontine = await this.assertIsMemberOfTontine(id, username);
 
     const member = tontine.members.find((m) => m.user.username === username);
     if (!member) {
@@ -243,10 +501,20 @@ export class TontineService {
     return this.dataSource.getRepository(RapportMeeting).save(rapportMeeting);
   }
 
-  async updateRapport(id: number, rapport: CreateMeetingRapportDto) {
+  async updateRapport(
+    tontineId: number,
+    rapportId: number,
+    rapport: CreateMeetingRapportDto,
+    username: string,
+  ) {
+    await this.assertTontineWritable(tontineId);
+    await this.assertIsMemberOfTontine(tontineId, username);
+
     const rapportMeeting = await this.dataSource
       .getRepository(RapportMeeting)
-      .findOne({ where: { id } });
+      .findOne({
+        where: { id: rapportId, tontine: { id: tontineId } },
+      });
     if (!rapportMeeting) {
       throw new HttpException('Rapport not found', 404);
     }
@@ -258,11 +526,13 @@ export class TontineService {
     });
   }
 
-  async removeRapport(tontineId: number, rapportId: number) {
-    const tontine = await this.findOne(tontineId);
-    if (!tontine) {
-      throw new NotFoundException('Tontine not found');
-    }
+  async removeRapport(
+    tontineId: number,
+    rapportId: number,
+    username: string,
+  ) {
+    await this.assertTontineWritable(tontineId);
+    await this.assertIsMemberOfTontine(tontineId, username);
 
     const rapportMeeting = await this.dataSource
       .getRepository(RapportMeeting)
@@ -274,14 +544,16 @@ export class TontineService {
     return this.dataSource.getRepository(RapportMeeting).remove(rapportMeeting);
   }
 
-  getRapport(rapportId: number) {
+  async getRapport(tontineId: number, rapportId: number, username: string) {
+    await this.assertIsMemberOfTontine(tontineId, username);
     return this.dataSource.getRepository(RapportMeeting).findOne({
-      where: { id: rapportId },
+      where: { id: rapportId, tontine: { id: tontineId } },
       relations: ['author', 'author.user'],
     });
   }
 
   async createSanction(tontineId: number, sanctionDto: CreateSanctionDto) {
+    await this.assertTontineWritable(tontineId);
     const tontine = await this.findOne(tontineId);
     if (!tontine) {
       throw new NotFoundException('Tontine not found');
@@ -310,6 +582,7 @@ export class TontineService {
     sanctionId: number,
     sanctionDto: CreateSanctionDto,
   ) {
+    await this.assertTontineWritable(id);
     const tontine = await this.findOne(id);
     if (!tontine) {
       throw new NotFoundException('Tontine not found');
@@ -329,6 +602,7 @@ export class TontineService {
   }
 
   async removeSanction(id: number, sanctionId: number) {
+    await this.assertTontineWritable(id);
     const tontine = await this.findOne(id);
     if (!tontine) {
       throw new NotFoundException('Tontine not found');
@@ -363,10 +637,8 @@ export class TontineService {
     status: StatusDeposit,
     user: User,
   ) {
-    const tontine = await this.findOne(tontineId);
-    if (!tontine) {
-      throw new NotFoundException('Tontine not found');
-    }
+    await this.assertTontineWritable(tontineId);
+    const tontine = await this.assertIsMemberOfTontine(tontineId, user.username);
 
     const member = await this.memberService.findOne(createDepositDto.memberId);
     if (!member) {
@@ -407,7 +679,9 @@ export class TontineService {
       cashflow.deposits = [];
     }
 
-    await this.updateCashflow(createDepositDto.cashFlowId, deposit.amount);
+    if (status === StatusDeposit.APPROVED) {
+      await this.updateCashflow(createDepositDto.cashFlowId, deposit.amount);
+    }
 
     const depositSaved = await this.dataSource
       .getRepository(Deposit)
@@ -457,16 +731,33 @@ export class TontineService {
     await this.dataSource.getRepository(CashFlow).save(cashflow);
   }
 
+  /** Recalcule le cashflow à partir des dépôts APPROVED uniquement. */
+  private async recalculateCashflow(cashFlowId: number) {
+    const deposits = await this.dataSource.getRepository(Deposit).find({
+      where: { cashFlow: { id: cashFlowId } },
+    });
+    const totalDeposit = deposits
+      .filter((deposit) => deposit.status === StatusDeposit.APPROVED)
+      .reduce((acc, deposit) => acc + deposit.amount, 0);
+
+    const cashflow = await this.dataSource
+      .getRepository(CashFlow)
+      .findOne({ where: { id: cashFlowId } });
+    if (!cashflow) {
+      throw new NotFoundException('Cashflow not found');
+    }
+    cashflow.amount = totalDeposit;
+    await this.dataSource.getRepository(CashFlow).save(cashflow);
+  }
+
   async updateDeposit(
     id: number,
     depositId: number,
     deposit: CreateDepositDto,
     user: User,
   ) {
-    const tontine = await this.findOne(id);
-    if (!tontine) {
-      throw new NotFoundException('Tontine not found');
-    }
+    await this.assertTontineWritable(id);
+    const tontine = await this.assertIsMemberOfTontine(id, user.username);
 
     const depositFind = await this.dataSource
       .getRepository(Deposit)
@@ -498,6 +789,10 @@ export class TontineService {
 
     const depositSaved = await this.dataSource.getRepository(Deposit).save(depositFind);
 
+    if (depositSaved.status === StatusDeposit.APPROVED) {
+      await this.recalculateCashflow(tontine.cashFlow.id);
+    }
+
     this.notificationService.create({
       action: Action.UPDATE,
       depositId: depositSaved.id,
@@ -512,10 +807,8 @@ export class TontineService {
   }
 
   async removeDeposit(id: number, depositId: number, user: User) {
-    const tontine = await this.findOne(id);
-    if (!tontine) {
-      throw new NotFoundException('Tontine not found');
-    }
+    await this.assertTontineWritable(id);
+    const tontine = await this.assertIsMemberOfTontine(id, user.username);
 
     const deposit = await this.dataSource
       .getRepository(Deposit)
@@ -561,11 +854,8 @@ export class TontineService {
     return this.dataSource.getRepository(Tontine).save(tontine);
   }
 
-  async getDeposits(id: number) {
-    const tontine = await this.findOne(id);
-    if (!tontine) {
-      throw new NotFoundException('Tontine not found');
-    }
+  async getDeposits(id: number, username: string) {
+    const tontine = await this.assertIsMemberOfTontine(id, username);
 
     const deposits = await this.dataSource.getRepository(Deposit).find({
       where: { cashFlow: { id: tontine.cashFlow.id } },
@@ -575,6 +865,7 @@ export class TontineService {
   }
 
   async updateConfig(id: number, updateConfigDto: CreateConfigTontineDto) {
+    await this.assertTontineWritable(id);
     const tontine = await this.findOne(id);
     if (!tontine) {
       throw new NotFoundException('Tontine not found');
@@ -705,6 +996,7 @@ export class TontineService {
     memberId: number,
     roles: Role[],
   ): Promise<{ roles: Role[] }> {
+    await this.assertTontineWritable(tontineId);
     const uniqueRoles = [...new Set(roles)];
     if (uniqueRoles.length === 0) {
       throw new BadRequestException('Au moins un rôle est requis.');
@@ -745,6 +1037,7 @@ export class TontineService {
   }
 
   async removeMember(tontineId: number, memberId: number) {
+    await this.assertTontineWritable(tontineId);
     const tontine = await this.findOne(tontineId);
     if (!tontine) {
       throw new NotFoundException('Tontine not found');
@@ -768,6 +1061,7 @@ export class TontineService {
   }
 
   async createPartOrder(tontineId: number, data: PartOrderDto) {
+    await this.assertTontineWritable(tontineId);
     const tontine = await this.findOne(tontineId);
     if (!tontine) {
       throw new NotFoundException('Tontine not found');
@@ -780,10 +1074,12 @@ export class TontineService {
     partOrder.member = member;
     partOrder.order = data.order;
     partOrder.period = data.period;
+    partOrder.config = tontine.config;
     return this.dataSource.getRepository(PartOrder).save(partOrder);
   }
 
   async updatePartOrder(tontineId: number, partOrderId: number, data: PartOrderDto) {
+    await this.assertTontineWritable(tontineId);
     const tontine = await this.findOne(tontineId);
     if (!tontine) {
       throw new NotFoundException('Tontine not found');
@@ -805,6 +1101,7 @@ export class TontineService {
   }
 
   async deletePartOrder(tontineId: number, partOrderId: number) {
+    await this.assertTontineWritable(tontineId);
     const tontine = await this.findOne(tontineId);
     if (!tontine) {
       throw new NotFoundException('Tontine not found');
@@ -823,15 +1120,16 @@ export class TontineService {
     if (!tontine) {
       throw new NotFoundException('Tontine not found');
     }
-    return this.dataSource.getRepository(PartOrder).findOne({
+    return this.dataSource.getRepository(PartOrder).find({
       where: {
         config: { id: tontine.config.id },
       },
-      relations: ['member', 'member.user',]
+      relations: ['member', 'member.user'],
     });
   }
 
   async addMemberFromScratch(tontineId: number, data: CreateMemberDto) {
+    await this.assertTontineWritable(tontineId);
     const tontine = await this.findOne(tontineId);
     if (!tontine) {
       throw new NotFoundException('Tontine not found');

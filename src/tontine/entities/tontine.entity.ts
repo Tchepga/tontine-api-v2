@@ -7,6 +7,7 @@ import {
   JoinColumn,
   JoinTable,
   ManyToMany,
+  ManyToOne,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -18,6 +19,8 @@ import { RapportMeeting } from './rapport-meeting.entity';
 import { Sanction } from './sanction.entity';
 import { MemberRole } from './member-role.entity';
 import { Notification } from 'src/notification/entities/notification.entity';
+import { TontineStatus } from '../enum/tontine-status';
+import { ClosureSnapshot } from '../types/closure-snapshot';
 
 @Entity()
 export class Tontine extends BasicEntity {
@@ -59,6 +62,26 @@ export class Tontine extends BasicEntity {
 
   @Column({ default: false })
   isSelected: boolean;
+
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: TontineStatus.ACTIVE,
+  })
+  status: TontineStatus;
+
+  @Column({ nullable: true })
+  parentTontineId: number;
+
+  @ManyToOne(() => Tontine, { nullable: true })
+  @JoinColumn({ name: 'parentTontineId' })
+  parentTontine: Tontine;
+
+  @Column({ type: 'datetime', nullable: true })
+  closedAt: Date;
+
+  @Column({ type: 'json', nullable: true })
+  closureSnapshot: ClosureSnapshot;
 
   @OneToMany(() => Notification, (notification) => notification.tontine)
   notifications: Notification[];

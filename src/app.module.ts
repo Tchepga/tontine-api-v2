@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 import { JwtModule } from '@nestjs/jwt';
 import type { StringValue } from 'ms';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -16,6 +18,13 @@ import { TontineModule } from './tontine/tontine.module';
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
     JwtModule.register({
       global: environment.jwtConfig.global,
       secret: environment.jwtConfig.secret,
@@ -42,6 +51,10 @@ import { TontineModule } from './tontine/tontine.module';
   ],
   controllers: [AppController],
   providers: [
+    {
+      provide: APP_FILTER,
+      useClass: SentryGlobalFilter,
+    },
     AppService,
     {
       provide: APP_GUARD,

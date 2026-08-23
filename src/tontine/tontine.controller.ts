@@ -30,6 +30,7 @@ import { TontineService } from './tontine.service';
 import { isMemberOfTontine } from './utilities/service.helper';
 import { CreateMemberDto } from 'src/member/dto/create-member.dto';
 import { UpdateMemberRolesDto } from './dto/update-member-roles.dto';
+import { RestartTontineDto } from './dto/restart-tontine.dto';
 
 @UseGuards(RolesGuard)
 @Controller('tontine')
@@ -65,6 +66,27 @@ export class TontineController {
   setSelectedTontine(@Param('id') id: string, @Req() req: any) {
     const user = req.user;
     return this.tontineService.setSelectedTontine(+id, user.username);
+  }
+
+  @Post(':id/close')
+  @Roles(Role.PRESIDENT)
+  closeTontine(@Param('id') id: string) {
+    return this.tontineService.closeTontine(+id);
+  }
+
+  @Get(':id/closure-summary')
+  @Roles(Role.TONTINARD)
+  getClosureSummary(@Param('id') id: string, @Req() req: any) {
+    return this.tontineService.getClosureSummary(+id, req.user.username);
+  }
+
+  @Post(':id/restart')
+  @Roles(Role.PRESIDENT)
+  restartTontine(
+    @Param('id') id: string,
+    @Body() restartTontineDto: RestartTontineDto,
+  ) {
+    return this.tontineService.restartTontine(+id, restartTontineDto);
   }
 
   @Get('member/:username')
@@ -159,8 +181,8 @@ export class TontineController {
 
   @Get(':id/rapport')
   @Roles(Role.TONTINARD)
-  async getRapports(@Param('id') id: string) {
-    return this.tontineService.getRapports(+id);
+  async getRapports(@Param('id') id: string, @Req() req: any) {
+    return this.tontineService.getRapports(+id, req.user.username);
   }
 
   @Post(':id/rapport')
@@ -187,35 +209,44 @@ export class TontineController {
     return this.tontineService.createRapport(+id, req.user.username, rapport);
   }
 
-  @Patch(':id/rapport')
+  @Patch(':id/rapport/:rapportId')
   @Roles(Role.ACCOUNT_MANAGER)
   updateRapport(
     @Param('id') id: string,
-    @Body() rapport: CreateMeetingRapportDto
+    @Param('rapportId') rapportId: string,
+    @Body() rapport: CreateMeetingRapportDto,
+    @Req() req: any,
   ) {
-    return this.tontineService.updateRapport(+id, rapport);
+    return this.tontineService.updateRapport(
+      +id,
+      +rapportId,
+      rapport,
+      req.user.username,
+    );
   }
 
   @Delete(':id/rapport/:rapportId')
   @Roles(Role.ACCOUNT_MANAGER)
   deleteRapport(
     @Param('id') id: string,
-    @Param('rapportId') rapportId: string
+    @Param('rapportId') rapportId: string,
+    @Req() req: any,
   ) {
-    return this.tontineService.removeRapport(+id, +rapportId);
+    return this.tontineService.removeRapport(+id, +rapportId, req.user.username);
   }
 
   @Get(':id/rapport/:rapportId/attachment')
   @Roles(Role.TONTINARD)
   async getAttachment(
     @Param('id') id: string,
-    @Param('rapportId') rapportId: string
+    @Param('rapportId') rapportId: string,
+    @Req() req: any,
   ) {
-    const tontine = await this.tontineService.findOne(+id);
-    if (!tontine) {
-      throw new NotFoundException('Tontine not found');
-    }
-    const rapport = await this.tontineService.getRapport(+rapportId);
+    const rapport = await this.tontineService.getRapport(
+      +id,
+      +rapportId,
+      req.user.username,
+    );
     if (!rapport) {
       throw new NotFoundException('Rapport not found');
     }
@@ -241,7 +272,7 @@ export class TontineController {
     return this.tontineService.updateSanction(+id, +sanctionId, sanction);
   }
 
-  @Delete(':id/sanction')
+  @Delete(':id/sanction/:sanctionId')
   @Roles(Role.OFFICE_MANAGER)
   deleteSanction(
     @Param('id') id: string,
@@ -253,8 +284,8 @@ export class TontineController {
   // Deposist part
   @Get(':id/deposit')
   @Roles(Role.TONTINARD)
-  getDeposit(@Param('id') id: string) {
-    return this.tontineService.getDeposits(+id);
+  getDeposit(@Param('id') id: string, @Req() req: any) {
+    return this.tontineService.getDeposits(+id, req.user.username);
   }
 
   @Post(':id/deposit')

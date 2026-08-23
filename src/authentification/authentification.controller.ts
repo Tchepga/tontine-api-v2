@@ -1,15 +1,21 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthentificationService } from './authentification.service';
 import { LoginDto } from './dto/login-dto';
 import { Public } from './entities/public.decorator';
 import { Role } from './entities/roles/roles.enum';
 import { Roles } from './entities/roles/roles.decorator';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Controller('auth')
 export class AuthentificationController {
   constructor(private authService: AuthentificationService) {}
 
   @Public()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('login')
   login(@Body() loginDto: LoginDto): Promise<any> {
     return this.authService.login(loginDto.username, loginDto.password);
@@ -30,6 +36,23 @@ export class AuthentificationController {
   @Post('verify')
   async verify(@Body() body: { token: string }) {
     return { valid: await this.authService.verify(body.token) };
+  }
+
+  @Post('change-password')
+  changePassword(@Req() req: any, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(req.user.username, dto);
+  }
+
+  @Public()
+  @Post('forgot-password')
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.username);
+  }
+
+  @Public()
+  @Post('reset-password')
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 
   @Get('username/:username')

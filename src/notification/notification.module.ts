@@ -14,6 +14,7 @@ import { TontineService } from 'src/tontine/tontine.service';
 import { Notification } from './entities/notification.entity';
 import { NotificationController } from './notification.controller';
 import { NotificationService } from './notification.service';
+import { NotificationGateway } from './notification.gateway';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { NotificationService } from './notification.service';
     MemberService,
     AuthentificationService,
     NotificationService,
+    NotificationGateway,
   ],
   exports: [NotificationService],
 })

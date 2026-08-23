@@ -13,8 +13,11 @@ export class NotificationController {
   constructor(private readonly notificationService: NotificationService) { }
 
   @Get('tontine/:tontineId')
-  async findAll(@Param('tontineId') tontineId: string) {
-    return this.notificationService.findFromTontine(+tontineId);
+  async findAll(@Param('tontineId') tontineId: string, @Req() req: any) {
+    return this.notificationService.findFromTontine(
+      +tontineId,
+      req.user.username,
+    );
   }
 
   @Post()
