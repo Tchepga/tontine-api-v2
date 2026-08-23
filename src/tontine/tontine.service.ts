@@ -384,7 +384,9 @@ export class TontineService {
       );
     }
     deposit.author = author;
-    deposit.creationDate = new Date();
+    deposit.creationDate = createDepositDto.creationDate
+      ? new Date(createDepositDto.creationDate)
+      : new Date();
     deposit.reasons = createDepositDto.reasons;
     deposit.status = status;
     deposit.cashFlow = tontine.cashFlow;
@@ -478,10 +480,23 @@ export class TontineService {
       deposit.status = StatusDeposit.PENDING;
     }
 
-    const depositSaved = await this.dataSource.getRepository(Deposit).save({
-      ...depositFind,
-      ...deposit,
-    });
+    if (deposit.amount != null) {
+      depositFind.amount = deposit.amount;
+    }
+    if (deposit.reasons != null) {
+      depositFind.reasons = deposit.reasons;
+    }
+    if (deposit.currency != null) {
+      depositFind.currency = deposit.currency;
+    }
+    if (deposit.creationDate) {
+      depositFind.creationDate = new Date(deposit.creationDate);
+    }
+    if (deposit.status != null) {
+      depositFind.status = deposit.status;
+    }
+
+    const depositSaved = await this.dataSource.getRepository(Deposit).save(depositFind);
 
     this.notificationService.create({
       action: Action.UPDATE,

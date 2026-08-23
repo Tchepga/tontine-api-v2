@@ -1,4 +1,4 @@
-import { IsIn, IsPositive, IsString } from 'class-validator';
+import { IsIn, IsOptional, IsPositive, IsString, IsDateString } from 'class-validator';
 import { Currency } from '../enum/shared';
 import { StatusDeposit } from '../enum/status-deposit';
 
@@ -23,5 +23,11 @@ export class CreateDepositDto {
   cashFlowId: number;
 
   @IsString()
+  @IsOptional()
   reasons: string | undefined;
+
+  /** Date du versement (ISO). Par défaut : aujourd'hui côté serveur. */
+  @IsOptional()
+  @IsDateString({}, { message: 'La date du versement est invalide' })
+  creationDate?: string;
 }

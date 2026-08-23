@@ -1,0 +1,12 @@
+---
+description: Conventions de l'API NestJS Tontine v2
+globs: "**/*.{ts,js}"
+alwaysApply: false
+---
+
+# NestJS — Tontine v2 API
+
+- Rester dans `tontine-api-v2`. Le mobile vit dans `tontine_v2`.
+- Modules : controller, service, entity, dto, spec. Auth via JWT + `@Roles` / `RolesGuard`.
+- Valider les DTO avec `class-validator`. Réutiliser les error codes existants.
+- Pas de secrets dans le code. Pas de `synchronize` improvisé en prod.

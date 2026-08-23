@@ -21,6 +21,7 @@ describe('TontineService', () => {
 
   const mockQueryBuilder = {
     innerJoinAndSelect: jest.fn().mockReturnThis(),
+    leftJoinAndSelect: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
     getOne: jest.fn(),
   };
