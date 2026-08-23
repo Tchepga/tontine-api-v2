@@ -469,6 +469,169 @@ describe('TontineService', () => {
     });
   });
 
+  describe('getMembersContributions', () => {
+    const mockTontine = {
+      id: 1,
+      status: TontineStatus.ACTIVE,
+      cashFlow: { id: 10, amount: 3000 },
+      members: [
+        {
+          id: 1,
+          firstname: 'Alice',
+          lastname: 'A',
+          user: { username: 'alice.a' },
+        },
+        {
+          id: 2,
+          firstname: 'Bob',
+          lastname: 'B',
+          user: { username: 'bob.b' },
+        },
+        {
+          id: 3,
+          firstname: 'Charlie',
+          lastname: 'C',
+          user: { username: 'charlie.c' },
+        },
+      ],
+    };
+
+    it('should return contributions and shares for all members', async () => {
+      const lastDepositDate = new Date('2026-03-01T12:00:00.000Z');
+
+      mockQueryBuilder.getOne.mockResolvedValue(mockTontine);
+      mockDataSource.getRepository.mockReturnValue({
+        find: jest.fn().mockResolvedValue([
+          {
+            status: StatusDeposit.APPROVED,
+            amount: 2000,
+            creationDate: new Date('2026-01-01T00:00:00.000Z'),
+            author: { id: 1, user: { username: 'alice.a' } },
+          },
+          {
+            status: StatusDeposit.APPROVED,
+            amount: 1000,
+            creationDate: lastDepositDate,
+            author: { id: 2, user: { username: 'bob.b' } },
+          },
+          {
+            status: StatusDeposit.PENDING,
+            amount: 500,
+            creationDate: new Date('2026-02-01T00:00:00.000Z'),
+            author: { id: 2, user: { username: 'bob.b' } },
+          },
+          {
+            status: StatusDeposit.REJECTED,
+            amount: 200,
+            creationDate: new Date('2026-02-15T00:00:00.000Z'),
+            author: { id: 1, user: { username: 'alice.a' } },
+          },
+        ]),
+        findOne: jest.fn(),
+        save: jest.fn(),
+        remove: jest.fn(),
+        delete: jest.fn(),
+        createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+      });
+
+      const result = await service.getMembersContributions(1, 'alice.a');
+
+      expect(result).toHaveLength(3);
+
+      expect(result[0]).toMatchObject({
+        memberId: 1,
+        firstname: 'Alice',
+        lastname: 'A',
+        username: 'alice.a',
+        totalApproved: 2000,
+        totalPending: 0,
+        totalRejected: 200,
+        depositCount: 2,
+        shareAmount: 2000,
+        sharePercent: 66.67,
+      });
+      expect(result[0].lastDeposit).toBe('2026-02-15T00:00:00.000Z');
+
+      expect(result[1]).toMatchObject({
+        memberId: 2,
+        totalApproved: 1000,
+        totalPending: 500,
+        totalRejected: 0,
+        depositCount: 2,
+        shareAmount: 1000,
+        sharePercent: 33.33,
+      });
+      expect(result[1].lastDeposit).toBe(lastDepositDate.toISOString());
+
+      expect(result[2]).toMatchObject({
+        memberId: 3,
+        firstname: 'Charlie',
+        totalApproved: 0,
+        totalPending: 0,
+        totalRejected: 0,
+        depositCount: 0,
+        lastDeposit: null,
+        shareAmount: 0,
+        sharePercent: 0,
+      });
+    });
+
+    it('should split equally when no approved deposits', async () => {
+      mockQueryBuilder.getOne.mockResolvedValue(mockTontine);
+      mockDataSource.getRepository.mockReturnValue({
+        find: jest.fn().mockResolvedValue([
+          {
+            status: StatusDeposit.PENDING,
+            amount: 500,
+            creationDate: new Date('2026-02-01T00:00:00.000Z'),
+            author: { id: 1, user: { username: 'alice.a' } },
+          },
+        ]),
+        findOne: jest.fn(),
+        save: jest.fn(),
+        remove: jest.fn(),
+        delete: jest.fn(),
+        createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+      });
+
+      const result = await service.getMembersContributions(1, 'alice.a');
+
+      expect(result).toHaveLength(3);
+      result.forEach((member) => {
+        expect(member.shareAmount).toBe(1000);
+        expect(member.sharePercent).toBeCloseTo(33.33, 2);
+      });
+    });
+
+    it('should work on closed tontine', async () => {
+      mockQueryBuilder.getOne.mockResolvedValue({
+        ...mockTontine,
+        status: TontineStatus.CLOSED,
+      });
+      mockDataSource.getRepository.mockReturnValue({
+        find: jest.fn().mockResolvedValue([]),
+        findOne: jest.fn(),
+        save: jest.fn(),
+        remove: jest.fn(),
+        delete: jest.fn(),
+        createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+      });
+
+      const result = await service.getMembersContributions(1, 'alice.a');
+
+      expect(result).toHaveLength(3);
+      expect(result[0].shareAmount).toBe(1000);
+    });
+
+    it('should reject non-member', async () => {
+      mockQueryBuilder.getOne.mockResolvedValue(mockTontine);
+
+      await expect(
+        service.getMembersContributions(1, 'unknown.user'),
+      ).rejects.toThrow('Vous n\'êtes pas membre de cette tontine.');
+    });
+  });
+
   describe('assertTontineWritable', () => {
     it('should block writes on closed tontine', async () => {
       mockQueryBuilder.getOne.mockResolvedValue({

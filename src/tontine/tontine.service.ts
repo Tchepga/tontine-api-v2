@@ -43,7 +43,16 @@ import {
   ClosureSnapshot,
   ClosureSummaryResponse,
   MemberClosureShare,
+  MemberContribution,
 } from './types/closure-snapshot';
+
+interface MemberDepositStats {
+  totalApproved: number;
+  totalPending: number;
+  totalRejected: number;
+  depositCount: number;
+  lastDeposit: Date | null;
+}
 
 @Injectable()
 export class TontineService {
@@ -350,53 +359,153 @@ export class TontineService {
     return config;
   }
 
-  private async computeMemberShares(
-    tontine: Tontine,
-  ): Promise<MemberClosureShare[]> {
-    const deposits = await this.dataSource.getRepository(Deposit).find({
-      where: { cashFlow: { id: tontine.cashFlow.id } },
-      relations: ['author'],
-    });
+  async getMembersContributions(
+    tontineId: number,
+    username: string,
+  ): Promise<MemberContribution[]> {
+    const tontine = await this.assertIsMemberOfTontine(tontineId, username);
+    const deposits = await this.getDepositsForTontine(tontine.cashFlow.id);
+    const statsByMember = this.aggregateDepositsByMember(deposits);
 
-    const contributionsByMember = new Map<number, number>();
-    for (const deposit of deposits) {
-      if (deposit.status !== StatusDeposit.APPROVED) {
-        continue;
-      }
-      const memberId = deposit.author.id;
-      contributionsByMember.set(
-        memberId,
-        (contributionsByMember.get(memberId) ?? 0) + deposit.amount,
-      );
-    }
-
-    const remainingBalance = tontine.cashFlow.amount;
-    const totalContributions = [...contributionsByMember.values()].reduce(
-      (acc, amount) => acc + amount,
+    const totalContributions = tontine.members.reduce(
+      (acc, member) => acc + (statsByMember.get(member.id)?.totalApproved ?? 0),
       0,
     );
+    const remainingBalance = tontine.cashFlow.amount;
     const memberCount = tontine.members.length;
 
     return tontine.members.map((member) => {
-      const totalDeposits = contributionsByMember.get(member.id) ?? 0;
-      let shareAmount = 0;
-      let sharePercent = 0;
+      const stats = statsByMember.get(member.id) ?? {
+        totalApproved: 0,
+        totalPending: 0,
+        totalRejected: 0,
+        depositCount: 0,
+        lastDeposit: null,
+      };
+      const { shareAmount, sharePercent } = this.computeShareAmounts(
+        stats.totalApproved,
+        totalContributions,
+        remainingBalance,
+        memberCount,
+      );
 
-      if (totalContributions > 0) {
-        sharePercent = (totalDeposits / totalContributions) * 100;
-        shareAmount = (totalDeposits / totalContributions) * remainingBalance;
-      } else if (memberCount > 0) {
-        sharePercent = 100 / memberCount;
-        shareAmount = remainingBalance / memberCount;
+      return {
+        memberId: member.id,
+        firstname: member.firstname,
+        lastname: member.lastname,
+        username: member.user?.username ?? '',
+        totalApproved: stats.totalApproved,
+        totalPending: stats.totalPending,
+        totalRejected: stats.totalRejected,
+        depositCount: stats.depositCount,
+        lastDeposit: stats.lastDeposit?.toISOString() ?? null,
+        sharePercent,
+        shareAmount,
+      };
+    });
+  }
+
+  private async getDepositsForTontine(cashFlowId: number): Promise<Deposit[]> {
+    return this.dataSource.getRepository(Deposit).find({
+      where: { cashFlow: { id: cashFlowId } },
+      relations: ['author', 'author.user'],
+    });
+  }
+
+  private aggregateDepositsByMember(
+    deposits: Deposit[],
+  ): Map<number, MemberDepositStats> {
+    const statsByMember = new Map<number, MemberDepositStats>();
+
+    for (const deposit of deposits) {
+      const memberId = deposit.author.id;
+      const stats = statsByMember.get(memberId) ?? {
+        totalApproved: 0,
+        totalPending: 0,
+        totalRejected: 0,
+        depositCount: 0,
+        lastDeposit: null,
+      };
+
+      stats.depositCount += 1;
+
+      switch (deposit.status) {
+        case StatusDeposit.APPROVED:
+          stats.totalApproved += deposit.amount;
+          break;
+        case StatusDeposit.PENDING:
+          stats.totalPending += deposit.amount;
+          break;
+        case StatusDeposit.REJECTED:
+          stats.totalRejected += deposit.amount;
+          break;
       }
+
+      if (
+        !stats.lastDeposit ||
+        deposit.creationDate > stats.lastDeposit
+      ) {
+        stats.lastDeposit = deposit.creationDate;
+      }
+
+      statsByMember.set(memberId, stats);
+    }
+
+    return statsByMember;
+  }
+
+  private computeShareAmounts(
+    totalApproved: number,
+    totalContributions: number,
+    remainingBalance: number,
+    memberCount: number,
+  ): { shareAmount: number; sharePercent: number } {
+    let shareAmount = 0;
+    let sharePercent = 0;
+
+    if (totalContributions > 0) {
+      sharePercent = (totalApproved / totalContributions) * 100;
+      shareAmount = (totalApproved / totalContributions) * remainingBalance;
+    } else if (memberCount > 0) {
+      sharePercent = 100 / memberCount;
+      shareAmount = remainingBalance / memberCount;
+    }
+
+    return {
+      shareAmount: Math.round(shareAmount * 100) / 100,
+      sharePercent: Math.round(sharePercent * 100) / 100,
+    };
+  }
+
+  private async computeMemberShares(
+    tontine: Tontine,
+  ): Promise<MemberClosureShare[]> {
+    const deposits = await this.getDepositsForTontine(tontine.cashFlow.id);
+    const statsByMember = this.aggregateDepositsByMember(deposits);
+
+    const totalContributions = tontine.members.reduce(
+      (acc, member) => acc + (statsByMember.get(member.id)?.totalApproved ?? 0),
+      0,
+    );
+    const remainingBalance = tontine.cashFlow.amount;
+    const memberCount = tontine.members.length;
+
+    return tontine.members.map((member) => {
+      const totalDeposits = statsByMember.get(member.id)?.totalApproved ?? 0;
+      const { shareAmount, sharePercent } = this.computeShareAmounts(
+        totalDeposits,
+        totalContributions,
+        remainingBalance,
+        memberCount,
+      );
 
       return {
         memberId: member.id,
         firstname: member.firstname,
         lastname: member.lastname,
         totalDeposits,
-        shareAmount: Math.round(shareAmount * 100) / 100,
-        sharePercent: Math.round(sharePercent * 100) / 100,
+        shareAmount,
+        sharePercent,
       };
     });
   }

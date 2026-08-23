@@ -7,6 +7,20 @@ export interface MemberClosureShare {
   sharePercent: number;
 }
 
+export interface MemberContribution {
+  memberId: number;
+  firstname: string;
+  lastname: string;
+  username: string;
+  totalApproved: number;
+  totalPending: number;
+  totalRejected: number;
+  depositCount: number;
+  lastDeposit: string | null;
+  sharePercent: number;
+  shareAmount: number;
+}
+
 export interface ClosureSnapshot {
   remainingBalance: number;
   currency: string;

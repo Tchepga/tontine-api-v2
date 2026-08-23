@@ -282,6 +282,12 @@ export class TontineController {
   }
 
   // Deposist part
+  @Get(':id/members/contributions')
+  @Roles(Role.ACCOUNT_MANAGER)
+  getMembersContributions(@Param('id') id: string, @Req() req: any) {
+    return this.tontineService.getMembersContributions(+id, req.user.username);
+  }
+
   @Get(':id/deposit')
   @Roles(Role.TONTINARD)
   getDeposit(@Param('id') id: string, @Req() req: any) {
