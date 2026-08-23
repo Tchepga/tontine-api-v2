@@ -11,6 +11,7 @@ import {
 } from './dto/create-tontine.dto';
 import { Currency } from './enum/shared';
 import { StatusDeposit } from './enum/status-deposit';
+import { DepositType } from './enum/deposit-type';
 import { SystemType } from './enum/system-type';
 import { TontineStatus } from './enum/tontine-status';
 import { TontineService } from './tontine.service';
@@ -25,7 +26,12 @@ describe('TontineService', () => {
     innerJoinAndSelect: jest.fn().mockReturnThis(),
     leftJoinAndSelect: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    skip: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
     getOne: jest.fn(),
+    getManyAndCount: jest.fn(),
   };
 
   const createMockRepository = () => ({
@@ -629,6 +635,147 @@ describe('TontineService', () => {
       await expect(
         service.getMembersContributions(1, 'unknown.user'),
       ).rejects.toThrow('Vous n\'êtes pas membre de cette tontine.');
+    });
+  });
+
+  describe('getDeposits', () => {
+    const mockTontine = {
+      id: 1,
+      cashFlow: { id: 10 },
+      members: [{ user: { username: 'alice.a' } }],
+    };
+
+    const mockDeposits = [
+      {
+        id: 1,
+        amount: 100,
+        status: StatusDeposit.APPROVED,
+        creationDate: new Date('2026-03-01T12:00:00.000Z'),
+        reasons: 'Cotisation Mars 2026',
+        author: {
+          id: 1,
+          firstname: 'Alice',
+          lastname: 'A',
+          user: { username: 'alice.a' },
+        },
+      },
+      {
+        id: 2,
+        amount: 50,
+        status: StatusDeposit.PENDING,
+        creationDate: new Date('2026-02-01T12:00:00.000Z'),
+        reasons: 'Fond Février 2026',
+        author: {
+          id: 2,
+          firstname: 'Jean',
+          lastname: 'Dupont',
+          user: { username: 'jean.d' },
+        },
+      },
+    ];
+
+    beforeEach(() => {
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([mockDeposits, 42]);
+      mockQueryBuilder.getOne.mockResolvedValue(mockTontine);
+      mockDataSource.getRepository.mockReturnValue({
+        find: jest.fn(),
+        findOne: jest.fn(),
+        save: jest.fn(),
+        remove: jest.fn(),
+        delete: jest.fn(),
+        createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+      });
+    });
+
+    it('should return paginated deposits with defaults', async () => {
+      const result = await service.getDeposits(1, 'alice.a');
+
+      expect(result).toEqual({
+        items: mockDeposits,
+        total: 42,
+        page: 1,
+        limit: 20,
+        hasMore: true,
+      });
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'deposit.cashFlowId = :cashFlowId',
+        { cashFlowId: 10 },
+      );
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
+        'deposit.creationDate',
+        'DESC',
+      );
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0);
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(20);
+    });
+
+    it('should apply page, limit and compute hasMore=false on last page', async () => {
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[mockDeposits[0]], 21]);
+
+      const result = await service.getDeposits(2, 'alice.a', {
+        page: 2,
+        limit: 20,
+      });
+
+      expect(result).toEqual({
+        items: [mockDeposits[0]],
+        total: 21,
+        page: 2,
+        limit: 20,
+        hasMore: false,
+      });
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(20);
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(20);
+    });
+
+    it('should cap limit to 100', async () => {
+      await service.getDeposits(1, 'alice.a', { limit: 500 });
+
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(100);
+    });
+
+    it('should filter by status VALIDATED (APPROVED in DB)', async () => {
+      await service.getDeposits(1, 'alice.a', { status: 'VALIDATED' });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'deposit.status = :status',
+        { status: StatusDeposit.APPROVED },
+      );
+    });
+
+    it('should filter by type FOND via reasons prefix', async () => {
+      await service.getDeposits(1, 'alice.a', { type: DepositType.FOND });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'LOWER(deposit.reasons) LIKE :fondPrefix',
+        { fondPrefix: 'fond%' },
+      );
+    });
+
+    it('should filter by type COTISATION excluding fond reasons', async () => {
+      await service.getDeposits(1, 'alice.a', { type: DepositType.COTISATION });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        '(deposit.reasons IS NULL OR LOWER(deposit.reasons) NOT LIKE :fondPrefix)',
+        { fondPrefix: 'fond%' },
+      );
+    });
+
+    it('should filter by author firstname/lastname search', async () => {
+      await service.getDeposits(1, 'alice.a', { search: 'jean' });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        '(LOWER(author.firstname) LIKE :search OR LOWER(author.lastname) LIKE :search)',
+        { search: '%jean%' },
+      );
+    });
+
+    it('should reject non-member', async () => {
+      mockQueryBuilder.getOne.mockResolvedValue(mockTontine);
+
+      await expect(service.getDeposits(1, 'unknown.user')).rejects.toThrow(
+        "Vous n'êtes pas membre de cette tontine.",
+      );
     });
   });
 

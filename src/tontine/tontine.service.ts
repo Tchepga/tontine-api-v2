@@ -12,6 +12,15 @@ import { MemberService } from 'src/member/member.service';
 import { ErrorCode } from 'src/shared/utilities/error-code';
 import { DataSource } from 'typeorm';
 import { CreateDepositDto } from './dto/create-deposit.dto';
+import {
+  DEPOSITS_DEFAULT_LIMIT,
+  DEPOSITS_DEFAULT_PAGE,
+  DEPOSITS_MAX_LIMIT,
+  DepositStatusFilter,
+  GetDepositsQueryDto,
+} from './dto/get-deposits-query.dto';
+import { DepositType } from './enum/deposit-type';
+import { PaginatedDepositsResponse } from './types/paginated-deposits';
 import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
 import { CreateSanctionDto } from './dto/create-sanction.dto';
 import {
@@ -963,14 +972,76 @@ export class TontineService {
     return this.dataSource.getRepository(Tontine).save(tontine);
   }
 
-  async getDeposits(id: number, username: string) {
+  async getDeposits(
+    id: number,
+    username: string,
+    query: GetDepositsQueryDto = {},
+  ): Promise<PaginatedDepositsResponse> {
     const tontine = await this.assertIsMemberOfTontine(id, username);
 
-    const deposits = await this.dataSource.getRepository(Deposit).find({
-      where: { cashFlow: { id: tontine.cashFlow.id } },
-      relations: ['author', 'cashFlow', 'author.user'],
-    });
-    return deposits;
+    const page = query.page ?? DEPOSITS_DEFAULT_PAGE;
+    const limit = Math.min(
+      query.limit ?? DEPOSITS_DEFAULT_LIMIT,
+      DEPOSITS_MAX_LIMIT,
+    );
+
+    const qb = this.dataSource
+      .getRepository(Deposit)
+      .createQueryBuilder('deposit')
+      .leftJoinAndSelect('deposit.author', 'author')
+      .leftJoinAndSelect('deposit.cashFlow', 'cashFlow')
+      .leftJoinAndSelect('author.user', 'user')
+      .where('deposit.cashFlowId = :cashFlowId', {
+        cashFlowId: tontine.cashFlow.id,
+      });
+
+    if (query.status) {
+      qb.andWhere('deposit.status = :status', {
+        status: this.mapDepositStatusFilter(query.status),
+      });
+    }
+
+    if (query.type === DepositType.FOND) {
+      qb.andWhere('LOWER(deposit.reasons) LIKE :fondPrefix', {
+        fondPrefix: 'fond%',
+      });
+    } else if (query.type === DepositType.COTISATION) {
+      qb.andWhere(
+        '(deposit.reasons IS NULL OR LOWER(deposit.reasons) NOT LIKE :fondPrefix)',
+        { fondPrefix: 'fond%' },
+      );
+    }
+
+    const search = query.search?.trim();
+    if (search) {
+      qb.andWhere(
+        '(LOWER(author.firstname) LIKE :search OR LOWER(author.lastname) LIKE :search)',
+        { search: `%${search.toLowerCase()}%` },
+      );
+    }
+
+    qb.orderBy('deposit.creationDate', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [items, total] = await qb.getManyAndCount();
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      hasMore: page * limit < total,
+    };
+  }
+
+  private mapDepositStatusFilter(
+    status: DepositStatusFilter,
+  ): StatusDeposit {
+    if (status === 'VALIDATED') {
+      return StatusDeposit.APPROVED;
+    }
+    return status as StatusDeposit;
   }
 
   async updateConfig(id: number, updateConfigDto: CreateConfigTontineDto) {

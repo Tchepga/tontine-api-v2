@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { Roles } from 'src/authentification/entities/roles/roles.decorator';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
 import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
 import { CreateDepositDto } from './dto/create-deposit.dto';
+import { GetDepositsQueryDto } from './dto/get-deposits-query.dto';
 import { CreateMeetingRapportDto } from './dto/create-meeting-rapport.dto';
 import { CreateSanctionDto } from './dto/create-sanction.dto';
 import {
@@ -290,8 +292,12 @@ export class TontineController {
 
   @Get(':id/deposit')
   @Roles(Role.TONTINARD)
-  getDeposit(@Param('id') id: string, @Req() req: any) {
-    return this.tontineService.getDeposits(+id, req.user.username);
+  getDeposit(
+    @Param('id') id: string,
+    @Query() query: GetDepositsQueryDto,
+    @Req() req: any,
+  ) {
+    return this.tontineService.getDeposits(+id, req.user.username, query);
   }
 
   @Post(':id/deposit')
