@@ -18,6 +18,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { environment } from 'src/shared/config';
 import { MailService } from 'src/mail/mail.service';
 import { Member } from 'src/member/entities/member.entity';
+import { validateEmail } from 'src/shared/utilities/custom-validator';
 
 @Injectable()
 export class AuthentificationService {
@@ -122,18 +123,45 @@ export class AuthentificationService {
     return { success: true };
   }
 
+  private async resolveUsernameFromIdentifier(
+    usernameOrEmail: string,
+  ): Promise<string | null> {
+    const identifier = usernameOrEmail.trim();
+    if (!identifier) {
+      return null;
+    }
+
+    const userByUsername = await this.dataSource
+      .getRepository(User)
+      .findOne({ where: { username: identifier } });
+    if (userByUsername) {
+      return userByUsername.username;
+    }
+
+    if (validateEmail(identifier)) {
+      const member = await this.dataSource.getRepository(Member).findOne({
+        where: { email: identifier },
+        relations: ['user'],
+      });
+      if (member?.user?.username) {
+        return member.user.username;
+      }
+    }
+
+    return null;
+  }
+
   public async forgotPassword(
-    username: string,
+    usernameOrEmail: string,
   ): Promise<{ message: string; emailSent?: boolean }> {
-    const user = await this.dataSource.getRepository(User).findOne({
-      where: { username },
-    });
+    const username =
+      await this.resolveUsernameFromIdentifier(usernameOrEmail);
 
     // Réponse générique pour éviter l'énumération d'utilisateurs
     const genericMessage =
       'Si un compte existe pour cet identifiant, un email de réinitialisation a été envoyé.';
 
-    if (!user) {
+    if (!username) {
       return { message: genericMessage };
     }
 

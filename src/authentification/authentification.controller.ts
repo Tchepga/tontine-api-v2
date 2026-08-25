@@ -51,7 +51,7 @@ export class AuthentificationController {
   @Public()
   @Post('forgot-password')
   forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(dto.username);
+    return this.authService.forgotPassword(dto.usernameOrEmail);
   }
 
   @Public()
