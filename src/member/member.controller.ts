@@ -19,6 +19,7 @@ import { RolesGuard } from 'src/authentification/entities/roles/roles.guard';
 import { Roles } from 'src/authentification/entities/roles/roles.decorator';
 import { Role } from 'src/authentification/entities/roles/roles.enum';
 import { Public } from 'src/authentification/entities/public.decorator';
+import { SkipTontineContext } from 'src/authentification/entities/roles/skip-tontine-context.decorator';
 
 @Controller('member')
 @UseGuards(RolesGuard)
@@ -39,6 +40,7 @@ export class MemberController {
   }
 
   @Get()
+  @SkipTontineContext()
   @Roles(Role.TONTINARD)
   findOne(@Req() req: any) {
     const { user } = req;
