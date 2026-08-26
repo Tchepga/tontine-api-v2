@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   HttpException,
   Injectable,
@@ -46,6 +47,7 @@ import { SystemType } from './enum/system-type';
 import { PartOrder } from './entities/part-order.entity';
 import { CreateMemberDto } from 'src/member/dto/create-member.dto';
 import { isMemberOfTontine } from './utilities/service.helper';
+import { hasDuplicateTontineTitle } from './utilities/tontine-title.helper';
 import { RestartTontineDto } from './dto/restart-tontine.dto';
 import { TontineStatus } from './enum/tontine-status';
 import {
@@ -118,8 +120,13 @@ export class TontineService {
         }),
       );
 
+      await this.assertUniqueTitleForMembers(
+        createTontineDto.title,
+        members.map((member) => member.id),
+      );
+
       const tontine = new Tontine();
-      tontine.title = createTontineDto.title;
+      tontine.title = createTontineDto.title.trim();
       tontine.legacy = createTontineDto.legacy;
       tontine.cashFlow = cashflowSaved;
       tontine.config = configTontine;
@@ -143,8 +150,10 @@ export class TontineService {
         })),
       };
     } catch (err) {
-      // since we have errors lets rollback the changes we made
       await queryRunner.rollbackTransaction();
+      if (err instanceof HttpException) {
+        throw err;
+      }
       console.error(err);
       throw new HttpException(err, 500);
     } finally {
@@ -170,6 +179,30 @@ export class TontineService {
         tontine.members.find((m) => m.id === member.id),
       ),
     );
+  }
+
+  private async assertUniqueTitleForMembers(
+    title: string,
+    memberIds: number[],
+    excludeTontineId?: number,
+  ): Promise<void> {
+    const tontines = await this.dataSource.getRepository(Tontine).find({
+      relations: ['members'],
+    });
+
+    if (
+      hasDuplicateTontineTitle(
+        tontines,
+        title,
+        memberIds,
+        excludeTontineId,
+      )
+    ) {
+      throw new ConflictException({
+        message: 'Une tontine avec ce nom existe déjà.',
+        errorCode: ErrorCode.TONTINE_TITLE_ALREADY_EXISTS,
+      });
+    }
   }
 
   /** Vérifie l'appartenance à une tontine avant accès aux ressources scopées. */
@@ -275,6 +308,13 @@ export class TontineService {
 
     const carryOverCash = restartDto.carryOverCash ?? true;
     const reliquat = source.closureSnapshot?.remainingBalance ?? 0;
+    const newTitle =
+      restartDto.name?.trim() || `${source.title} (suite)`;
+
+    await this.assertUniqueTitleForMembers(
+      newTitle,
+      source.members.map((member) => member.id),
+    );
 
     const sourceConfig = await this.dataSource
       .getRepository(ConfigTontine)
@@ -301,7 +341,7 @@ export class TontineService {
       const cashflowSaved = await queryRunner.manager.save(cashflow);
 
       const newTontine = new Tontine();
-      newTontine.title = restartDto.name?.trim() || `${source.title} (suite)`;
+      newTontine.title = newTitle;
       newTontine.legacy = source.legacy;
       newTontine.config = configSaved;
       newTontine.cashFlow = cashflowSaved;
@@ -574,6 +614,15 @@ export class TontineService {
     const tontine = await this.findOne(id);
     if (!tontine) {
       throw new HttpException('Tontine not found', 404);
+    }
+
+    if (updateTontineDto.title != null) {
+      await this.assertUniqueTitleForMembers(
+        updateTontineDto.title,
+        tontine.members.map((member) => member.id),
+        id,
+      );
+      updateTontineDto.title = updateTontineDto.title.trim();
     }
 
     return this.dataSource.getRepository(Tontine).save({

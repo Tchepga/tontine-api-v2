@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import { NotificationService } from 'src/notification/notification.service';
@@ -94,7 +94,9 @@ describe('TontineService', () => {
 
     // Reset all mocks before each test
     jest.clearAllMocks();
-    mockDataSource.getRepository.mockReturnValue(createMockRepository());
+    const repository = createMockRepository();
+    repository.find.mockResolvedValue([]);
+    mockDataSource.getRepository.mockReturnValue(repository);
     mockDataSource.createQueryRunner.mockReturnValue({
       connect: jest.fn(),
       startTransaction: jest.fn(),
@@ -144,6 +146,7 @@ describe('TontineService', () => {
       mockMemberService.buildUsernameForMember.mockReturnValue('test.test');
       mockMemberService.findByUsername.mockResolvedValue(null);
       mockMemberService.create.mockResolvedValue(mockMember);
+      mockDataSource.getRepository().find.mockResolvedValue([]);
       mockDataSource.getRepository().save.mockImplementation((entity) => ({
         ...entity,
         id: 1,
@@ -154,6 +157,56 @@ describe('TontineService', () => {
       expect(result).toBeDefined();
       expect(result.title).toBe(createTontineDto.title);
       expect(result.members).toHaveLength(1);
+    });
+
+    it('should reject duplicate title for the same member', async () => {
+      const createTontineDto: CreateTontineDto = {
+        title: 'Familiale',
+        legacy: 'Test Legacy',
+        currency: 'EUR',
+        members: [
+          {
+            email: 'test@test.com',
+            password: 'test',
+            firstname: 'test',
+            lastname: 'test',
+            phone: 'test',
+            country: 'FR',
+          },
+        ],
+        config: {
+          defaultLoanRate: 5,
+          defaultLoanDuration: 30,
+          loopPeriod: 'MONTHLY',
+          minLoanAmount: 1000,
+          countPersonPerMovement: 1,
+          movementType: 'CUMULATIVE',
+          countMaxMember: 10,
+          systemType: SystemType.PART,
+          rateMaps: [],
+        },
+      };
+
+      const mockMember = {
+        id: 1,
+        user: { username: 'test', roles: ['TONTINARD'] },
+      };
+
+      mockMemberService.buildUsernameForMember.mockReturnValue('test.test');
+      mockMemberService.findByUsername.mockResolvedValue(mockMember);
+      mockDataSource.getRepository().find.mockResolvedValue([
+        {
+          id: 2,
+          title: 'familiale',
+          members: [{ id: 1 }],
+        },
+      ]);
+
+      await expect(service.create(createTontineDto)).rejects.toMatchObject({
+        response: {
+          errorCode: ErrorCode.TONTINE_TITLE_ALREADY_EXISTS,
+        },
+      });
     });
   });
 
